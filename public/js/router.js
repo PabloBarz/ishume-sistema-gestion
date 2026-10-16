@@ -1,4 +1,6 @@
 // Relaciona rutas hash con sus vistas HTML y módulos JavaScript.
+import { closeOverlay } from './utils.js';
+
 const routes = {
   dashboard: {
     title: 'Dashboard',
@@ -83,6 +85,11 @@ export function startRouter() {
   if (started) return;
   started = true;
   window.addEventListener('hashchange', loadCurrentRoute);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.open').forEach((modal) => closeOverlay(modal.id));
+    }
+  });
 
   if (!window.location.hash) window.history.replaceState(null, '', '#/dashboard');
   void loadCurrentRoute();
