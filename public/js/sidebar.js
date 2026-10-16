@@ -86,4 +86,5 @@ document.addEventListener('keydown', (event) => {
 });
 
 mobile.addEventListener('change', syncLayout);
+window.addEventListener('hashchange', () => closeMenu());
 syncLayout();
