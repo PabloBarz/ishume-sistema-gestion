@@ -59,6 +59,84 @@ export function validateRequiredFields(valores) {
   }).map(([nombre]) => nombre);
 }
 
+// Consume una ruta API y devuelve JSON, texto o null cuando la respuesta está vacía.
+export async function http(url, method = 'GET', body = null) {
+  const options = { method, headers: {} };
+
+  if (body !== null && body !== undefined) {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body);
+  }
+
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (cause) {
+    const error = new Error('Error de red al conectar con el servidor.', { cause });
+    error.name = 'NetworkError';
+    throw error;
+  }
+
+  const texto = await response.text();
+  let data = null;
+
+  if (texto) {
+    try {
+      data = JSON.parse(texto);
+    } catch {
+      data = texto;
+    }
+  }
+
+  if (!response.ok) {
+    const message = data && typeof data === 'object' && data.message
+      ? data.message
+      : typeof data === 'string' && data
+        ? data
+        : `Error HTTP ${response.status}`;
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+
+  return data;
+}
+
+function updateDescribedBy(input, errorId, includeError) {
+  const descriptions = new Set((input.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+  if (includeError) descriptions.add(errorId);
+  else descriptions.delete(errorId);
+
+  if (descriptions.size) input.setAttribute('aria-describedby', [...descriptions].join(' '));
+  else input.removeAttribute('aria-describedby');
+}
+
+// Muestra un error junto al campo y lo asocia para tecnologías de asistencia.
+export function setError(inputId, errorId, message) {
+  const input = document.getElementById(inputId);
+  const error = document.getElementById(errorId);
+  if (!input || !error) return;
+
+  input.classList.add('is-invalid');
+  input.setAttribute('aria-invalid', 'true');
+  updateDescribedBy(input, errorId, true);
+  error.textContent = String(message ?? '');
+}
+
+// Limpia los campos indicados y sus mensajes con el patrón err-{id}.
+export function clearErrors(inputIds) {
+  inputIds.forEach((id) => {
+    const errorId = `err-${id}`;
+    const input = document.getElementById(id);
+    const error = document.getElementById(errorId);
+
+    input?.classList.remove('is-invalid');
+    input?.removeAttribute('aria-invalid');
+    if (input) updateDescribedBy(input, errorId, false);
+    if (error) error.textContent = '';
+  });
+}
+
 const tiposToast = {
   success: { icono: 'bi bi-check-circle-fill', rol: 'status' },
   error: { icono: 'bi bi-exclamation-octagon-fill', rol: 'alert' },
