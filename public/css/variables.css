@@ -1,0 +1,39 @@
+/* ── Variables ─────────────────────────────── */
+:root {
+  --sidebar-w: 260px;
+  --topbar-h: 64px;
+
+  /* Colores */
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --surface-2: #f0f1f6;
+  --border: #e4e6ef;
+
+  --sidebar-bg: #111827;
+  --sidebar-text: #9ca3af;
+  --sidebar-active: #ffffff;
+  --sidebar-active-bg: rgba(99,102,241,.18);
+  --sidebar-active-border: #6366f1;
+
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: rgba(99,102,241,.1);
+  --danger: #ef4444;
+  --danger-light: rgba(239,68,68,.1);
+  --success: #10b981;
+  --warning: #f59e0b;
+
+  --text: #111827;
+  --text-muted: #6b7280;
+  --text-sm: 13px;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.18);
+
+  /* Radio */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+}
