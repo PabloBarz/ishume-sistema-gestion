@@ -7,6 +7,11 @@ const routes = {
     view: '/views/dashboard.html',
     loadModule: () => import('./modules/dashboard.js'),
   },
+  ejemplo: {
+    title: 'Vista de ejemplo',
+    view: '/views/example.html',
+    loadModule: () => import('./modules/example.js'),
+  },
 };
 
 const viewCache = new Map();

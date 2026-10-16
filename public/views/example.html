@@ -1,0 +1,128 @@
+<section aria-labelledby="example-title">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title" id="example-title">Componentes compartidos</h1>
+      <p class="page-subtitle">Referencia interactiva para las futuras vistas de ISHUME.</p>
+    </div>
+    <span class="badge badge-info">Datos ficticios</span>
+  </div>
+
+  <div class="dashboard-grid">
+    <section class="card-panel" aria-labelledby="example-toast-title">
+      <div class="panel-header">
+        <h2 class="panel-title" id="example-toast-title"><i class="bi bi-bell" aria-hidden="true"></i> Notificaciones</h2>
+      </div>
+      <div class="modal-body-custom">
+        <p class="panel-note">Prueba cada tipo de Toast reutilizable.</p>
+        <div class="example-actions">
+          <button class="btn-save" type="button" data-toast="success">Éxito</button>
+          <button class="btn-save" type="button" data-toast="error">Error</button>
+          <button class="btn-save" type="button" data-toast="warning">Advertencia</button>
+          <button class="btn-save" type="button" data-toast="info">Información</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card-panel" aria-labelledby="example-modal-title">
+      <div class="panel-header">
+        <h2 class="panel-title" id="example-modal-title"><i class="bi bi-window" aria-hidden="true"></i> Modal de la vista</h2>
+      </div>
+      <div class="modal-body-custom">
+        <p class="panel-note">Este modal pertenece a esta vista, no al shell global.</p>
+        <button class="btn-primary-action" id="openExampleModal" type="button">
+          <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Abrir modal
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div class="dashboard-grid">
+    <section class="card-panel" aria-labelledby="example-form-title">
+      <div class="panel-header">
+        <h2 class="panel-title" id="example-form-title"><i class="bi bi-ui-checks" aria-hidden="true"></i> Formulario demostrativo</h2>
+      </div>
+      <form class="modal-body-custom" id="exampleForm" novalidate>
+        <div>
+          <label class="form-label-custom" for="exampleDescription">Descripción <span class="required" aria-hidden="true">*</span></label>
+          <input class="input-custom" id="exampleDescription" name="description" type="text" required aria-describedby="err-exampleDescription">
+          <p class="field-error" id="err-exampleDescription" aria-live="polite"></p>
+        </div>
+        <div>
+          <label class="form-label-custom" for="exampleCategory">Categoría <span class="required" aria-hidden="true">*</span></label>
+          <select class="input-custom" id="exampleCategory" name="category" required aria-describedby="err-exampleCategory">
+            <option value="">Selecciona una categoría</option>
+            <option value="Compra">Compra</option>
+            <option value="Inventario">Inventario</option>
+            <option value="Pago">Pago</option>
+          </select>
+          <p class="field-error" id="err-exampleCategory" aria-live="polite"></p>
+        </div>
+        <div>
+          <label class="form-label-custom" for="exampleQuantity">Cantidad <span class="required" aria-hidden="true">*</span></label>
+          <input class="input-custom" id="exampleQuantity" name="quantity" type="number" min="1" step="1" required aria-describedby="err-exampleQuantity">
+          <p class="field-error" id="err-exampleQuantity" aria-live="polite"></p>
+        </div>
+        <div>
+          <label class="form-label-custom" for="exampleAmount">Importe en soles <span class="required" aria-hidden="true">*</span></label>
+          <input class="input-custom" id="exampleAmount" name="amount" type="number" min="0" step="0.01" required aria-describedby="err-exampleAmount">
+          <p class="field-error" id="err-exampleAmount" aria-live="polite"></p>
+        </div>
+        <button class="btn-save" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> Agregar a la tabla</button>
+      </form>
+    </section>
+
+    <section class="card-panel" aria-labelledby="example-formats-title">
+      <div class="panel-header">
+        <h2 class="panel-title" id="example-formats-title"><i class="bi bi-123" aria-hidden="true"></i> Formatos compartidos</h2>
+      </div>
+      <div class="modal-body-custom">
+        <p>Fecha: <strong id="exampleFormattedDate"></strong></p>
+        <p>Cantidad: <strong id="exampleFormattedNumber"></strong></p>
+        <p>Importe: <strong id="exampleFormattedCurrency"></strong></p>
+      </div>
+    </section>
+  </div>
+
+  <section class="card-panel" aria-labelledby="example-table-title">
+    <div class="panel-header">
+      <h2 class="panel-title" id="example-table-title"><i class="bi bi-table" aria-hidden="true"></i> Tabla de demostración</h2>
+      <span class="panel-caption">Registros ficticios</span>
+    </div>
+    <div class="table-scroll">
+      <table class="table-custom" id="exampleTable">
+        <thead>
+          <tr><th scope="col">Descripción</th><th scope="col">Categoría</th><th scope="col">Cantidad</th><th scope="col">Importe</th><th scope="col">Fecha</th></tr>
+        </thead>
+        <tbody id="exampleTableRows">
+          <tr>
+            <td><span class="cell-primary">Artículo de muestra</span><span class="cell-secondary">Registro demostrativo</span></td>
+            <td><span class="badge badge-info">Inventario</span></td>
+            <td class="cell-value">3</td>
+            <td class="cell-value">S/ 45.50</td>
+            <td>16 oct 2026</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="modal-overlay" id="exampleModal" aria-hidden="true">
+    <div class="modal-panel modal-sm" aria-labelledby="exampleModalTitle">
+      <div class="modal-header-custom">
+        <div>
+          <h2 class="modal-title-custom" id="exampleModalTitle">Modal de ejemplo</h2>
+          <p class="modal-subtitle">Se abre y cierra con las utilidades compartidas.</p>
+        </div>
+        <button class="btn-modal-close" type="button" data-close-example-modal aria-label="Cerrar modal">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="modal-body-custom">
+        <p>Al navegar a otra vista, este contenido se reemplaza junto con sus eventos.</p>
+      </div>
+      <div class="modal-footer-custom">
+        <button class="btn-cancel" type="button" data-close-example-modal>Cerrar</button>
+      </div>
+    </div>
+  </div>
+</section>
