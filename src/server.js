@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import './config/db.js';
 import express from 'express';
+import categoriaRouter from './routes/categoriaRouter.js';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,6 +11,9 @@ const publicDirectory = resolve(currentDirectory, '../public');
 const port = process.env.PORT || 3000;
 
 app.use(express.static(publicDirectory));
+app.use(express.json());
+
+app.use('/api/categorias', categoriaRouter);
 
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada.' });

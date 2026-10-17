@@ -8,4 +8,4 @@
 | 4. Utilidades compartidas | Completada | Toasts, modales, peticiones HTTP y validación accesible reutilizables. | `public/js/utils.js` |
 | 5. Vista de ejemplo | Completada y verificada | Demostración práctica de componentes compartidos; validación manual confirmada por el usuario. | `266ab8e` |
 | 6. Configuración MySQL | En progreso | Pool reutilizable `mysql2/promise` y variables de entorno; conexión real pendiente de credenciales y servicio disponibles. | `src/config/db.js` |
-| 7. Arquitectura backend | Pendiente | Ejemplo pequeño de routes, controllers y services; sin módulos de negocio. | — |
+| 7. Arquitectura backend | Implementada (demostración) | Routes → Controllers → Services con GET/POST de categorías (`id_categoria`, `nombre`, `descripcion`); la tabla no está verificada. | `src/routes/categoriaRouter.js`, `src/controllers/categoriaController.js`, `src/services/categoriaService.js` |
