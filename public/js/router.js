@@ -2,6 +2,11 @@
 import { closeOverlay } from './utils.js';
 
 const routes = {
+  contratos: {
+    title: 'Consulta de contratos',
+    view: '/views/contratos.html',
+    loadModule: () => import('./modules/contratos.js'),
+  },
   dashboard: {
     title: 'Dashboard',
     view: '/views/dashboard.html',
@@ -12,6 +17,11 @@ const routes = {
     view: '/views/example.html',
     loadModule: () => import('./modules/example.js'),
   },
+  compras: {
+    title: 'Compras',
+    view: '/views/compras.html',
+    loadModule: () => import('./modules/compras.js')
+  }
 };
 
 const viewCache = new Map();

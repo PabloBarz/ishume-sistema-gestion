@@ -88,6 +88,24 @@
 
 .panel-note { margin: 14px 20px 20px; }
 
+/* Contenido y datos de paneles compartidos por las vistas. */
+.panel-body { padding: 20px 24px; }
+
+.detail-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 20px;
+  margin: 0;
+}
+
+.detail-list > div { min-width: 0; }
+.detail-list dd { margin: 0; overflow-wrap: anywhere; }
+
+.btn-primary-action:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
 .btn-link {
   font-size: 13px;
   color: var(--primary);
