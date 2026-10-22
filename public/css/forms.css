@@ -73,6 +73,16 @@
 
 .required { color: var(--danger); }
 
+/* Distribución vertical reutilizable de formularios. */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.form-stack > button { align-self: flex-start; }
+
 .input-custom {
   width: 100%;
   padding: 10px 12px;

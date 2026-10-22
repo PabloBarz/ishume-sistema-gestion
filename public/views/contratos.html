@@ -1,0 +1,43 @@
+<section aria-labelledby="contratos-title">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title" id="contratos-title">Consulta de contratos</h1>
+      <p class="page-subtitle">Ingresa el ID del contrato para consultar su cliente, modelos y fecha de entrega.</p>
+    </div>
+  </div>
+
+  <section class="card-panel" aria-labelledby="contrato-busqueda-title">
+    <div class="panel-header">
+      <h2 class="panel-title" id="contrato-busqueda-title"><i class="bi bi-search" aria-hidden="true"></i> Buscar contrato</h2>
+    </div>
+    <form class="panel-body form-stack" id="contratoForm" novalidate>
+      <div>
+        <label class="form-label-custom" for="contratoId">ID del contrato</label>
+        <input class="input-custom" id="contratoId" name="id" type="text" inputmode="numeric" pattern="[0-9]+" required aria-describedby="err-contratoId" autocomplete="off">
+        <p class="field-error" id="err-contratoId" aria-live="polite"></p>
+      </div>
+      <button class="btn-primary-action" id="contratoConsultar" type="submit">
+        <i class="bi bi-search" aria-hidden="true"></i> Consultar contrato
+      </button>
+    </form>
+  </section>
+
+  <p id="contratoEstado" role="status" aria-live="polite">Ingresa un ID para comenzar.</p>
+
+  <section class="card-panel" id="contratoResultado" aria-labelledby="contrato-resultado-title" hidden>
+    <div class="panel-header">
+      <h2 class="panel-title" id="contrato-resultado-title">Detalle del contrato <span id="contratoNumero"></span></h2>
+    </div>
+    <dl class="panel-body detail-list">
+      <div><dt class="form-label-custom">Cliente / colegio</dt><dd id="contratoCliente"></dd></div>
+      <div><dt class="form-label-custom">Fecha de entrega</dt><dd id="contratoFecha"></dd></div>
+    </dl>
+    <div class="table-scroll">
+      <table class="table-custom">
+        <caption class="panel-note">Modelos solicitados</caption>
+        <thead><tr><th scope="col">Modelo</th><th scope="col">Cantidad</th></tr></thead>
+        <tbody id="contratoModelos"></tbody>
+      </table>
+    </div>
+  </section>
+</section>
