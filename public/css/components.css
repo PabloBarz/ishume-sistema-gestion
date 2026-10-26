@@ -136,6 +136,97 @@
   border-color: var(--primary);
 }
 
+/* Catálogos internos del módulo de inventario; no navegan entre rutas SPA. */
+.inventory-tablist {
+  display: flex;
+  gap: 28px;
+  overflow-x: auto;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+}
+
+.inventory-tab {
+  flex: 0 0 auto;
+  padding: 16px 2px 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inventory-tab:hover { color: var(--text); }
+.inventory-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.inventory-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.inventory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.inventory-toolbar .search-input-wrap { max-width: 420px; }
+.inventory-toolbar .search-input:disabled { background: var(--surface-2); cursor: not-allowed; }
+.inventory-filter-placeholder { color: var(--text-muted); font-size: 12px; }
+.inventory-table-panel { min-height: 180px; }
+.inventory-stat-note { color: var(--text-muted); font-size: 11px; }
+.inventory-error p { margin-bottom: 16px; }
+.inventory-error .btn-cancel { cursor: pointer; }
+.inventory-error .btn-cancel:disabled { opacity: .6; cursor: wait; }
+
+/* Ajustes visuales limitados a Inventario para preservar el resto de las vistas. */
+.inventory-page .page-header { margin-bottom: 24px; }
+.inventory-page .page-title { font-size: 28px; letter-spacing: -.7px; }
+.inventory-page .page-subtitle { max-width: 620px; line-height: 1.55; }
+.inventory-page .inventory-stats { gap: 18px; }
+.inventory-page .stat-card {
+  min-width: 0;
+  min-height: 158px;
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.inventory-page .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.inventory-page .stat-icon { flex: 0 0 42px; width: 42px; height: 42px; }
+.inventory-page .stat-value { margin-top: 4px; font-size: 26px; }
+.inventory-page .stat-label { line-height: 1.4; }
+.inventory-page .inventory-catalog { border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.inventory-panel-header { padding: 20px 24px; }
+.inventory-panel-header .panel-title { font-size: 16px; }
+.inventory-panel-header .panel-caption { display: inline-block; margin-top: 5px; }
+.inventory-table { min-width: 900px; }
+.inventory-table th { padding: 13px 16px; }
+.inventory-table td { padding: 15px 16px; }
+.inventory-number { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.inventory-sku { font-family: 'DM Mono', ui-monospace, monospace; font-size: 12px !important; font-weight: 600; }
+.inventory-price { font-weight: 600; }
+.inventory-stock { font-family: 'DM Mono', ui-monospace, monospace; font-weight: 600; }
+.inventory-related-badge { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.inventory-relation-id { margin-top: 4px; }
+.inventory-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 40%, transparent); }
+.inventory-table tbody tr:hover { background: var(--primary-light); }
+.inventory-table-panel .empty-state { padding: 54px 20px; }
+.inventory-table-panel .inventory-error { display: flex; flex-direction: column; align-items: center; }
+.inventory-table-panel .inventory-error p { max-width: 560px; line-height: 1.5; }
+.inventory-page [hidden] { display: none !important; }
+.inventory-toolbar .filter-select { min-width: 150px; }
+.inventory-panel-header .btn-primary-action { flex: 0 0 auto; }
+.inventory-category-actions { white-space: nowrap; }
+.inventory-category-actions .btn-action { margin-right: 3px; }
+.inventory-state-off { color: var(--danger); }
+.inventory-state-on { color: var(--success); }
+.inventory-state-off:hover { background: var(--danger-light); }
+.inventory-state-on:hover { background: rgba(16,185,129,.13); }
+.category-confirm-message { margin: 0; line-height: 1.6; }
+.category-detail-list dt { margin-bottom: 4px; font-size: 12px; }
+.category-detail-list dd { font-weight: 600; }
+
 
 /* ══════════════════════════════════════════
    BOTONES

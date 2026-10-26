@@ -17,6 +17,11 @@ const routes = {
     view: '/views/example.html',
     loadModule: () => import('./modules/example.js'),
   },
+  inventario: {
+    title: 'Inventario',
+    view: '/views/inventario.html',
+    loadModule: () => import('./modules/inventario.js'),
+  },
   compras: {
     title: 'Compras',
     view: '/views/compras.html',
