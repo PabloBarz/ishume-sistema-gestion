@@ -1,5 +1,5 @@
 import { formatCurrencyPEN, formatNumber } from '../utils.js';
-import { inventoryAppState } from '../inventarioAppState.js';
+import { appState } from '../appState.js';
 
 const catalogLabels = {
   productos: 'Productos',
@@ -43,6 +43,28 @@ function makeStatusCell(value) {
   return cell;
 }
 
+function makeBadgeCell(label, secondary = '') {
+  const cell = document.createElement('td');
+  const badge = document.createElement('span');
+  badge.className = 'badge badge-info inventory-related-badge';
+  badge.textContent = String(label ?? '—');
+  cell.append(badge);
+  if (secondary) {
+    const detail = document.createElement('span');
+    detail.className = 'cell-secondary inventory-relation-id';
+    detail.textContent = secondary;
+    cell.append(detail);
+  }
+  return cell;
+}
+
+function makeNumericCell(value, className = '') {
+  const cell = document.createElement('td');
+  cell.className = `inventory-number ${className}`.trim();
+  cell.textContent = String(value ?? '—');
+  return cell;
+}
+
 function makeTable(catalog, rows) {
   const columns = {
     productos: ['SKU', 'Modelo', 'Categoría', 'Diseño', 'Nivel educativo', 'Precio', 'Stock', 'Estado', 'Acciones'],
@@ -70,13 +92,13 @@ function makeTable(catalog, rows) {
     const row = document.createElement('tr');
     if (catalog === 'productos') {
       row.append(
-        makeCell(record.sku),
+        makeNumericCell(record.sku, 'inventory-sku'),
         makeCell(record.nombre_modelo, `Modelo #${record.id_modelo ?? '—'}`),
-        makeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
+        makeBadgeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
         makeCell(record.nombre_diseno, `Diseño #${record.id_diseno ?? '—'}`),
         makeCell(record.nivel_educativo),
-        makeCell(formatCurrencyPEN(record.precio)),
-        makeCell(formatNumber(record.stock_actual)),
+        makeNumericCell(formatCurrencyPEN(record.precio), 'inventory-price'),
+        makeNumericCell(formatNumber(record.stock_actual), 'inventory-stock'),
         makeStatusCell(record.estado),
         makeCell('—'),
       );
@@ -85,14 +107,14 @@ function makeTable(catalog, rows) {
     } else if (catalog === 'disenios') {
       row.append(
         makeCell(record.id_diseno), makeCell(record.nombre_diseno),
-        makeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
+        makeBadgeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
         makeStatusCell(record.estado), makeCell('—'),
       );
     } else {
       row.append(
         makeCell(record.id_modelo), makeCell(record.nombre_modelo), makeCell(record.nivel_educativo),
         makeCell(record.nombre_diseno, `Diseño #${record.id_diseno ?? '—'}`),
-        makeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
+        makeBadgeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
         makeStatusCell(record.estado), makeCell('—'),
       );
     }
@@ -105,8 +127,8 @@ function makeTable(catalog, rows) {
 }
 
 function renderStats(root) {
-  const productState = inventoryAppState.getStatus('productos');
-  const categoryState = inventoryAppState.getStatus('categorias');
+  const productState = appState.catalogos.getStatus('productos');
+  const categoryState = appState.catalogos.getStatus('categorias');
   const products = root.querySelector('[data-stat="products"]');
   const units = root.querySelector('[data-stat="units"]');
   const categories = root.querySelector('[data-stat="categories"]');
@@ -127,7 +149,7 @@ function renderStats(root) {
 function renderCatalog(root, catalog) {
   if (!root.isConnected) return;
   const panel = root.querySelector('#inventory-panel');
-  const status = inventoryAppState.getStatus(catalog);
+  const status = appState.catalogos.getStatus(catalog);
   panel.setAttribute('aria-labelledby', `tab-${catalog}`);
   root.querySelector('#inventory-caption').textContent = catalogCaptions[catalog];
   panel.replaceChildren();
@@ -186,7 +208,10 @@ export async function init() {
 
   root.querySelector('.inventory-tablist').addEventListener('click', (event) => {
     const tab = event.target.closest('.inventory-tab');
-    if (tab) selectCatalog(root, tab.dataset.catalog);
+    if (tab) {
+      selectCatalog(root, tab.dataset.catalog);
+      void loadCatalog(tab.dataset.catalog, root);
+    }
   });
   root.querySelector('.inventory-tablist').addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -198,19 +223,20 @@ export async function init() {
     event.preventDefault();
     selectCatalog(root, tabs[nextIndex].dataset.catalog);
     tabs[nextIndex].focus();
+    void loadCatalog(tabs[nextIndex].dataset.catalog, root);
   });
 
   root.querySelector('#inventory-panel').addEventListener('click', async (event) => {
     const retry = event.target.closest('[data-retry-catalog]');
     if (!retry) return;
     const catalog = retry.dataset.retryCatalog;
-    inventoryAppState.invalidate(catalog);
+    appState.catalogos.invalidate(catalog);
     retry.disabled = true;
     await loadCatalog(catalog, root);
   });
 
   function loadCatalog(catalog, currentRoot) {
-    return inventoryAppState.getCatalog(catalog)
+    return appState.catalogos.get(catalog)
       .then(() => {
         renderStats(currentRoot);
         renderCatalog(currentRoot, activeCatalog);
@@ -222,6 +248,6 @@ export async function init() {
   }
 
   selectCatalog(root, activeCatalog);
-  const catalogs = Object.keys(catalogLabels);
-  await Promise.all(catalogs.map((catalog) => loadCatalog(catalog, root)));
+  // Productos es la pestaña inicial; categorías se cargan para su indicador. El resto es lazy.
+  await Promise.all([loadCatalog(activeCatalog, root), loadCatalog('categorias', root)]);
 }

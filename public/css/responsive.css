@@ -19,6 +19,11 @@
   .topbar { padding: 0 16px; }
   .page-wrapper { padding: 20px 16px; }
   .stats-grid { gap: 12px; }
+  .inventory-page .inventory-stats { gap: 12px; }
+  .inventory-page .stat-card { min-height: 146px; padding: 16px; }
+  .inventory-panel-header { padding: 18px 20px; }
+  .inventory-tablist { gap: 22px; padding: 0 20px; }
+  .inventory-toolbar { padding: 16px 20px; }
   .modal-panel { max-width: 100%; }
 }
 
@@ -32,6 +37,10 @@
   .inventory-toolbar { align-items: stretch; flex-direction: column; gap: 10px; padding: 14px 16px; }
   .inventory-toolbar .search-input-wrap { max-width: none; width: 100%; }
   .inventory-tablist { gap: 18px; padding: 0 16px; }
+  .inventory-page .page-title { font-size: 24px; }
+  .inventory-page .stat-value { font-size: 22px; }
+  .inventory-panel-header { padding: 16px; }
+  .inventory-toolbar { padding: 14px 16px; }
   .table-custom th, .table-custom td { padding: 10px 12px; }
   .toast-container { left: 12px; right: 12px; bottom: 12px; }
   .toast-item { min-width: 0; max-width: none; width: 100%; box-sizing: border-box; }

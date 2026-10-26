@@ -1,4 +1,4 @@
-import { http } from './utils.js';
+import { http } from '../utils.js';
 
 const endpoints = {
   categorias: '/api/categorias',
@@ -7,8 +7,8 @@ const endpoints = {
   productos: '/api/inventario-productos',
 };
 
-// Cache in-memory separada de viewCache, con deduplicación y recarga por catálogo.
-export function createInventoryAppState(request = http) {
+// Caché compartida de catálogos; permanece independiente de la caché HTML del router.
+export function createCatalogosState(request = http) {
   const catalogs = Object.fromEntries(Object.keys(endpoints).map((name) => [name, {
     data: null,
     loaded: false,
@@ -17,7 +17,7 @@ export function createInventoryAppState(request = http) {
     version: 0,
   }]));
 
-  function getCatalog(name, { reload = false } = {}) {
+  function get(name, { reload = false } = {}) {
     const entry = catalogs[name];
     if (!entry) return Promise.reject(new Error(`Catálogo desconocido: ${name}`));
     if (reload) invalidate(name);
@@ -25,19 +25,29 @@ export function createInventoryAppState(request = http) {
     if (entry.loaded) return Promise.resolve(entry.data);
 
     const version = entry.version;
-    const promise = request(endpoints[name]).then((response) => {
+    const outcome = request(endpoints[name]).then(
+      (response) => ({ response }),
+      (error) => ({ error }),
+    );
+    const promise = outcome.then((result) => {
+      // Invalidar durante una petición impide que su respuesta antigua llegue al consumidor.
+      if (entry.version !== version) return get(name);
+      if (result.error) {
+        entry.error = result.error;
+        throw result.error;
+      }
+
+      const { response } = result;
       if (!response?.success || !Array.isArray(response.data)) {
-        throw new Error('El servidor devolvió una respuesta inválida para el catálogo.');
+        const error = new Error('El servidor devolvió una respuesta inválida para el catálogo.');
+        entry.error = error;
+        throw error;
       }
-      if (entry.version === version) {
-        entry.data = response.data;
-        entry.loaded = true;
-        entry.error = null;
-      }
-      return response.data;
-    }).catch((error) => {
-      if (entry.version === version) entry.error = error;
-      throw error;
+
+      entry.data = response.data;
+      entry.loaded = true;
+      entry.error = null;
+      return entry.data;
     }).finally(() => {
       if (entry.promise === promise) entry.promise = null;
     });
@@ -65,7 +75,5 @@ export function createInventoryAppState(request = http) {
     return { data: entry.data, loaded: entry.loaded, loading: Boolean(entry.promise), error: entry.error };
   }
 
-  return { getCatalog, invalidate, getStatus };
+  return { get, reload: (name) => get(name, { reload: true }), invalidate, getStatus };
 }
-
-export const inventoryAppState = createInventoryAppState();
