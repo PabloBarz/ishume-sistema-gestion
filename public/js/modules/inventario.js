@@ -1,5 +1,7 @@
-import { formatCurrencyPEN, formatNumber } from '../utils.js';
+import { formatNumber } from '../utils.js';
 import { appState } from '../appState.js';
+import { createCategoriesModule } from './inventario/categorias.js';
+import { renderReadonlyCatalog } from './inventario/catalogos.js';
 
 const catalogLabels = {
   productos: 'Productos',
@@ -17,152 +19,32 @@ const catalogCaptions = {
 
 let activeCatalog = 'productos';
 
-function makeCell(value, secondary = '') {
-  const cell = document.createElement('td');
-  if (secondary) {
-    const primary = document.createElement('span');
-    primary.className = 'cell-primary';
-    primary.textContent = String(value ?? '—');
-    const detail = document.createElement('span');
-    detail.className = 'cell-secondary';
-    detail.textContent = secondary;
-    cell.append(primary, detail);
-  } else {
-    cell.textContent = String(value ?? '—');
-  }
-  return cell;
-}
-
-function makeStatusCell(value) {
-  const cell = document.createElement('td');
-  const badge = document.createElement('span');
-  const active = Number(value) === 1;
-  badge.className = `badge ${active ? 'badge-success' : 'badge-danger'}`;
-  badge.textContent = active ? 'Activo' : 'Inactivo';
-  cell.append(badge);
-  return cell;
-}
-
-function makeBadgeCell(label, secondary = '') {
-  const cell = document.createElement('td');
-  const badge = document.createElement('span');
-  badge.className = 'badge badge-info inventory-related-badge';
-  badge.textContent = String(label ?? '—');
-  cell.append(badge);
-  if (secondary) {
-    const detail = document.createElement('span');
-    detail.className = 'cell-secondary inventory-relation-id';
-    detail.textContent = secondary;
-    cell.append(detail);
-  }
-  return cell;
-}
-
-function makeNumericCell(value, className = '') {
-  const cell = document.createElement('td');
-  cell.className = `inventory-number ${className}`.trim();
-  cell.textContent = String(value ?? '—');
-  return cell;
-}
-
-function makeTable(catalog, rows) {
-  const columns = {
-    productos: ['SKU', 'Modelo', 'Categoría', 'Diseño', 'Nivel educativo', 'Precio', 'Stock', 'Estado', 'Acciones'],
-    categorias: ['ID', 'Categoría', 'Estado', 'Acciones'],
-    disenios: ['ID', 'Diseño', 'Categoría', 'Estado', 'Acciones'],
-    modelos: ['ID', 'Modelo', 'Nivel educativo', 'Diseño', 'Categoría', 'Estado', 'Acciones'],
-  }[catalog];
-
-  const wrapper = document.createElement('div');
-  wrapper.className = 'table-scroll';
-  const table = document.createElement('table');
-  table.className = 'table-custom inventory-table';
-  const head = document.createElement('thead');
-  const headerRow = document.createElement('tr');
-  columns.forEach((label) => {
-    const header = document.createElement('th');
-    header.scope = 'col';
-    header.textContent = label;
-    headerRow.append(header);
-  });
-  head.append(headerRow);
-  const body = document.createElement('tbody');
-
-  rows.forEach((record) => {
-    const row = document.createElement('tr');
-    if (catalog === 'productos') {
-      row.append(
-        makeNumericCell(record.sku, 'inventory-sku'),
-        makeCell(record.nombre_modelo, `Modelo #${record.id_modelo ?? '—'}`),
-        makeBadgeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
-        makeCell(record.nombre_diseno, `Diseño #${record.id_diseno ?? '—'}`),
-        makeCell(record.nivel_educativo),
-        makeNumericCell(formatCurrencyPEN(record.precio), 'inventory-price'),
-        makeNumericCell(formatNumber(record.stock_actual), 'inventory-stock'),
-        makeStatusCell(record.estado),
-        makeCell('—'),
-      );
-    } else if (catalog === 'categorias') {
-      row.append(makeCell(record.id_categoria), makeCell(record.nombre_categoria), makeStatusCell(record.estado), makeCell('—'));
-    } else if (catalog === 'disenios') {
-      row.append(
-        makeCell(record.id_diseno), makeCell(record.nombre_diseno),
-        makeBadgeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
-        makeStatusCell(record.estado), makeCell('—'),
-      );
-    } else {
-      row.append(
-        makeCell(record.id_modelo), makeCell(record.nombre_modelo), makeCell(record.nivel_educativo),
-        makeCell(record.nombre_diseno, `Diseño #${record.id_diseno ?? '—'}`),
-        makeBadgeCell(record.nombre_categoria, `Categoría #${record.id_categoria ?? '—'}`),
-        makeStatusCell(record.estado), makeCell('—'),
-      );
-    }
-    body.append(row);
-  });
-
-  table.append(head, body);
-  wrapper.append(table);
-  return wrapper;
-}
-
 function renderStats(root) {
   const productState = appState.catalogos.getStatus('productos');
   const categoryState = appState.catalogos.getStatus('categorias');
-  const products = root.querySelector('[data-stat="products"]');
+  root.querySelector('[data-stat="products"]').textContent = productState.loaded ? formatNumber(productState.data.length) : productState.error ? '—' : 'Cargando…';
+  root.querySelector('[data-stat="categories"]').textContent = categoryState.loaded ? formatNumber(categoryState.data.length) : categoryState.error ? '—' : 'Cargando…';
   const units = root.querySelector('[data-stat="units"]');
-  const categories = root.querySelector('[data-stat="categories"]');
-
-  products.textContent = productState.loaded ? formatNumber(productState.data.length) : productState.error ? '—' : 'Cargando…';
-  categories.textContent = categoryState.loaded ? formatNumber(categoryState.data.length) : categoryState.error ? '—' : 'Cargando…';
-  if (productState.loaded) {
-    const total = productState.data.reduce((sum, product) => {
-      const quantity = Number(product.stock_actual);
-      return Number.isFinite(quantity) ? sum + quantity : sum;
-    }, 0);
-    units.textContent = formatNumber(total);
-  } else {
+  if (!productState.loaded) {
     units.textContent = productState.error ? '—' : 'Cargando…';
+    return;
   }
+  const total = productState.data.reduce((sum, product) => {
+    const quantity = Number(product.stock_actual);
+    return Number.isFinite(quantity) ? sum + quantity : sum;
+  }, 0);
+  units.textContent = formatNumber(total);
 }
 
-function renderCatalog(root, catalog) {
-  if (!root.isConnected) return;
-  const panel = root.querySelector('#inventory-panel');
-  const status = appState.catalogos.getStatus(catalog);
-  panel.setAttribute('aria-labelledby', `tab-${catalog}`);
-  root.querySelector('#inventory-caption').textContent = catalogCaptions[catalog];
-  panel.replaceChildren();
-
+function renderCatalogState(panel, catalog, status, onRetry) {
   if (status.loading || (!status.loaded && !status.error)) {
     const loading = document.createElement('div');
     loading.className = 'empty-state';
     loading.setAttribute('role', 'status');
     loading.textContent = `Cargando ${catalogLabels[catalog].toLocaleLowerCase('es-PE')}…`;
     panel.append(loading);
-    return;
+    return true;
   }
-
   if (status.error) {
     const error = document.createElement('div');
     error.className = 'empty-state inventory-error';
@@ -174,24 +56,23 @@ function renderCatalog(root, catalog) {
     retry.type = 'button';
     retry.dataset.retryCatalog = catalog;
     retry.textContent = 'Reintentar';
+    retry.addEventListener('click', onRetry);
     error.append(message, retry);
     panel.append(error);
-    return;
+    return true;
   }
-
   if (!status.data.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
     empty.setAttribute('role', 'status');
     empty.textContent = `No hay ${catalogLabels[catalog].toLocaleLowerCase('es-PE')} registrados.`;
     panel.append(empty);
-    return;
+    return true;
   }
-
-  panel.append(makeTable(catalog, status.data));
+  return false;
 }
 
-function selectCatalog(root, catalog) {
+function selectCatalog(root, catalog, categoriesModule) {
   activeCatalog = catalog;
   root.querySelectorAll('.inventory-tab').forEach((tab) => {
     const selected = tab.dataset.catalog === catalog;
@@ -199,21 +80,79 @@ function selectCatalog(root, catalog) {
     tab.setAttribute('aria-selected', String(selected));
     tab.tabIndex = selected ? 0 : -1;
   });
-  renderCatalog(root, catalog);
+  categoriesModule.setVisible(catalog === 'categorias');
+  renderCatalog(root, catalog, categoriesModule);
+}
+
+function renderCatalog(root, catalog, categoriesModule) {
+  if (!root.isConnected) return;
+  const panel = root.querySelector('#inventory-panel');
+  const status = appState.catalogos.getStatus(catalog);
+  panel.setAttribute('aria-labelledby', `tab-${catalog}`);
+  root.querySelector('#inventory-caption').textContent = catalogCaptions[catalog];
+  panel.replaceChildren();
+  if (renderCatalogState(panel, catalog, status, () => loadCatalog(catalog, root, categoriesModule))) return;
+
+  if (catalog === 'categorias') {
+    const filtered = categoriesModule.render();
+    if (!filtered.querySelector('tbody tr')) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.setAttribute('role', 'status');
+      empty.textContent = status.data.length
+        ? 'No hay categorías que coincidan con la búsqueda y el estado seleccionados.'
+        : 'No hay categorías registradas.';
+      panel.append(empty);
+      return;
+    }
+    panel.append(filtered);
+    return;
+  }
+  panel.append(renderReadonlyCatalog(catalog, status.data));
+}
+
+function loadCatalog(catalog, root, categoriesModule) {
+  return appState.catalogos.get(catalog)
+    .then(() => {
+      if (!root.isConnected) return;
+      renderStats(root);
+      renderCatalog(root, activeCatalog, categoriesModule);
+    })
+    .catch(() => {
+      if (!root.isConnected) return;
+      renderStats(root);
+      renderCatalog(root, activeCatalog, categoriesModule);
+    });
 }
 
 export async function init() {
   const root = document.querySelector('.inventory-page');
   if (!root) return;
 
-  root.querySelector('.inventory-tablist').addEventListener('click', (event) => {
-    const tab = event.target.closest('.inventory-tab');
-    if (tab) {
-      selectCatalog(root, tab.dataset.catalog);
-      void loadCatalog(tab.dataset.catalog, root);
+  function updateActiveCatalog({ renderOnly = false, nameChanged = false } = {}) {
+    if (!root.isConnected) return;
+    if (renderOnly) {
+      renderCatalog(root, activeCatalog, categoriesModule);
+      return;
     }
+    renderStats(root);
+    if (activeCatalog === 'categorias') renderCatalog(root, activeCatalog, categoriesModule);
+    else void loadCatalog(activeCatalog, root, categoriesModule);
+  }
+
+  const categoriesModule = createCategoriesModule(root, {
+    isActive: () => activeCatalog === 'categorias',
+    onChanged: updateActiveCatalog,
   });
-  root.querySelector('.inventory-tablist').addEventListener('keydown', (event) => {
+
+  const tablist = root.querySelector('.inventory-tablist');
+  tablist.addEventListener('click', (event) => {
+    const tab = event.target.closest('.inventory-tab');
+    if (!tab) return;
+    selectCatalog(root, tab.dataset.catalog, categoriesModule);
+    void loadCatalog(tab.dataset.catalog, root, categoriesModule);
+  });
+  tablist.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     const tabs = [...root.querySelectorAll('.inventory-tab')];
     const currentIndex = tabs.findIndex((tab) => tab.dataset.catalog === activeCatalog);
@@ -221,33 +160,12 @@ export async function init() {
       : event.key === 'End' ? tabs.length - 1
         : (currentIndex + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
     event.preventDefault();
-    selectCatalog(root, tabs[nextIndex].dataset.catalog);
+    selectCatalog(root, tabs[nextIndex].dataset.catalog, categoriesModule);
     tabs[nextIndex].focus();
-    void loadCatalog(tabs[nextIndex].dataset.catalog, root);
+    void loadCatalog(tabs[nextIndex].dataset.catalog, root, categoriesModule);
   });
 
-  root.querySelector('#inventory-panel').addEventListener('click', async (event) => {
-    const retry = event.target.closest('[data-retry-catalog]');
-    if (!retry) return;
-    const catalog = retry.dataset.retryCatalog;
-    appState.catalogos.invalidate(catalog);
-    retry.disabled = true;
-    await loadCatalog(catalog, root);
-  });
-
-  function loadCatalog(catalog, currentRoot) {
-    return appState.catalogos.get(catalog)
-      .then(() => {
-        renderStats(currentRoot);
-        renderCatalog(currentRoot, activeCatalog);
-      })
-      .catch(() => {
-        renderStats(currentRoot);
-        renderCatalog(currentRoot, activeCatalog);
-      });
-  }
-
-  selectCatalog(root, activeCatalog);
+  selectCatalog(root, activeCatalog, categoriesModule);
   // Productos es la pestaña inicial; categorías se cargan para su indicador. El resto es lazy.
-  await Promise.all([loadCatalog(activeCatalog, root), loadCatalog('categorias', root)]);
+  await Promise.all([loadCatalog(activeCatalog, root, categoriesModule), loadCatalog('categorias', root, categoriesModule)]);
 }

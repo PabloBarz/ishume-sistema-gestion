@@ -36,6 +36,9 @@
         <h2 class="panel-title" id="inventory-catalog-title">Catálogo de inventario</h2>
         <span class="panel-caption" id="inventory-caption">Consulta los registros del sistema</span>
       </div>
+      <button class="btn-primary-action" id="categoryCreateButton" type="button" hidden>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nueva categoría
+      </button>
     </div>
 
     <div class="inventory-tablist" role="tablist" aria-label="Catálogos de inventario">
@@ -48,11 +51,32 @@
     <div class="inventory-toolbar" aria-label="Búsqueda y filtros">
       <label class="search-input-wrap">
         <i class="bi bi-search search-icon" aria-hidden="true"></i>
-        <input class="search-input" type="search" placeholder="Búsqueda disponible en una próxima fase" disabled aria-label="Buscar en el catálogo">
+        <input class="search-input" id="inventory-search" type="search" placeholder="Búsqueda disponible en una próxima fase" disabled aria-label="Buscar en el catálogo">
       </label>
-      <span class="inventory-filter-placeholder">Los filtros estarán disponibles en una próxima fase</span>
+      <select class="filter-select" id="categoryStateFilter" aria-label="Filtrar categorías por estado" hidden disabled>
+        <option value="">Todos</option>
+        <option value="1">Activos</option>
+        <option value="0">Inactivos</option>
+      </select>
+      <span class="inventory-filter-placeholder" id="inventory-filter-placeholder">Los filtros estarán disponibles en una próxima fase</span>
     </div>
 
     <div id="inventory-panel" class="inventory-table-panel" role="tabpanel" aria-labelledby="tab-productos" tabindex="0" aria-live="polite"></div>
   </section>
+
+  <div class="modal-overlay" id="inventoryModal" aria-hidden="true">
+    <div class="modal-panel" aria-labelledby="inventoryModalTitle" aria-describedby="inventoryModalSubtitle">
+      <div class="modal-header-custom">
+        <div>
+          <h2 class="modal-title-custom" id="inventoryModalTitle"></h2>
+          <p class="modal-subtitle" id="inventoryModalSubtitle"></p>
+        </div>
+        <button class="btn-modal-close" id="inventoryModalClose" type="button" aria-label="Cerrar ventana">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="modal-body-custom" id="inventoryModalBody"></div>
+      <div class="modal-footer-custom" id="inventoryModalFooter"></div>
+    </div>
+  </div>
 </section>
