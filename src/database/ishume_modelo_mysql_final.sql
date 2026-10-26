@@ -11,6 +11,7 @@ USE ishume_gestion;
 CREATE TABLE categorias (
   id_categoria INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombre_categoria VARCHAR(30) NOT NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=Activo, 0=Inactivo',
   CONSTRAINT uq_categorias_nombre UNIQUE (nombre_categoria)
 ) ENGINE=InnoDB;
 
@@ -20,6 +21,7 @@ CREATE TABLE disenios (
   id_categoria INT UNSIGNED NOT NULL,
   nombre_diseno VARCHAR(30) NOT NULL,
   descripcion VARCHAR(255) NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=Activo, 0=Inactivo',
   CONSTRAINT fk_disenios_categoria FOREIGN KEY (id_categoria)
     REFERENCES categorias(id_categoria)
 ) ENGINE=InnoDB;
@@ -30,6 +32,7 @@ CREATE TABLE modelos (
   id_diseno INT UNSIGNED NOT NULL,
   nombre_modelo VARCHAR(30) NOT NULL,
   nivel_educativo VARCHAR(30) NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=Activo, 0=Inactivo',
   CONSTRAINT fk_modelos_diseno FOREIGN KEY (id_diseno)
     REFERENCES disenios(id_diseno)
 ) ENGINE=InnoDB;
@@ -41,6 +44,7 @@ CREATE TABLE inventario_productos (
   sku VARCHAR(30) NOT NULL,
   precio DECIMAL(5,2) NOT NULL DEFAULT 0.00 COMMENT 'Precio de referencia de venta, no costo real de compra',
   stock_actual INT UNSIGNED NOT NULL DEFAULT 0,
+  estado TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1=Activo, 0=Inactivo',
   CONSTRAINT uq_productos_sku UNIQUE (sku),
   CONSTRAINT chk_productos_precio CHECK (precio >= 0),
   CONSTRAINT fk_productos_modelo FOREIGN KEY (id_modelo)
