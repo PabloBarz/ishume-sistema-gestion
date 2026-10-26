@@ -39,13 +39,23 @@ function responderError(res, error, operacion) {
 
 export const modeloController = {
   async listar(req, res) {
-    const { estado } = req.query;
+    const { estado, id_categoria: idCategoria, id_diseno: idDiseno } = req.query;
     if (estado !== undefined && estado !== '0' && estado !== '1') {
       return res.status(400).json({ success: false, message: 'El estado debe ser 0 o 1.' });
     }
+    if (idCategoria !== undefined && !enteroPositivo(idCategoria)) {
+      return res.status(400).json({ success: false, message: 'El identificador de categoría debe ser un entero mayor que cero.' });
+    }
+    if (idDiseno !== undefined && !enteroPositivo(idDiseno)) {
+      return res.status(400).json({ success: false, message: 'El identificador de diseño debe ser un entero mayor que cero.' });
+    }
 
     try {
-      const modelos = await modeloService.obtenerTodos(estado === undefined ? null : Number(estado));
+      const modelos = await modeloService.obtenerTodos({
+        estado: estado === undefined ? null : Number(estado),
+        idCategoria: idCategoria === undefined ? null : Number(idCategoria),
+        idDiseno: idDiseno === undefined ? null : Number(idDiseno),
+      });
       return res.status(200).json({ success: true, data: modelos });
     } catch (error) {
       return responderError(res, error, 'listar');

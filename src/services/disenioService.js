@@ -26,9 +26,11 @@ async function enTransaccion(callback) {
 
 async function buscarPorId(id, connection = pool, bloquear = false) {
   const [rows] = await connection.query(
-    `SELECT id_diseno, id_categoria, nombre_diseno, descripcion, estado
-     FROM disenios
-     WHERE id_diseno = ?${bloquear ? ' FOR UPDATE' : ''}`,
+    `SELECT d.id_diseno, d.id_categoria, c.nombre_categoria,
+            d.nombre_diseno, d.descripcion, d.estado
+     FROM disenios AS d
+     INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
+     WHERE d.id_diseno = ?${bloquear ? ' FOR UPDATE' : ''}`,
     [id],
   );
   if (!rows.length) throw apiError('Diseño no encontrado.', 404);
@@ -59,19 +61,21 @@ export const disenioService = {
     const filtros = [];
     const parametros = [];
     if (estado !== null) {
-      filtros.push('estado = ?');
+      filtros.push('d.estado = ?');
       parametros.push(estado);
     }
     if (idCategoria !== null) {
-      filtros.push('id_categoria = ?');
+      filtros.push('d.id_categoria = ?');
       parametros.push(idCategoria);
     }
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
     const [rows] = await pool.query(
-      `SELECT id_diseno, id_categoria, nombre_diseno, descripcion, estado
-       FROM disenios
+      `SELECT d.id_diseno, d.id_categoria, c.nombre_categoria,
+              d.nombre_diseno, d.descripcion, d.estado
+       FROM disenios AS d
+       INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
        ${where}
-       ORDER BY id_diseno DESC`,
+       ORDER BY d.id_diseno DESC`,
       parametros,
     );
     return rows;

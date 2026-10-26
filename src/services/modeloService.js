@@ -26,9 +26,12 @@ async function enTransaccion(callback) {
 
 async function buscarPorId(id, connection = pool, bloquear = false) {
   const [rows] = await connection.query(
-    `SELECT id_modelo, id_diseno, nombre_modelo, nivel_educativo, estado
-     FROM modelos
-     WHERE id_modelo = ?${bloquear ? ' FOR UPDATE' : ''}`,
+    `SELECT m.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado,
+            m.id_diseno, d.nombre_diseno, d.id_categoria, c.nombre_categoria
+     FROM modelos AS m
+     INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
+     INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
+     WHERE m.id_modelo = ?${bloquear ? ' FOR UPDATE' : ''}`,
     [id],
   );
   if (!rows.length) throw apiError('Modelo no encontrado.', 404);
@@ -75,14 +78,30 @@ async function bloquearDiseno(connection, idDiseno, validarActivo = true) {
 }
 
 export const modeloService = {
-  async obtenerTodos(estado = null) {
-    const filtro = estado === null ? '' : 'WHERE estado = ?';
-    const parametros = estado === null ? [] : [estado];
+  async obtenerTodos({ estado = null, idCategoria = null, idDiseno = null } = {}) {
+    const filtros = [];
+    const parametros = [];
+    if (idCategoria !== null) {
+      filtros.push('d.id_categoria = ?');
+      parametros.push(idCategoria);
+    }
+    if (idDiseno !== null) {
+      filtros.push('m.id_diseno = ?');
+      parametros.push(idDiseno);
+    }
+    if (estado !== null) {
+      filtros.push('m.estado = ?');
+      parametros.push(estado);
+    }
+    const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
     const [rows] = await pool.query(
-      `SELECT id_modelo, id_diseno, nombre_modelo, nivel_educativo, estado
-       FROM modelos
-       ${filtro}
-       ORDER BY id_modelo DESC`,
+      `SELECT m.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado,
+              m.id_diseno, d.nombre_diseno, d.id_categoria, c.nombre_categoria
+       FROM modelos AS m
+       INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
+       INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
+       ${where}
+       ORDER BY m.id_modelo DESC`,
       parametros,
     );
     return rows;
