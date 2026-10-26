@@ -136,6 +136,50 @@
   border-color: var(--primary);
 }
 
+/* Catálogos internos del módulo de inventario; no navegan entre rutas SPA. */
+.inventory-tablist {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.inventory-tab {
+  flex: 0 0 auto;
+  padding: 14px 2px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inventory-tab:hover { color: var(--text); }
+.inventory-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.inventory-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.inventory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.inventory-toolbar .search-input-wrap { max-width: 420px; }
+.inventory-toolbar .search-input:disabled { background: var(--surface-2); cursor: not-allowed; }
+.inventory-filter-placeholder { color: var(--text-muted); font-size: 12px; }
+.inventory-table-panel { min-height: 180px; }
+.inventory-table { min-width: 760px; }
+.inventory-stat-note { color: var(--text-muted); font-size: 11px; }
+.inventory-error p { margin-bottom: 16px; }
+.inventory-error .btn-cancel { cursor: pointer; }
+.inventory-error .btn-cancel:disabled { opacity: .6; cursor: wait; }
+
 
 /* ══════════════════════════════════════════
    BOTONES

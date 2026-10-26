@@ -29,6 +29,9 @@
   .page-title { font-size: 20px; }
   .topbar-actions .text-sm { font-size: 11px; }
   .panel-header { align-items: flex-start; gap: 8px; }
+  .inventory-toolbar { align-items: stretch; flex-direction: column; gap: 10px; padding: 14px 16px; }
+  .inventory-toolbar .search-input-wrap { max-width: none; width: 100%; }
+  .inventory-tablist { gap: 18px; padding: 0 16px; }
   .table-custom th, .table-custom td { padding: 10px 12px; }
   .toast-container { left: 12px; right: 12px; bottom: 12px; }
   .toast-item { min-width: 0; max-width: none; width: 100%; box-sizing: border-box; }

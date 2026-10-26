@@ -1,0 +1,58 @@
+<section class="inventory-page" aria-labelledby="inventory-title">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title" id="inventory-title">Inventario</h1>
+      <p class="page-subtitle">Gestiona los productos, modelos, diseños y categorías de ISHUME</p>
+    </div>
+  </div>
+
+  <div class="stats-grid inventory-stats" aria-label="Indicadores de inventario">
+    <article class="stat-card">
+      <span class="stat-icon" style="--c: var(--primary)"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+      <span class="stat-value" data-stat="products">Cargando…</span>
+      <span class="stat-label">Productos registrados</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-icon" style="--c: var(--success)"><i class="bi bi-boxes" aria-hidden="true"></i></span>
+      <span class="stat-value" data-stat="units">Cargando…</span>
+      <span class="stat-label">Unidades en inventario</span>
+    </article>
+    <article class="stat-card" title="No se ha definido un umbral de stock bajo">
+      <span class="stat-icon" style="--c: var(--warning)"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>
+      <span class="stat-value" data-stat="low-stock">Pendiente</span>
+      <span class="stat-label">Productos con stock bajo</span>
+      <small class="inventory-stat-note">Sin umbral definido</small>
+    </article>
+    <article class="stat-card">
+      <span class="stat-icon" style="--c: var(--primary)"><i class="bi bi-tags" aria-hidden="true"></i></span>
+      <span class="stat-value" data-stat="categories">Cargando…</span>
+      <span class="stat-label">Categorías</span>
+    </article>
+  </div>
+
+  <section class="card-panel inventory-catalog" aria-labelledby="inventory-catalog-title">
+    <div class="panel-header inventory-panel-header">
+      <div>
+        <h2 class="panel-title" id="inventory-catalog-title">Catálogo de inventario</h2>
+        <span class="panel-caption" id="inventory-caption">Consulta los registros del sistema</span>
+      </div>
+    </div>
+
+    <div class="inventory-tablist" role="tablist" aria-label="Catálogos de inventario">
+      <button class="inventory-tab active" id="tab-productos" type="button" role="tab" aria-selected="true" aria-controls="inventory-panel" data-catalog="productos">Productos</button>
+      <button class="inventory-tab" id="tab-categorias" type="button" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1" data-catalog="categorias">Categorías</button>
+      <button class="inventory-tab" id="tab-disenios" type="button" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1" data-catalog="disenios">Diseños</button>
+      <button class="inventory-tab" id="tab-modelos" type="button" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1" data-catalog="modelos">Modelos</button>
+    </div>
+
+    <div class="inventory-toolbar" aria-label="Búsqueda y filtros">
+      <label class="search-input-wrap">
+        <i class="bi bi-search search-icon" aria-hidden="true"></i>
+        <input class="search-input" type="search" placeholder="Búsqueda disponible en una próxima fase" disabled aria-label="Buscar en el catálogo">
+      </label>
+      <span class="inventory-filter-placeholder">Los filtros estarán disponibles en una próxima fase</span>
+    </div>
+
+    <div id="inventory-panel" class="inventory-table-panel" role="tabpanel" aria-labelledby="tab-productos" tabindex="0" aria-live="polite"></div>
+  </section>
+</section>
