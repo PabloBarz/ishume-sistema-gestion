@@ -3,6 +3,7 @@ import './config/db.js';
 import express from 'express';
 import categoriaRouter from './routes/categoriaRouter.js';
 import disenioRouter from './routes/disenioRouter.js';
+import modeloRouter from './routes/modeloRouter.js';
 import contratoRouter from './routes/contratoRouter.js';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +18,7 @@ app.use(express.json());
 
 app.use('/api/categorias', categoriaRouter);
 app.use('/api/disenios', disenioRouter);
+app.use('/api/modelos', modeloRouter);
 app.use('/api/contratos', contratoRouter);
 
 app.use('/api', (req, res) => {
