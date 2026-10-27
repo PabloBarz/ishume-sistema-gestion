@@ -1,43 +1,45 @@
-<section aria-labelledby="contratos-title">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title" id="contratos-title">Consulta de contratos</h1>
-      <p class="page-subtitle">Ingresa el ID del contrato para consultar su cliente, modelos y fecha de entrega.</p>
-    </div>
-  </div>
-
-  <section class="card-panel" aria-labelledby="contrato-busqueda-title">
-    <div class="panel-header">
-      <h2 class="panel-title" id="contrato-busqueda-title"><i class="bi bi-search" aria-hidden="true"></i> Buscar contrato</h2>
-    </div>
-    <form class="panel-body form-stack" id="contratoForm" novalidate>
-      <div>
-        <label class="form-label-custom" for="contratoId">ID del contrato</label>
-        <input class="input-custom" id="contratoId" name="id" type="text" inputmode="numeric" pattern="[0-9]+" required aria-describedby="err-contratoId" autocomplete="off">
-        <p class="field-error" id="err-contratoId" aria-live="polite"></p>
-      </div>
-      <button class="btn-primary-action" id="contratoConsultar" type="submit">
-        <i class="bi bi-search" aria-hidden="true"></i> Consultar contrato
-      </button>
+<section class="ordenes-contenido" aria-labelledby="contratos-title">
+  <div class="page-header"><div>
+    <h1 class="page-title" id="contratos-title">Preparar pedidos</h1>
+    <p class="page-subtitle" id="ordenPaso">Busca colegios, asigna proveedores y prepara pedidos</p>
+  </div></div>
+  <p id="contratoEstado" role="status" aria-live="polite">Cargando proveedores…</p>
+  <div id="ordenEditor">
+  <section class="card-panel" aria-label="Buscar colegio">
+    <form class="panel-body colegio-buscador" id="contratoForm" role="search">
+      <label class="form-label-custom" for="colegioBusqueda">Agregar colegio</label>
+      <div class="colegio-buscador-campo"><i class="bi bi-search" aria-hidden="true"></i><input class="input-custom" id="colegioBusqueda" type="search" placeholder="Buscar colegio por nombre..." autocomplete="off" aria-controls="colegioResultados" aria-describedby="colegioBusquedaEstado" disabled></div>
+      <p class="text-sm text-muted" id="colegioBusquedaEstado" role="status" aria-live="polite">Cargando colegios…</p>
+      <button class="btn-cancel" id="colegioReintentar" type="button" hidden>Reintentar carga</button>
+      <ul id="colegioResultados" class="colegio-resultados" aria-label="Colegios disponibles" hidden></ul>
     </form>
   </section>
-
-  <p id="contratoEstado" role="status" aria-live="polite">Ingresa un ID para comenzar.</p>
-
-  <section class="card-panel" id="contratoResultado" aria-labelledby="contrato-resultado-title" hidden>
-    <div class="panel-header">
-      <h2 class="panel-title" id="contrato-resultado-title">Detalle del contrato <span id="contratoNumero"></span></h2>
+  <section class="colegios-agregados" aria-labelledby="colegios-agregados-title">
+    <h2 class="panel-title" id="colegios-agregados-title">Colegios agregados (0)</h2>
+    <div class="panel-stack" id="contratoColegios"></div>
+  </section>
+  <section class="card-panel orden-accion" id="compraResumen" aria-label="Preparar órdenes" hidden>
+    <div class="panel-body resumen-pedido-proveedores"><h2 class="panel-title">Resumen del pedido</h2><dl id="compraPedidosProveedor" class="pedidos-proveedor"></dl></div>
+    <div class="panel-body resumen-footer">
+      <div class="orden-accion-texto"><p id="compraAccionResumen"></p><p class="resumen-validacion" id="compraValidacion" role="status" aria-live="polite"><i class="bi bi-check-circle-fill" id="compraValidacionIcono" aria-hidden="true" hidden></i><span id="compraValidacionTexto"></span></p></div>
+      <button class="btn-primary-action" id="compraPreparar" type="button" disabled>Guardar pedidos</button>
     </div>
-    <dl class="panel-body detail-list">
-      <div><dt class="form-label-custom">Cliente / colegio</dt><dd id="contratoCliente"></dd></div>
-      <div><dt class="form-label-custom">Fecha de entrega</dt><dd id="contratoFecha"></dd></div>
-    </dl>
-    <div class="table-scroll">
-      <table class="table-custom">
-        <caption class="panel-note">Modelos solicitados</caption>
-        <thead><tr><th scope="col">Modelo</th><th scope="col">Cantidad</th></tr></thead>
-        <tbody id="contratoModelos"></tbody>
-      </table>
+  </section>
+  </div>
+  <div class="modal-overlay orden-confirmacion" id="compraRevision" aria-hidden="true" hidden>
+  <section class="card-panel revision-pedido modal-panel" aria-labelledby="compra-revision-title">
+    <div class="modal-header-custom"><h2 class="modal-title-custom" id="compra-revision-title">Confirmar pedidos</h2></div>
+    <div class="panel-body" id="compraRevisionContenido"></div>
+    <p class="orden-modal-estado" id="compraRevisionEstado" role="status" aria-live="polite"></p>
+    <div class="panel-body compra-totals revision-acciones">
+      <button class="btn-cancel" id="compraEditar" type="button">Volver a editar</button>
+      <button class="btn-primary-action" id="compraConfirmar" type="button">Confirmar y guardar</button>
     </div>
+  </section>
+  </div>
+  <section class="card-panel compra-summary" id="compraConfirmacion" aria-labelledby="compra-confirmacion-title" hidden>
+    <div class="panel-header"><h2 class="panel-title" id="compra-confirmacion-title"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedidos guardados correctamente</h2></div>
+    <div class="panel-body" id="compraOrdenesGeneradas" role="status"></div>
+    <div class="panel-body compra-totals confirmacion-acciones"><a class="btn-primary-action" href="#/ordenes/guardadas">Ir a pedidos pendientes</a><button class="btn-cancel" id="compraNueva" type="button">Crear otro pedido</button></div>
   </section>
 </section>

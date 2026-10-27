@@ -1,0 +1,47 @@
+#pagos .pagos-demo { margin: 0 0 18px; padding: 12px 16px; border: 1px solid #e5def5; border-radius: var(--radius-sm); background: #f8f5ff; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+#pagos .pagos-selector .panel-body { padding: 16px 20px; }
+#pagos #pagosProveedor { width: 100%; max-width: 430px; }
+#pagos #pagosEstado { font-size: 13px; line-height: 1.6; }
+#pagos #pagosEstado:empty { display: none; }
+#pagos .pagos-resumen { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 18px 0; }
+#pagos .pagos-resumen[hidden], #pagos .pagos-form[hidden] { display: none; }
+#pagos .pagos-indicador { margin: 0; padding: 16px 18px; background: white; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
+#pagos .pagos-indicador dt, #pagos .pagos-orden-resumen dt { font-size: 12px; color: var(--text-muted); }
+#pagos .pagos-indicador dd { margin: 7px 0 0; font-size: 25px; font-weight: 700; overflow-wrap: anywhere; }
+#pagos .pagos-indicador:last-child dd { color: var(--primary-dark); }
+#pagos .pagos-tabla { min-width: 650px; }
+#pagos .pagos-tabla th { text-align: left; text-transform: none; letter-spacing: normal; }
+#pagos .pagos-tabla th:nth-child(2), #pagos .pagos-tabla th:nth-child(3), #pagos .pagos-tabla td:nth-child(2), #pagos .pagos-tabla td:nth-child(3) { text-align: center; }
+#pagos .pagos-tabla td { padding-block: 12px; }
+#pagos .pagos-codigo { border: 0; background: none; padding: 5px 0; font-weight: 600; text-align: left; }
+#pagos .pagos-orden-activa { background: #f7f3ff; }
+#pagos .pagos-detalle { margin-top: 20px; }
+#pagos .pagos-detalle .panel-header { gap: 12px; flex-wrap: wrap; }
+#pagos .pagos-form { display: grid; gap: 14px; max-width: 680px; margin-top: 16px; }
+#pagos .pagos-form .input-custom { width: 100%; }
+#pagos .pagos-form button { justify-self: start; }
+#pagos .pagos-form-fila { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+#pagos .field-error:empty { display: none; }
+#pagos .pagos-archivo-vista:empty { display: none; }
+#pagos .pagos-archivo-vista p { font-size: 13px; margin: 0 0 10px; overflow-wrap: anywhere; }
+#pagos .pagos-archivo-vista img { display: block; max-width: 100%; max-height: 200px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+#pagos .pagos-orden-resumen { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 0 0 16px; }
+#pagos .pagos-orden-resumen dd { font-size: 21px; font-weight: 700; margin: 6px 0 0; overflow-wrap: anywhere; }
+#pagos .pagos-archivo-registrado { color: var(--text-muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; margin: 0 0 16px; }
+#pagos .pagos-historial-title { margin-top: 22px; }
+#pagos .pagos-historial { list-style: none; margin: 12px 0 0; padding: 0; max-width: 800px; }
+#pagos .pagos-historial li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+#pagos .pagos-historial small { display: block; color: var(--text-muted); line-height: 1.5; margin-top: 4px; overflow-wrap: anywhere; }
+#pagos .pagos-historial li > span { min-width: 0; }
+#pagos .pagos-historial strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#pagos .pagos-completado { color: #176534; font-size: 14px; font-weight: 600; }
+#pagos #pagosReintentar[hidden] { display: none; }
+@media (max-width: 600px) {
+  #pagos .pagos-resumen { grid-template-columns: 1fr; gap: 8px; }
+  #pagos .pagos-indicador { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; }
+  #pagos .pagos-indicador dd { margin: 0; font-size: 22px; }
+  #pagos .pagos-form-fila { grid-template-columns: 1fr; }
+  #pagos .pagos-orden-resumen { gap: 10px; }
+  #pagos .pagos-orden-resumen dd { font-size: 17px; }
+  #pagos .panel-body { padding: 16px; }
+}

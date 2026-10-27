@@ -1,6 +1,15 @@
 import { contratoService } from '../services/contratoService.js';
 
 export const contratoController = {
+  async listarColegios(req, res) {
+    res.set('Cache-Control', 'no-store');
+    try {
+      return res.json({ success: true, data: await contratoService.listarEscolaresEnProceso() });
+    } catch (error) {
+      return res.status(error.status || 500).json({ success: false,
+        message: error.status ? error.message : 'No se pudo cargar el listado de colegios.' });
+    }
+  },
   async consultar(req, res) {
     const { id } = req.query;
     if (typeof id !== 'string' || !/^\d+$/.test(id) ||

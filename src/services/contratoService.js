@@ -2,8 +2,18 @@ function apiError(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
-export const contratoService = {
-  async obtenerPorId(id) {
+function disponibilidad(productos) {
+  const ids = new Set();
+  const validos = Array.isArray(productos) && productos.length > 0 && productos.every(p => {
+    if (!p || !Number.isInteger(p.id_modelo) || p.id_modelo < 1 || p.id_modelo > 2147483647 || ids.has(p.id_modelo) ||
+        typeof p.modelo !== 'string' || !p.modelo.trim() || !Number.isInteger(p.cantidad) || p.cantidad < 1 || p.cantidad > 2147483647) return false;
+    ids.add(p.id_modelo);return true;
+  });
+  return { modelos_disponibles: validos, aviso_modelos: validos ? ''
+    : Array.isArray(productos) && productos.length === 0 ? 'Sin modelos disponibles' : 'Modelos incompletos o cantidades inválidas' };
+}
+
+async function consultarApi(params) {
     let url;
     try {
       url = new URL(process.env.CONTRATOS_API_URL);
@@ -11,7 +21,10 @@ export const contratoService = {
     } catch {
       throw apiError('Configura CONTRATOS_API_URL con la dirección de la API de contratos.', 503);
     }
-    url.searchParams.set('id', id);
+    url.searchParams.delete('id');
+    url.searchParams.delete('estado_trabajo');
+    url.searchParams.delete('listado');
+    Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,value));
 
     let response;
     let data;
@@ -33,6 +46,30 @@ export const contratoService = {
       throw apiError('No se pudo obtener una respuesta válida del sistema de contratos.', 502);
     }
 
+    return data;
+}
+
+export const contratoService = {
+  async listarEscolaresEnProceso() {
+    const data = await consultarApi({ listado: 'escolares_en_proceso' });
+    if (!Array.isArray(data)) throw apiError('El sistema de contratos devolvió un listado inválido.', 502);
+    const ids = new Set();
+    return data.filter(c => {
+      const servicio = typeof c?.promocion === 'string'
+        ? c.promocion.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
+      if (!c || !Number.isSafeInteger(c.id_contrato) || c.id_contrato <= 0 ||
+          typeof c.colegio !== 'string' || !c.colegio.trim() || c.estado_trabajo !== 'en_proceso' ||
+          (servicio && servicio !== 'promocion') || ids.has(c.id_contrato)) return false;
+      ids.add(c.id_contrato);
+      return true;
+    }).map(c => ({ id_contrato: c.id_contrato, colegio: c.colegio,
+      cliente: typeof c.cliente === 'string' ? c.cliente : '',
+      fecha_entrega: typeof c.fecha_entrega === 'string' ? c.fecha_entrega : null,
+      ...disponibilidad(c.productos) }));
+  },
+  async obtenerPorId(id) {
+    const data = await consultarApi({ id });
+
     if (!data || String(data.id_contrato) !== String(Number(id)) ||
         typeof data.cliente !== 'string' ||
         !(data.fecha_entrega === null || typeof data.fecha_entrega === 'string') ||
@@ -42,6 +79,6 @@ export const contratoService = {
       throw apiError('El sistema de contratos devolvió datos incompletos o inválidos.', 502);
     }
 
-    return data;
+    return { ...data, ...disponibilidad(data.productos) };
   },
 };

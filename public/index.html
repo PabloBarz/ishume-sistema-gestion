@@ -36,23 +36,18 @@
           <span>Vista de ejemplo</span>
         </a>
         <div class="nav-section-label">Compras</div>
-        <a class="nav-item" href="#/contratos" data-page="contratos">
-          <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-          <span>Consultar contratos</span>
-        </a>
-        <a class="nav-item active" href="#/compras.html" data-page="compras" aria-current="page">
-          <i class="bi bi-grid-1x2-fill" aria-hidden="true"></i>
-          <span>Compras</span>
-        </a>
-        <div class="nav-section-label">Ordenes</div>
-        <a class="nav-item active" href="views/ordenes_compra.html" data-page="dashboard" aria-current="page">
-          <i class="bi bi-grid-1x2-fill" aria-hidden="true"></i>
-          <span>Ordenes_compra</span>
-        </a>
+        <details class="nav-group" id="ordenesMenu">
+          <summary class="nav-item"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Órdenes de compra</span><i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i></summary>
+          <div class="nav-submenu">
+            <a class="nav-item" href="#/ordenes/nueva" data-page="ordenes/nueva"><i class="bi bi-plus-circle" aria-hidden="true"></i><span>Preparar pedidos</span></a>
+            <a class="nav-item" href="#/ordenes/guardadas" data-page="ordenes/guardadas"><i class="bi bi-archive" aria-hidden="true"></i><span>Órdenes guardadas</span></a>
+          </div>
+        </details>
+        <a class="nav-item" href="#/pagos" data-page="pagos"><i class="bi bi-receipt" aria-hidden="true"></i><span>Pagos</span></a>
+
         <div class="nav-section-label">Próximamente</div>
         <span class="nav-item nav-item-disabled"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Compras</span></span>
         <span class="nav-item nav-item-disabled"><i class="bi bi-boxes" aria-hidden="true"></i><span>Inventario</span></span>
-        <span class="nav-item nav-item-disabled"><i class="bi bi-receipt" aria-hidden="true"></i><span>Pagos</span></span>
       </nav>
 
       <div class="sidebar-footer">

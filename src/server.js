@@ -3,6 +3,8 @@ import './config/db.js';
 import express from 'express';
 import categoriaRouter from './routes/categoriaRouter.js';
 import contratoRouter from './routes/contratoRouter.js';
+import proveedorRouter from './routes/proveedorRouter.js';
+import compraMasivaRouter from './routes/compraMasivaRouter.js';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,6 +18,8 @@ app.use(express.json());
 
 app.use('/api/categorias', categoriaRouter);
 app.use('/api/contratos', contratoRouter);
+app.use('/api/proveedores', proveedorRouter);
+app.use('/api/compras-masivas', compraMasivaRouter);
 
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada.' });

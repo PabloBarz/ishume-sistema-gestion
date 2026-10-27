@@ -23,6 +23,34 @@
 }
 
 @media (max-width: 480px) {
+  #compraRevision > .panel-body { padding: 14px; }
+  #compraRevision .revision-indicadores { gap: 8px; }
+  #compraRevision .resumen-indicador { padding: 12px 8px; gap: 6px; }
+  #compraRevision .resumen-indicador span { font-size: 11px; }
+  #compraRevision .resumen-indicador strong { font-size: 24px; }
+  #compraRevision .revision-proveedor-header { padding: 14px; }
+  #compraRevision .revision-proveedor-header h3 { font-size: 16px; }
+  #compraRevision .revision-proveedor-total { font-size: 17px; }
+  #compraRevision .revision-colegio { padding: 14px; }
+  #compraRevision .revision-tabla th, #compraRevision .revision-tabla td { padding: 10px 8px; }
+  #compraRevision .revision-tabla th:last-child, #compraRevision .revision-tabla td:last-child { width: 72px; }
+  #compraRevision .revision-final { padding: 14px; }
+  #compraRevision .revision-acciones > button { height: auto; min-height: 40px; padding: 10px 12px; white-space: normal; }
+  #ordenEditor .colegio-header { padding: 16px; gap: 10px; }
+  #ordenEditor .colegio-header h2 { font-size: 15px; }
+  #ordenEditor .colegio-card > h3 { margin: 14px 12px 0; }
+  #ordenEditor .colegio-card > .table-scroll { margin: 0 12px 14px; }
+  #ordenEditor .colegio-card > .table-footer { padding: 14px 16px; gap: 8px 16px; }
+  #ordenEditor .colegio-card > .table-footer strong { font-size: 16px; }
+  .revision-pedido > .panel-body { padding: 12px; }
+  .revision-indicadores { gap: 8px; }
+  .revision-indicadores .resumen-indicador { padding: 10px 8px; }
+  .revision-indicadores .resumen-indicador span { font-size: 11px; }
+  .revision-proveedor { padding: 12px; }
+  .resumen-indicadores { gap: 8px; }
+  .resumen-indicador { padding: 10px; }
+  .resumen-indicador strong { font-size: 22px; }
+  .resumen-orden .panel-body { padding: 10px 12px; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat-card { padding: 16px; }
   .stat-value { font-size: 22px; }

@@ -1,0 +1,22 @@
+<section id="pagos" class="ordenes-contenido" aria-labelledby="pagos-title">
+  <div class="page-header"><div><h1 class="page-title" id="pagos-title">Pagos a proveedores</h1><p class="page-subtitle">Controla los abonos y saldos de tus compras</p></div><span class="badge badge-info">Prototipo</span></div>
+  <p class="pagos-demo">Las órdenes y proveedores son reales. Las cotizaciones y abonos son de demostración: no se guardan en MySQL ni se suben archivos. Se reinician al recargar o salir de esta pantalla.</p>
+  <section class="card-panel pagos-selector">
+    <div class="panel-body"><label class="form-label-custom" for="pagosProveedor">Seleccionar proveedor</label><select class="input-custom" id="pagosProveedor" disabled><option value="">Cargando proveedores…</option></select></div>
+  </section>
+  <p id="pagosEstado" role="status" aria-live="polite">Cargando proveedores…</p>
+  <button class="btn-cancel" id="pagosReintentar" type="button" hidden>Reintentar consulta</button>
+  <dl class="pagos-resumen" id="pagosResumen" aria-label="Resumen de demostración del proveedor" hidden>
+    <div class="pagos-indicador"><dt>Total acordado</dt><dd id="pagosTotalAcordado"></dd></div>
+    <div class="pagos-indicador"><dt>Total abonado</dt><dd id="pagosTotalAbonado"></dd></div>
+    <div class="pagos-indicador"><dt>Saldo pendiente</dt><dd id="pagosSaldoPendiente"></dd></div>
+  </dl>
+  <section class="card-panel" id="pagosOrdenesPanel" aria-labelledby="pagosOrdenesTitulo" hidden>
+    <div class="panel-header"><h2 class="panel-title" id="pagosOrdenesTitulo">Órdenes de compra masivas</h2></div>
+    <div id="pagosOrdenes"></div>
+  </section>
+  <section class="card-panel pagos-detalle" id="pagosDetalle" aria-labelledby="pagosDetalleTitulo" hidden>
+    <div class="panel-header"><h2 class="panel-title" id="pagosDetalleTitulo"></h2><span class="badge" id="pagosDetalleEstado"></span></div>
+    <div class="panel-body" id="pagosDetalleContenido"></div>
+  </section>
+</section>

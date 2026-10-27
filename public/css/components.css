@@ -91,6 +91,327 @@
 /* Contenido y datos de paneles compartidos por las vistas. */
 .panel-body { padding: 20px 24px; }
 
+.panel-stack { display: grid; gap: 24px; margin-bottom: 24px; }
+.compra-summary { margin-top: 24px; }
+.colegio-buscador { max-width: 850px; }
+.colegio-buscador-campo { position: relative; }
+.colegio-buscador-campo > i { position: absolute; top: 50%; left: 14px; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+.colegio-buscador-campo input { width: 100%; padding-left: 40px; background: white; border-radius: var(--radius-sm); }
+.colegio-buscador > p { margin: 10px 0; line-height: 1.5; }
+.colegio-resultados { list-style: none; margin: 12px 0 0; padding: 0; max-height: 310px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; }
+.colegio-resultados:empty { display: none; }
+.colegio-resultados li + li { border-top: 1px solid var(--border); }
+.colegio-resultados button { display: flex; flex-direction: column; gap: 5px; width: 100%; text-align: left; padding: 12px 14px; border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.colegio-resultados button strong { font-size: 14px; line-height: 1.5; }
+.colegio-resultados button span { font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+.colegio-resultados button:hover, .colegio-resultados button:focus-visible { background: var(--primary-light); outline: 2px solid var(--primary); outline-offset: -2px; }
+.colegio-resultados button:disabled { cursor: default; opacity: .6; background: #f8f8fb; }
+.colegio-resultados .colegio-sin-modelos { color: #8c570b; font-weight: 600; }
+.colegio-resultados button:has(.colegio-sin-modelos) { opacity: 1; background: #fcfaf6; }
+.colegio-resultados[hidden] { display: none; }
+#ordenEditor .colegio-buscador { max-width: none; padding: 18px 22px; }
+#ordenEditor .colegio-buscador .form-label-custom { font-size: 15px; font-weight: 700; }
+#ordenEditor .colegio-buscador-campo { max-width: 760px; }
+#ordenEditor .colegio-resultados { max-width: 760px; max-height: 265px; }
+#ordenEditor .colegios-agregados { margin-top: 24px; }
+#ordenEditor #colegios-agregados-title { margin: 0 0 14px; font-size: 16px; font-weight: 700; }
+#ordenEditor #contratoColegios:empty { margin-bottom: 0; }
+#ordenEditor #compraResumenContenido { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#ordenEditor .colegio-card > h3.categoria-book { background: #f0f4fa; border-left-color: #8296b2; color: #435d80; }
+#ordenEditor .orden-estadisticas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+#contratoEstado:empty { display: none; }
+#ordenEditor .orden-estadisticas .stat-card { background: white; border-color: #e4e2ed; padding: 16px 18px; gap: 6px; box-shadow: none; }
+#ordenEditor .orden-estadisticas .stat-card:hover { transform: none; box-shadow: none; }
+#ordenEditor .orden-estadisticas strong { font-size: 27px; color: var(--text); font-variant-numeric: tabular-nums; }
+#ordenEditor .orden-estadisticas span { color: var(--text-muted); font-size: 12px; }
+#ordenEditor .orden-estadisticas small { font-size: 11px; }
+#ordenEditor .colegios-agregados { margin-top: 20px; }
+#ordenEditor #contratoColegios { gap: 18px; margin-bottom: 18px; }
+#ordenEditor .colegio-header { padding: 16px 20px; background: #fdfcfe; }
+#ordenEditor .colegio-header h2 { font-size: 16px; }
+#ordenEditor .colegio-card > h3 { margin-top: 12px; padding: 9px 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
+#ordenEditor .colegio-card > .table-scroll { margin-bottom: 12px; }
+#ordenEditor .colegio-card > .table-footer { padding: 12px 20px; }
+#ordenEditor .colegio-card > .table-footer strong { font-size: 16px; }
+#ordenEditor .orden-accion { margin-top: 18px; border-color: #e0d8ef; }
+#ordenEditor .orden-accion .panel-body { padding: 14px 18px; }
+#ordenEditor .orden-accion-texto { flex: 1 1 260px; min-width: 0; }
+#ordenEditor #compraAccionResumen { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.6; }
+#ordenEditor .orden-accion .resumen-validacion { margin-top: 5px; font-size: 12px; line-height: 1.5; }
+@media (max-width: 480px) {
+  #ordenEditor .orden-estadisticas { gap: 8px; }
+  #ordenEditor .orden-estadisticas .stat-card { padding: 12px 8px; }
+  #ordenEditor .orden-estadisticas strong { font-size: 22px; }
+  #ordenEditor .orden-estadisticas span { font-size: 11px; }
+  #ordenEditor .colegio-header { padding: 14px; }
+  #ordenEditor .orden-accion .panel-body { padding: 12px; }
+}
+.compra-provider + .compra-provider { margin-top: 24px; }
+.proveedor-total { margin: 0; padding: 18px 12px; text-align: right; font-size: 18px; font-weight: 600; color: var(--primary); border-top: 2px solid var(--border); }
+.proveedor-total strong { font-size: 24px; }
+.colegio-card { border: 2px solid var(--border); scroll-margin-top: calc(var(--topbar-h) + 16px); }
+.colegio-card:focus { outline: 2px solid var(--primary); outline-offset: 3px; }
+.colegio-header { background: var(--primary-light); border-bottom: 2px solid var(--border); }
+.colegio-numero { display: inline-block; padding: 4px 10px; margin-bottom: 10px; border-radius: var(--radius-sm); background: var(--primary); color: white; font-size: 12px; font-weight: 600; }
+.compra-totals { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+/* Jerarquía visual de colegios en edición; conserva controles y distribución. */
+#ordenEditor #contratoColegios { gap: 28px; }
+#ordenEditor .colegio-card { border: 1px solid #ded8ed; box-shadow: 0 3px 12px rgba(35, 24, 64, .04); }
+#ordenEditor .colegio-header { align-items: flex-start; gap: 16px; padding: 20px 24px; background: #faf8ff; border-bottom: 1px solid #e9e3f2; }
+#ordenEditor .colegio-header > div { flex: 1; min-width: 0; }
+#ordenEditor .colegio-header h2 { font-size: 17px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+#ordenEditor .colegio-header p { margin: 6px 0 0; line-height: 1.6; color: var(--text-muted); }
+#ordenEditor .colegio-numero { margin-bottom: 8px; padding: 4px 9px; background: #eee8fa; color: var(--primary-dark); font-size: 11px; }
+#ordenEditor .colegio-header [data-quitar] { flex-shrink: 0; margin-top: 2px; font-size: 13px; border: 1px solid transparent; }
+#ordenEditor .colegio-header [data-quitar]:hover { border-color: #f3d4d4; }
+#ordenEditor .colegio-card > h3 { margin: 18px 20px 0; padding: 11px 14px; background: #f4f0fc; border-left: 3px solid var(--primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--primary-dark); font-size: 15px; font-weight: 700; }
+#ordenEditor .colegio-card > .table-scroll { margin: 0 20px 18px; }
+#ordenEditor .colegio-card > .table-footer { align-items: center; padding: 16px 24px; background: #faf8ff; border-top: 1px solid #e9e3f2; font-variant-numeric: tabular-nums; }
+#ordenEditor .colegio-card > .table-footer span { font-size: 13px; color: var(--text-muted); }
+#ordenEditor .colegio-card > .table-footer strong { font-size: 18px; color: var(--primary-dark); }
+.resumen-orden .panel-header { padding: 12px 16px; }
+.resumen-orden .panel-body { padding: 12px 16px; }
+.resumen-indicadores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.resumen-indicador { min-width: 0; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 4px; }
+.resumen-indicador strong { font-size: 26px; line-height: 1.15; overflow-wrap: anywhere; }
+.resumen-indicador small, .resumen-indicador span { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.resumen-proveedores .panel-title { font-weight: 700; }
+.pedidos-proveedor { margin: 10px 0 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.pedidos-proveedor:empty { display: none; }
+.pedidos-proveedor > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; font-size: 13px; }
+.pedidos-proveedor > div + div { border-top: 1px solid var(--border); }
+.pedidos-proveedor dt { overflow-wrap: anywhere; }
+.pedidos-proveedor dd { margin: 0; font-weight: 700; text-align: right; }
+.resumen-proveedores > p { margin: 8px 0 0; }
+.resumen-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.resumen-validacion { display: flex; align-items: flex-start; gap: 8px; flex: 1 1 240px; margin: 0; font-size: 13px; color: var(--text-muted); }
+.resumen-validacion.is-complete i { color: var(--success); }
+.resumen-footer .btn-primary-action { margin-left: auto; flex-shrink: 0; }
+.resumen-footer .btn-primary-action:disabled { cursor: not-allowed; }
+
+/* Presentación compacta de la revisión; no afecta las tablas de edición. */
+.revision-pedido > .panel-body { padding: 16px; }
+.revision-indicadores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.revision-detalle-titulo { margin: 20px 0 12px; font-weight: 700; }
+.revision-proveedores { display: grid; gap: 14px; }
+.revision-proveedor { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+.revision-proveedor-header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding-bottom: 12px; }
+.revision-proveedor-header > div { flex: 1 1 180px; min-width: 0; }
+.revision-proveedor-header h3 { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.revision-proveedor-header p { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
+.revision-proveedor-total { margin-left: auto; font-size: 17px; text-align: right; }
+.revision-colegio { border-top: 1px solid var(--border); padding-top: 12px; }
+.revision-colegio + .revision-colegio { margin-top: 12px; }
+.revision-colegio h4 { margin: 0 0 8px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.revision-tabla { min-width: 0; table-layout: fixed; }
+.revision-tabla th, .revision-tabla td { padding: 8px 0; text-align: left; overflow-wrap: anywhere; }
+.revision-tabla th { background: var(--surface); text-transform: none; letter-spacing: normal; font-size: 11px; }
+.revision-tabla td { font-size: 13px; }
+.revision-tabla th:first-child, .revision-tabla td:first-child { padding-right: 12px; }
+.revision-tabla th:last-child, .revision-tabla td:last-child { width: 76px; text-align: right; }
+.revision-final { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.revision-total { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.revision-total span, .revision-final p { font-size: 12px; color: var(--text-muted); }
+.revision-total strong { font-size: 20px; }
+.revision-final p { margin: 0; }
+.revision-acciones { border-top: 1px solid var(--border); }
+.revision-acciones .btn-primary-action { margin-left: auto; }
+
+/* Jerarquía y lectura de la revisión de Nueva orden, sin afectar otras pantallas. */
+section:has(> #compraRevision:not([hidden])) > .page-header { padding-bottom: 16px; border-bottom: 1px solid #e5dfef; margin-bottom: 16px; }
+section:has(> #compraRevision:not([hidden])) #contratos-title { line-height: 1.35; font-weight: 700; }
+section:has(> #compraRevision:not([hidden])) #ordenPaso { margin-top: 8px; max-width: 760px; line-height: 1.65; }
+#compraRevision { border-color: #e1dbea; box-shadow: 0 3px 14px rgba(35, 24, 64, .035); }
+#compraRevision > .panel-body { padding: 22px; }
+#compraRevision .revision-indicadores { gap: 14px; }
+#compraRevision .resumen-indicador { background: #faf8fe; border-color: #e6e0ef; padding: 16px; gap: 8px; }
+#compraRevision .resumen-indicador span { color: var(--text); font-weight: 500; line-height: 1.4; }
+#compraRevision .resumen-indicador strong { color: var(--primary-dark); font-size: 30px; font-variant-numeric: tabular-nums; }
+#compraRevision .revision-detalle-titulo { margin: 26px 0 14px; font-size: 16px; font-weight: 700; }
+#compraRevision .revision-proveedores { gap: 20px; }
+#compraRevision .revision-proveedor { padding: 0; border-color: #e2ddeb; border-radius: var(--radius); overflow: hidden; }
+#compraRevision .revision-proveedor-header { background: #f8f6fc; padding: 16px 20px; border-bottom: 1px solid #e7e1ef; }
+#compraRevision .revision-proveedor-header h3 { font-size: 17px; font-weight: 700; line-height: 1.4; color: var(--text); }
+#compraRevision .revision-proveedor-header p { margin-top: 6px; line-height: 1.5; }
+#compraRevision .revision-proveedor-total { color: var(--primary-dark); font-size: 19px; font-variant-numeric: tabular-nums; }
+#compraRevision .revision-colegio { padding: 18px 20px; border-top: 0; }
+#compraRevision .revision-colegio + .revision-colegio { margin-top: 0; border-top: 1px solid #ece8f1; }
+#compraRevision .revision-colegio h4 { margin: 0 0 12px; padding-left: 10px; border-left: 3px solid #c5b5e5; font-size: 14px; font-weight: 700; line-height: 1.6; }
+#compraRevision .revision-tabla { width: 100%; min-width: 0; table-layout: fixed; }
+#compraRevision .revision-tabla th { background: #f7f8fb; padding: 10px 12px; color: var(--text-muted); font-size: 12px; white-space: normal; }
+#compraRevision .revision-tabla td { padding: 12px; border-bottom-color: #eeebf3; line-height: 1.5; }
+#compraRevision .revision-tabla th:last-child, #compraRevision .revision-tabla td:last-child { width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
+#compraRevision .revision-tabla td:last-child { font-weight: 600; }
+#compraRevision .revision-final { margin-top: 22px; padding: 16px; border: 1px solid #e6e0ef; border-radius: var(--radius-sm); background: #faf8fe; }
+#compraRevision .revision-total { padding: 0; border: 0; background: transparent; gap: 6px; }
+#compraRevision .revision-total strong { font-size: 23px; color: var(--primary-dark); }
+#compraRevision .revision-final p { line-height: 1.6; }
+#compraRevision .revision-acciones { align-items: center; background: #fdfcfe; border-top-color: #e6e0ef; gap: 12px; }
+
+.panel-stack[hidden] { display: none; }
+.ordenes-tarjetas { display: grid; gap: 16px; }
+/* Historial de órdenes: agrupación visual de los resultados de la página. */
+#ordenesGuardadas .ordenes-generadas-grupos { display: grid; gap: 18px; }
+#ordenesGuardadas .ordenes-generadas-proveedor { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius); background: white; overflow: hidden; }
+#ordenesGuardadas .ordenes-generadas-encabezado { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; padding: 14px 16px; border-bottom: 1px solid var(--border); background: #faf9fc; }
+#ordenesGuardadas .ordenes-generadas-encabezado h3 { margin: 0; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+#ordenesGuardadas .ordenes-generadas-encabezado p { margin: 0; color: var(--text-muted); font-size: 12px; }
+#ordenesGuardadas .ordenes-generadas-encabezado strong { color: var(--text); }
+#ordenesGuardadas .ordenes-generadas-lista { list-style: none; margin: 0; padding: 0; }
+#ordenesGuardadas .orden-generada-fila { display: grid; grid-template-columns: minmax(140px,1fr) auto auto auto; align-items: center; gap: 12px 16px; padding: 12px 16px; }
+#ordenesGuardadas .orden-generada-fila + .orden-generada-fila { border-top: 1px solid var(--border); }
+#ordenesGuardadas .orden-generada-identidad { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#ordenesGuardadas .orden-generada-identidad strong { white-space: normal; overflow-wrap: anywhere; }
+#ordenesGuardadas .orden-generada-identidad span { color: var(--text-muted); font-size: 12px; }
+#ordenesGuardadas .orden-generada-unidades { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+#ordenesGuardadas .orden-generada-estado { justify-self: start; }
+#ordenesGuardadas .orden-generada-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#ordenesGuardadas .orden-generada-acciones a { display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; height: 32px; font-size: 12px; text-decoration: none; }
+#ordenesGuardadas .orden-generada-acciones button { width: 32px; height: 32px; }
+@media (max-width: 1100px) {
+  #ordenesGuardadas .orden-generada-fila { grid-template-columns: minmax(140px,1fr) auto; gap: 8px 12px; }
+  #ordenesGuardadas .orden-generada-acciones { justify-content: flex-end; }
+}
+@media (max-width: 480px) {
+  #ordenesGuardadas .orden-generada-fila { padding: 12px; }
+  #ordenesGuardadas .orden-generada-acciones { grid-column: 1 / -1; justify-content: flex-start; }
+}
+/* Distribución exclusiva del módulo de órdenes y sus confirmaciones. */
+.ordenes-contenido { width: 100%; max-width: 1360px; margin-inline: auto; }
+.orden-confirmacion[hidden] { display: none; }
+body:has(.orden-confirmacion.open) { overflow: hidden; }
+.orden-confirmacion .modal-panel { display: flex; flex-direction: column; max-width: 840px; max-height: calc(100dvh - 40px); }
+.orden-confirmacion #compraRevisionContenido, .orden-confirmacion #solicitudRevisionContenido { overflow-y: auto; min-height: 0; padding: 18px 20px; overscroll-behavior: contain; }
+.orden-confirmacion .modal-panel > .panel-header, .orden-confirmacion .modal-panel > .modal-header-custom { flex-shrink: 0; padding: 16px 20px; }
+.orden-confirmacion .modal-panel > .compra-totals { flex-shrink: 0; padding: 14px 20px; border-top: 1px solid var(--border); }
+.orden-confirmacion .orden-detalle-revision { border-top: 1px solid var(--border); }
+.orden-confirmacion .orden-detalle-revision > summary { padding: 12px 16px; cursor: pointer; color: var(--primary-dark); font-size: 13px; font-weight: 600; }
+.orden-confirmacion .orden-detalle-revision > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.orden-modal-estado { padding: 0 20px 12px; margin: 0; color: var(--text); font-size: 13px; }
+.orden-modal-estado:empty { display: none; }
+#compraRevision.orden-confirmacion, #solicitudRevision.orden-confirmacion { border: 0; box-shadow: none; }
+#compraRevision .revision-proveedor-header { padding: 12px 16px; }
+#compraRevision .revision-proveedor-header h3 { font-size: 15px; }
+#compraRevision .revision-proveedores { gap: 12px; }
+#compraRevision .revision-detalle-titulo { margin-top: 18px; font-size: 14px; }
+#compraRevision .revision-final { display: none; }
+#solicitudRevision.orden-confirmacion .solicitud-revision-total { display: none; }
+#solicitudRevision.orden-confirmacion .solicitud-revision-colegios { padding: 0 12px 12px; margin-top: 0; }
+#ordenesGuardadas #ordenesBuscador { display: flex; align-items: flex-end; gap: 12px; }
+#ordenesGuardadas #ordenesBuscador > div { flex: 1; min-width: 0; }
+#ordenesGuardadas #ordenesBuscador > button { flex-shrink: 0; }
+#ordenesGuardadas #ordenConsultada { padding-top: 8px; }
+#ordenesGuardadas .orden-tarjeta[data-grupo] { padding: 16px; }
+#ordenesGuardadas .solicitud-pedido { padding: 10px 12px; }
+#compraConfirmacion { width: 100%; max-width: none; margin: 18px 0 0; }
+@media (max-width: 600px) {
+  .orden-confirmacion { padding: 10px; }
+  .orden-confirmacion .modal-panel { max-height: calc(100dvh - 20px); }
+  .orden-confirmacion #compraRevisionContenido, .orden-confirmacion #solicitudRevisionContenido { padding: 12px; }
+  .orden-confirmacion .modal-panel > .compra-totals { padding: 12px; gap: 8px; }
+  .orden-confirmacion .modal-panel > .compra-totals button { min-height: 40px; height: auto; white-space: normal; padding: 8px 12px; }
+  #ordenesGuardadas #ordenesBuscador { flex-wrap: wrap; }
+}
+#compraConfirmacion .panel-header { background: #faf8fe; }
+#compraConfirmacion .panel-title { font-size: 16px; font-weight: 700; line-height: 1.5; }
+#compraConfirmacion .panel-title i { color: var(--success); }
+#compraConfirmacion .confirmacion-cantidad { margin: 0 0 12px; font-weight: 600; }
+#compraConfirmacion .confirmacion-ordenes { list-style: none; padding: 0; margin: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+#compraConfirmacion .confirmacion-ordenes li { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; font-size: 14px; }
+#compraConfirmacion .confirmacion-ordenes li + li { border-top: 1px solid var(--border); }
+#compraConfirmacion .confirmacion-ordenes li > div { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; min-width: 0; overflow-wrap: anywhere; }
+#compraConfirmacion .confirmacion-ordenes li > strong { color: var(--primary-dark); font-variant-numeric: tabular-nums; }
+#compraConfirmacion .confirmacion-ayuda { margin: 14px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+#compraConfirmacion .confirmacion-acciones { justify-content: flex-start; align-items: center; padding-top: 0; }
+#compraConfirmacion .confirmacion-acciones a { text-decoration: none; }
+.orden-tarjeta { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; min-width: 0; }
+.orden-metricas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.orden-metricas dt { color: var(--text-muted); font-size: 12px; }
+.orden-metricas dd { margin: 6px 0 0; font-size: 24px; font-weight: 600; }
+.orden-acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+.orden-acciones a { flex: 1 1 160px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.orden-detalles-boton { margin-top: 12px; }
+.orden-detalle { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 12px; }
+.orden-detalle h4 { margin: 16px 0 8px; }
+.solicitud-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+/* Revisión de solicitudes: estilos aislados del historial y de Nueva orden. */
+#solicitudRevision { border-color: #e1dbea; }
+#solicitudRevision > .panel-header { padding: 18px 22px; }
+#solicitudRevision > .panel-header h2 { font-size: 18px; font-weight: 700; line-height: 1.4; }
+#solicitudRevision > .panel-header p { margin: 6px 0 0; line-height: 1.5; }
+#solicitudRevision .solicitud-revision-resumen { padding: 16px 18px; border: 1px solid #e5dfef; border-radius: var(--radius-sm); background: #f8f6fc; }
+#solicitudRevision .solicitud-revision-cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 20px; flex-wrap: wrap; }
+#solicitudRevision .solicitud-revision-cabecera h3, #solicitudRevision .solicitud-revision-cabecera h4 { flex: 1 1 200px; min-width: 0; margin: 0; line-height: 1.5; font-weight: 700; overflow-wrap: anywhere; }
+#solicitudRevision .solicitud-revision-cabecera h3 { font-size: 17px; }
+#solicitudRevision .solicitud-revision-cabecera strong { margin-left: auto; text-align: right; color: var(--primary-dark); font-size: 17px; font-variant-numeric: tabular-nums; }
+#solicitudRevision .solicitud-revision-resumen p { margin: 8px 0 0; font-size: 13px; line-height: 1.6; }
+#solicitudRevision .solicitud-revision-codigos { color: var(--text-muted); overflow-wrap: anywhere; }
+#solicitudRevision .solicitud-revision-colegios { display: grid; gap: 16px; margin-top: 20px; }
+#solicitudRevision .solicitud-revision-colegio { min-width: 0; border: 1px solid #e2e3ec; border-radius: var(--radius-sm); overflow: hidden; background: white; }
+#solicitudRevision .solicitud-revision-colegio header { padding: 14px 16px; background: #f5f6fa; border-bottom: 1px solid #e5e6ee; }
+#solicitudRevision .solicitud-revision-colegio h4 { font-size: 14px; }
+#solicitudRevision .solicitud-revision-colegio header strong { font-size: 14px; }
+#solicitudRevision .solicitud-tabla { width: 100%; min-width: 0; table-layout: fixed; }
+#solicitudRevision .solicitud-tabla th { text-align: left; background: #fcfcfe; white-space: normal; font-size: 11px; }
+#solicitudRevision .solicitud-tabla th, #solicitudRevision .solicitud-tabla td { padding: 11px 16px; line-height: 1.5; border-bottom-color: #eeedf3; overflow-wrap: anywhere; }
+#solicitudRevision .solicitud-tabla th:last-child, #solicitudRevision .solicitud-tabla td:last-child { width: 100px; text-align: right; font-variant-numeric: tabular-nums; }
+#solicitudRevision .solicitud-tabla td:last-child { font-weight: 600; }
+#solicitudRevision .solicitud-revision-total { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-top: 18px; padding: 14px 18px; background: #f3edfc; border: 1px solid #e4daf5; border-radius: var(--radius-sm); color: var(--primary-dark); }
+#solicitudRevision .solicitud-revision-total strong { font-size: 19px; margin-left: auto; font-variant-numeric: tabular-nums; }
+#solicitudRevision > .compra-totals { border-top: 1px solid var(--border); align-items: center; }
+@media (max-width: 480px) {
+  #solicitudRevision > .panel-body, #solicitudRevision > .panel-header { padding: 14px; }
+  #solicitudRevision .solicitud-revision-resumen { padding: 14px; }
+  #solicitudRevision .solicitud-tabla th, #solicitudRevision .solicitud-tabla td { padding: 10px 12px; }
+  #solicitudRevision .solicitud-tabla th:last-child, #solicitudRevision .solicitud-tabla td:last-child { width: 85px; }
+  #solicitudRevision > .compra-totals button { height: auto; min-height: 40px; padding: 10px 12px; white-space: normal; }
+  #solicitudRevision #solicitudConfirmar { margin-left: auto; }
+}
+.solicitud-tabs [aria-selected="true"] { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.solicitud-pedidos { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.solicitud-pedido { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; font-size: 13px; }
+.solicitud-pedido + .solicitud-pedido { border-top: 1px solid var(--border); }
+.solicitud-pedido > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.solicitud-pedido small { display: block; margin-top: 4px; color: var(--text-muted); }
+.solicitud-pedido input { accent-color: var(--primary); flex-shrink: 0; }
+.solicitud-pedido > strong { text-align: right; }
+#ordenesGuardadas .ordenes-buscador { padding-block: 16px; }
+#ordenesGuardadas .ordenes-buscador-campo input { padding-right: 44px; }
+#ordenesGuardadas #ordenesLimpiar { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; }
+#ordenesGuardadas #ordenesLimpiar[hidden] { display: none; }
+#ordenesGuardadas #ordenesFiltro::-webkit-search-cancel-button { -webkit-appearance: none; }
+#ordenesGuardadas .pedido-eleccion { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
+#ordenesGuardadas .pedido-eleccion > span { min-width: 0; overflow-wrap: anywhere; }
+#ordenesGuardadas .pedido-ver { flex-shrink: 0; width: 32px; height: 32px; }
+#ordenesGuardadas .pedido-ver-todos { border: 0; background: transparent; font: inherit; font-size: 13px; }
+#ordenesGuardadas .solicitud-pedido { gap: 10px; }
+#pedidoVista .pedido-vista-contenido { overflow-y: auto; min-height: 0; padding: 16px 20px; }
+#pedidoVista .solicitud-revision-resumen { border: 1px solid var(--border); background: #f8f6fc; border-radius: var(--radius-sm); padding: 14px 16px; }
+#pedidoVista .solicitud-revision-cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; }
+#pedidoVista .solicitud-revision-cabecera h3, #pedidoVista .solicitud-revision-cabecera h4 { margin: 0; flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; font-size: 15px; line-height: 1.5; }
+#pedidoVista .solicitud-revision-cabecera strong { margin-left: auto; color: var(--primary-dark); font-variant-numeric: tabular-nums; }
+#pedidoVista .solicitud-revision-resumen p { font-size: 13px; line-height: 1.6; margin: 8px 0 0; }
+#pedidoVista .solicitud-revision-codigos { color: var(--text-muted); overflow-wrap: anywhere; }
+#pedidoVista .solicitud-revision-colegios { display: grid; gap: 14px; }
+#pedidoVista .solicitud-revision-colegio { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+#pedidoVista .solicitud-revision-colegio header { padding: 12px; background: #f5f6fa; }
+#pedidoVista .solicitud-tabla { width: 100%; min-width: 0; table-layout: fixed; }
+#pedidoVista .solicitud-tabla th, #pedidoVista .solicitud-tabla td { padding: 10px 12px; white-space: normal; overflow-wrap: anywhere; }
+#pedidoVista .solicitud-tabla th:first-child { text-align: left; }
+#pedidoVista .solicitud-revision-total { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 12px 14px; margin-top: 16px; background: #f5f0fc; border-radius: var(--radius-sm); color: var(--primary-dark); }
+@media (max-width: 480px) {
+  #ordenesGuardadas .solicitud-pedido { flex-wrap: wrap; }
+  #ordenesGuardadas .pedido-eleccion { flex-basis: calc(100% - 46px); }
+  #pedidoVista .pedido-vista-contenido { padding: 12px; }
+}
+.solicitud-seleccion { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.solicitud-seleccion p { margin: 0; font-size: 13px; color: var(--text-muted); }
+.solicitud-tabla { min-width: 0; table-layout: fixed; }
+.solicitud-tabla th:last-child, .solicitud-tabla td:last-child { width: 85px; text-align: right; }
+.solicitud-tabla td { overflow-wrap: anywhere; }
+.solicitud-colegio { margin-top: 16px; }
+.solicitud-colegio h4 { overflow-wrap: anywhere; line-height: 1.5; margin-bottom: 8px; }
+
 .detail-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));

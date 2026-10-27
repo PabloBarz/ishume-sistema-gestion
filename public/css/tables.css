@@ -1,6 +1,25 @@
 /* Las tablas compartidas conservan el estilo original de encabezados, filas y acciones. */
 .table-scroll { overflow-x: auto; }
 
+.compra-table { min-width: 760px; }
+.compra-table td:nth-child(3) { width: 180px; }
+.compra-table td:nth-child(4) { min-width: 200px; }
+
+/* Alineación exclusiva de las tablas de Nueva orden. */
+#ordenEditor .compra-table th { padding: 13px 14px; text-align: left; text-transform: none; letter-spacing: normal; font-size: 12px; color: var(--text); white-space: normal; line-height: 1.5; }
+#ordenEditor .compra-table thead tr { background: white; }
+#ordenEditor .compra-table td { padding: 15px 14px; line-height: 1.5; }
+#ordenEditor .compra-table td:first-child { font-weight: 500; min-width: 180px; overflow-wrap: anywhere; }
+#ordenEditor .compra-table th:nth-child(2), #ordenEditor .compra-table td:nth-child(2) { text-align: center; width: 140px; font-variant-numeric: tabular-nums; }
+#ordenEditor .compra-table th:nth-child(3), #ordenEditor .compra-table td:nth-child(3) { width: 165px; }
+#ordenEditor .compra-table input { max-width: 125px; font-variant-numeric: tabular-nums; }
+#ordenEditor .compra-table select { width: 100%; }
+#ordenEditor .compra-table tbody tr:hover { background: #fcfaff; }
+#ordenEditor .compra-table .cell-secondary { display: block; margin-top: 5px; line-height: 1.4; overflow: visible; }
+#ordenEditor .compra-table td { padding-top: 11px; padding-bottom: 11px; }
+#ordenEditor .compra-table th { padding-top: 10px; padding-bottom: 10px; }
+#ordenEditor .compra-table input, #ordenEditor .compra-table select { min-height: 36px; padding-top: 7px; padding-bottom: 7px; }
+
 .table-custom {
   width: 100%;
   min-width: 540px;

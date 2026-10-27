@@ -66,7 +66,7 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     closeMenu();
   } else if (event.key === 'Tab') {
-    const focusable = [...sidebar.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')];
+    const focusable = [...sidebar.querySelectorAll('button:not([disabled]), summary, a[href], [tabindex]:not([tabindex="-1"])')].filter((el) => el.getClientRects().length);
     const first = focusable[0];
     const last = focusable.at(-1);
     if (!first) {

@@ -134,6 +134,13 @@ a { text-decoration: none; color: inherit; }
 .nav-item span:first-of-type { flex: 1; }
 
 .nav-item[href] { cursor: pointer; }
+.nav-group > summary { cursor: pointer; list-style: none; }
+.nav-group > summary::-webkit-details-marker { display: none; }
+.nav-submenu { padding-left: 18px; }
+.nav-submenu .nav-item { font-size: 13px; }
+.nav-group[open] .nav-chevron { transform: rotate(180deg); }
+.nav-group > summary:hover { background: rgba(255,255,255,.06); color: white; }
+.nav-group > summary:focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: -2px; }
 
 .nav-item[href]:hover {
   background: rgba(255,255,255,.06);

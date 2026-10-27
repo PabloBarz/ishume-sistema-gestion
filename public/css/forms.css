@@ -82,6 +82,7 @@
 }
 
 .form-stack > button { align-self: flex-start; }
+.form-stack[hidden] { display: none; }
 
 .input-custom {
   width: 100%;

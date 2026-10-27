@@ -2,10 +2,20 @@
 import { closeOverlay } from './utils.js';
 
 const routes = {
-  contratos: {
-    title: 'Consulta de contratos',
+  pagos: {
+    title: 'Pagos',
+    view: '/views/pagos.html',
+    loadModule: () => import('./modules/pagos.js'),
+  },
+  'ordenes/nueva': {
+    title: '',
     view: '/views/contratos.html',
     loadModule: () => import('./modules/contratos.js'),
+  },
+  'ordenes/guardadas': {
+    title: '',
+    view: '/views/ordenes_guardadas.html',
+    loadModule: () => import('./modules/ordenes_guardadas.js'),
   },
   dashboard: {
     title: 'Dashboard',
@@ -29,7 +39,12 @@ let started = false;
 let loadSequence = 0;
 
 function getRouteName() {
-  return window.location.hash.slice(1).replace(/^\/+/, '') || 'dashboard';
+  const name = window.location.hash.slice(1).replace(/^\/+/, '') || 'dashboard';
+  if (name === 'contratos') {
+    window.history.replaceState(null, '', '#/ordenes/nueva');
+    return 'ordenes/nueva';
+  }
+  return name;
 }
 
 function updateShell(routeName, title) {
@@ -41,6 +56,10 @@ function updateShell(routeName, title) {
   });
 
   document.getElementById('topbarTitle').textContent = title;
+  const ordenesMenu = document.getElementById('ordenesMenu');
+  const active = routeName.startsWith('ordenes/');
+  ordenesMenu.querySelector('summary').classList.toggle('active', active);
+  if (active) ordenesMenu.open = true;
 }
 
 function showError(message) {

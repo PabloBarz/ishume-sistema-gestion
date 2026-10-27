@@ -60,8 +60,10 @@ export function validateRequiredFields(valores) {
 }
 
 // Consume una ruta API y devuelve JSON, texto o null cuando la respuesta está vacía.
-export async function http(url, method = 'GET', body = null) {
-  const options = { method, headers: {} };
+export async function http(url, method = 'GET', body = null, { timeoutMs = 20000 } = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const options = { method, headers: {}, signal: controller.signal };
 
   if (body !== null && body !== undefined) {
     options.headers['Content-Type'] = 'application/json';
@@ -69,15 +71,16 @@ export async function http(url, method = 'GET', body = null) {
   }
 
   let response;
+  let texto;
   try {
     response = await fetch(url, options);
+    texto = await response.text();
   } catch (cause) {
-    const error = new Error('Error de red al conectar con el servidor.', { cause });
-    error.name = 'NetworkError';
+    const error = new Error(controller.signal.aborted ? 'La consulta tardó demasiado. Intenta nuevamente.' : 'Error de red al conectar con el servidor.', { cause });
+    error.name = controller.signal.aborted ? 'TimeoutError' : 'NetworkError';
     throw error;
-  }
+  } finally { clearTimeout(timeout); }
 
-  const texto = await response.text();
   let data = null;
 
   if (texto) {
