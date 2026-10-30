@@ -1,26 +1,26 @@
 <section class="ordenes-contenido" id="ordenesGuardadas" aria-labelledby="ordenes-guardadas-title">
-  <div class="page-header"><div><h1 class="page-title" id="ordenes-guardadas-title">Órdenes guardadas</h1><p class="page-subtitle">Selecciona pedidos pendientes o consulta las órdenes de compra generadas.</p></div><a class="btn-primary-action" href="#/ordenes/nueva">Preparar pedidos</a></div>
+  <div class="page-header"><div><h1 class="page-title" id="ordenes-guardadas-title">Órdenes guardadas</h1></div><a class="btn-primary-action" href="#/ordenes/nueva">Preparar pedidos</a></div>
   <div class="solicitud-tabs" role="tablist" aria-label="Pedidos">
     <button class="btn-cancel" id="tabPendientes" type="button" role="tab" aria-selected="true" aria-controls="pedidosPanel">Pedidos pendientes</button>
     <button class="btn-cancel" id="tabRealizados" type="button" role="tab" aria-selected="false" aria-controls="pedidosPanel" tabindex="-1">Órdenes generadas</button>
   </div>
   <section class="card-panel" id="pedidosPanel" role="tabpanel" aria-labelledby="tabPendientes">
     <form class="panel-body ordenes-buscador" id="ordenesBuscador" role="search">
-      <div><label class="form-label-custom" for="ordenesFiltro">Código o nombre del proveedor</label><div class="colegio-buscador-campo ordenes-buscador-campo"><i class="bi bi-search" aria-hidden="true"></i><input class="input-custom" id="ordenesFiltro" type="search" maxlength="200" placeholder="Buscar proveedor o código..." autocomplete="off" aria-describedby="ordenesEstado"><button class="btn-icon-outline" id="ordenesLimpiar" type="button" aria-label="Limpiar búsqueda" hidden><i class="bi bi-x" aria-hidden="true"></i></button></div></div>
+      <div><label class="form-label-custom" for="ordenesFiltro">Buscar</label><div class="colegio-buscador-campo ordenes-buscador-campo"><i class="bi bi-search" aria-hidden="true"></i><input class="input-custom" id="ordenesFiltro" type="search" maxlength="200" placeholder="Proveedor o código..." autocomplete="off" aria-describedby="ordenesEstado"><button class="btn-icon-outline" id="ordenesLimpiar" type="button" aria-label="Limpiar búsqueda" hidden><i class="bi bi-x" aria-hidden="true"></i></button></div></div>
     </form>
     <p class="panel-note" id="ordenesEstado" role="status" aria-live="polite"></p>
     <div class="panel-body" id="ordenConsultada"></div>
-    <div class="panel-body compra-totals"><button class="btn-cancel" id="ordenesAnterior" type="button" disabled>Anterior</button><button class="btn-cancel" id="ordenesSiguiente" type="button" disabled>Siguiente</button></div>
+    <div class="panel-body compra-totals" id="ordenesPaginacion" hidden><button class="btn-cancel" id="ordenesAnterior" type="button" disabled>Anterior</button><span class="text-sm text-muted" id="ordenesPagina"></span><button class="btn-cancel" id="ordenesSiguiente" type="button" disabled>Siguiente</button></div>
   </section>
-  <div class="modal-overlay orden-confirmacion" id="solicitudRevision" aria-hidden="true" hidden>
+  <div class="modal-overlay orden-confirmacion compras-modal" id="solicitudRevision" aria-hidden="true" hidden>
   <section class="card-panel modal-panel" aria-labelledby="solicitud-revision-title">
-    <div class="panel-header"><div><h2 class="panel-title" id="solicitud-revision-title">Confirmar orden de compra masiva</h2><p class="text-sm text-muted">Comprueba los productos antes de generar el PDF.</p></div></div>
+    <div class="panel-header"><h2 class="panel-title" id="solicitud-revision-title">Confirmar orden de compra masiva</h2></div>
     <div class="panel-body" id="solicitudRevisionContenido"></div>
     <p class="orden-modal-estado" id="solicitudRevisionEstado" role="status" aria-live="polite"></p>
-    <div class="panel-body compra-totals"><button class="btn-cancel" id="solicitudVolver" type="button">Volver a seleccionar</button><button class="btn-primary-action" id="solicitudConfirmar" type="button">Confirmar y generar orden de compra</button></div>
+    <div class="panel-body compra-totals"><button class="btn-cancel" id="solicitudVolver" type="button">Volver</button><button class="btn-primary-action" id="solicitudConfirmar" type="button">Confirmar</button></div>
   </section>
   </div>
-  <div class="modal-overlay orden-confirmacion" id="pedidoVista" aria-hidden="true" hidden>
+  <div class="modal-overlay orden-confirmacion compras-modal" id="pedidoVista" aria-hidden="true" hidden>
     <section class="card-panel modal-panel" aria-labelledby="pedido-vista-title">
       <div class="modal-header-custom"><h2 class="modal-title-custom" id="pedido-vista-title">Vista de pedidos pendientes</h2></div>
       <div class="panel-body pedido-vista-contenido" id="pedidoVistaContenido" aria-live="polite"></div>

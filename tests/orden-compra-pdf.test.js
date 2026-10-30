@@ -23,6 +23,11 @@ const orden = { id_orden: 12, codigo: 'OC-PDF-12', fecha: '22/10/2026', estado: 
   productos: [{ modelo: 'Álbum escolar', categoria: 'Anuario', cantidad: 35 }],
   distribuciones: [{ id_contrato: 4, id_contrato_api: 8, colegio: 'Colegio San Martín', modelo: 'Álbum escolar', categoria: 'Anuario', cantidad: 35 }], total: 35 };
 
+test('PDF conserva el nuevo código masivo por proveedor sin cambiar el detalle',()=>{
+  const texto=contenido(generarOrdenCompraPdf({...orden,codigo:'ORDEN-MAS-LIB-1000',version_documento:4}));
+  for(const dato of ['ORDEN-MAS-LIB-1000','Colegio San Martín','Álbum escolar','35 UNIDADES'])assert.ok(texto.includes(dato),dato);
+});
+
 test('PDF: orden masiva con código OC, conservando el formato de documentos históricos', () => {
   const antes=JSON.stringify(orden);
   const nueva={...orden,version_documento:2,codigo:'OC-MAS-000123'};

@@ -2,3 +2,5 @@ node_modules/
 .atl/
 test/
 .env
+# Documentos privados, fuera de public. Respaldar esta carpeta junto con MySQL.
+/storage/pagos/

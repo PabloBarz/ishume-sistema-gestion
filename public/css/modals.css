@@ -32,6 +32,16 @@
 
 .modal-panel.modal-sm { max-width: 400px; }
 
+/* Confirmación compacta exclusiva de Preparar pedidos. */
+#compraConfirmacion[hidden] { display: none; }
+body:has(#compraConfirmacion.open) { overflow: hidden; }
+#compraConfirmacion .modal-panel { max-width: 440px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+#compraConfirmacion .modal-title-custom { font-size: 18px; line-height: 1.4; }
+#compraConfirmacion .modal-title-custom i { color: #16a34a; margin-right: 6px; }
+#compraConfirmacion .modal-header-custom { gap: 12px; }
+#compraConfirmacion .confirmacion-acciones { display: flex; flex-direction: column; gap: 10px; }
+#compraConfirmacion .confirmacion-acciones > * { width: 100%; justify-content: center; white-space: normal; text-align: center; }
+
 @keyframes modalIn {
   from { opacity: 0; transform: scale(.92) translateY(16px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -84,3 +94,79 @@
   background: var(--surface-2);
 }
 
+
+/* Base visual compartida exclusivamente por los modales de Compras. */
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) {
+  background: rgba(17, 24, 39, .4);
+  backdrop-filter: none;
+}
+.compras-modal[hidden] { display: none; }
+body:has(.compras-modal.open) { overflow: hidden; }
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) .modal-panel {
+  display: flex;
+  flex-direction: column;
+  max-width: var(--compras-modal-ancho, 660px);
+  max-height: calc(100dvh - 40px);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  animation: overlayIn .15s ease;
+}
+#compraRevision, #solicitudRevision { --compras-modal-ancho: 560px; }
+#compraConfirmacion { --compras-modal-ancho: 440px; }
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) .modal-panel > :is(.modal-header-custom, .panel-header) {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) .modal-panel > :is(.modal-header-custom, .panel-header) h2 {
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--text);
+  margin: 0;
+}
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) .modal-panel > :is(.panel-body, .modal-body-custom):not(.compra-totals) {
+  padding: 16px 20px;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) .modal-panel > .compra-totals {
+  padding: 12px 20px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  background: white;
+  gap: 10px;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) :is(.btn-cancel, .btn-primary-action) {
+  min-height: 40px;
+  height: auto;
+  padding: 9px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) .solicitud-revision-resumen {
+  padding: 0 0 14px;
+  border: 0;
+  border-radius: 0;
+  background: white;
+}
+.compras-modal:is(#solicitudRevision, #pedidoVista) .solicitud-revision-cabecera :is(h3, h4, strong) { font-size: 14px; color: var(--text); }
+.compras-modal .compras-tabla { width: 100%; min-width: 0; table-layout: fixed; }
+.compras-modal .compras-tabla :is(th, td) { padding: 9px 10px; font-size: 13px; text-align: left; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.compras-modal .compras-tabla thead th { font-size: 12px; color: var(--text-muted); background: white; text-transform: none; letter-spacing: normal; }
+.compras-modal .compras-tabla thead th:last-child, .compras-modal .compras-tabla td:last-child { width: 104px; text-align: right; white-space: nowrap; overflow-wrap: normal; font-variant-numeric: tabular-nums; }
+.compras-modal .compras-tabla-grupo th { padding-top: 13px; font-weight: 600; color: var(--text); background: #fafafa; text-transform: none; letter-spacing: normal; }
+.compras-modal .compras-tabla-grupo span { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); margin-top: 3px; }
+@media (max-width: 480px) {
+  .compras-modal:is(#compraRevision, #compraConfirmacion, #solicitudRevision, #pedidoVista, #pagosProductos) .modal-panel > :is(.panel-body, .modal-body-custom, .modal-header-custom):not(.compra-totals) { padding: 12px; }
+  .compras-modal .compras-tabla :is(th, td) { padding-inline: 8px; }
+}

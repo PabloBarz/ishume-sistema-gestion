@@ -98,6 +98,7 @@
 .colegio-buscador-campo > i { position: absolute; top: 50%; left: 14px; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .colegio-buscador-campo input { width: 100%; padding-left: 40px; background: white; border-radius: var(--radius-sm); }
 .colegio-buscador > p { margin: 10px 0; line-height: 1.5; }
+#colegioBusquedaEstado:empty { display: none; }
 .colegio-resultados { list-style: none; margin: 12px 0 0; padding: 0; max-height: 310px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; }
 .colegio-resultados:empty { display: none; }
 .colegio-resultados li + li { border-top: 1px solid var(--border); }
@@ -114,7 +115,6 @@
 #ordenEditor .colegio-buscador-campo { max-width: 760px; }
 #ordenEditor .colegio-resultados { max-width: 760px; max-height: 265px; }
 #ordenEditor .colegios-agregados { margin-top: 24px; }
-#ordenEditor #colegios-agregados-title { margin: 0 0 14px; font-size: 16px; font-weight: 700; }
 #ordenEditor #contratoColegios:empty { margin-bottom: 0; }
 #ordenEditor #compraResumenContenido { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 #ordenEditor .colegio-card > h3.categoria-book { background: #f0f4fa; border-left-color: #8296b2; color: #435d80; }
@@ -166,8 +166,11 @@
 #ordenEditor .colegio-header [data-quitar]:hover { border-color: #f3d4d4; }
 #ordenEditor .colegio-card > h3 { margin: 18px 20px 0; padding: 11px 14px; background: #f4f0fc; border-left: 3px solid var(--primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--primary-dark); font-size: 15px; font-weight: 700; }
 #ordenEditor .colegio-card > .table-scroll { margin: 0 20px 18px; }
-#ordenEditor .colegio-card > .table-footer { align-items: center; padding: 16px 24px; background: #faf8ff; border-top: 1px solid #e9e3f2; font-variant-numeric: tabular-nums; }
+#ordenEditor .colegio-card > .table-footer { align-items: center; justify-content: flex-end; padding: 12px 24px; background: #fafbfc; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
 #ordenEditor .colegio-card > .table-footer span { font-size: 13px; color: var(--text-muted); }
+#ordenesGuardadas .pendientes-proveedor-total { display: flex; gap: 12px; align-items: center; font-size: 13px; flex-wrap: wrap; }
+#ordenesPaginacion[hidden], #compraValidacion[hidden] { display: none; }
+#ordenesEstado:empty { display: none; }
 #ordenEditor .colegio-card > .table-footer strong { font-size: 18px; color: var(--primary-dark); }
 .resumen-orden .panel-header { padding: 12px 16px; }
 .resumen-orden .panel-body { padding: 12px 16px; }
@@ -276,8 +279,11 @@ section:has(> #compraRevision:not([hidden])) #ordenPaso { margin-top: 8px; max-w
   #ordenesGuardadas .orden-generada-fila { padding: 12px; }
   #ordenesGuardadas .orden-generada-acciones { grid-column: 1 / -1; justify-content: flex-start; }
 }
+/* Las vistas heredan el ancho del contenedor global .page-wrapper. */
+.preparar-pedidos #ordenEditor .colegio-buscador-campo { max-width: none; }
+
 /* Distribución exclusiva del módulo de órdenes y sus confirmaciones. */
-.ordenes-contenido { width: 100%; max-width: 1360px; margin-inline: auto; }
+.ordenes-contenido { width: 100%; min-width: 0; box-sizing: border-box; }
 .orden-confirmacion[hidden] { display: none; }
 body:has(.orden-confirmacion.open) { overflow: hidden; }
 .orden-confirmacion .modal-panel { display: flex; flex-direction: column; max-width: 840px; max-height: calc(100dvh - 40px); }
@@ -661,3 +667,40 @@ body:has(.orden-confirmacion.open) { overflow: hidden; }
 .badge-danger { background: var(--danger-light); color: #b91c1c; }
 .badge-warning { background: rgba(245,158,11,.15); color: #92400e; }
 .badge-info { background: var(--primary-light); color: var(--primary-dark); }
+
+/* Flujo compacto de preparación, revisión y éxito: solo pedidos nuevos. */
+#compraResumen .resumen-pedido-proveedores { padding: 14px 18px 0; }
+#compraResumen .panel-title { font-size: 14px; }
+#compraResumen .pedidos-proveedor { margin-top: 8px; border: 0; border-radius: 0; }
+#compraResumen .pedidos-proveedor > div { padding: 7px 0; }
+#compraResumen .resumen-footer { padding: 12px 18px; }
+#compraResumen .resumen-footer p { margin: 0; }
+#compraRevision .modal-panel { max-width: 560px; }
+#compraRevision .revision-resumen-linea { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+#compraRevision .revision-proveedores { display: block; }
+#compraRevision .revision-proveedor { border: 0; border-radius: 0; padding: 0; }
+#compraRevision .revision-proveedor + .revision-proveedor { border-top: 1px solid var(--border); margin-top: 0; }
+#compraRevision .revision-proveedor-header { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; background: transparent; }
+#compraRevision .revision-proveedor-nombre { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+#compraRevision .revision-proveedor-total { margin: 0; font-size: 13px; color: var(--text); }
+#compraRevision .revision-proveedor-header small { font-size: 12px; color: var(--primary-dark); }
+#compraRevision .revision-proveedor[open] .revision-proveedor-header small { font-size: 0; }
+#compraRevision .revision-proveedor[open] .revision-proveedor-header small::after { content: 'Ocultar'; font-size: 12px; }
+#compraRevision .revision-colegio { padding: 12px 0; }
+#compraRevision summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (max-width: 480px) {
+  #compraRevision .revision-proveedor-header { gap: 6px 10px; grid-template-columns: minmax(0,1fr) auto; }
+  #compraRevision .revision-proveedor-header small { grid-column: 1 / -1; }
+}
+
+/* Solo el ojo de Órdenes generadas; no altera los detalles de pendientes. */
+#pedidoVista.orden-consulta .pedido-vista-contenido { overflow-y: auto; min-height: 0; padding: 16px 20px; }
+#pedidoVista.orden-consulta .orden-consulta-datos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 24px; margin: 0 0 18px; }
+#pedidoVista.orden-consulta .orden-consulta-datos dt { font-size: 12px; color: var(--text-muted); }
+#pedidoVista.orden-consulta .orden-consulta-datos dd { margin: 3px 0 0; font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
+#pedidoVista.orden-consulta .orden-consulta-total { margin: 16px 0 0; text-align: right; font-size: 13px; color: var(--text); }
+@media (max-width: 480px) {
+  #pedidoVista.orden-consulta .pedido-vista-contenido { padding: 12px; }
+  #pedidoVista.orden-consulta .orden-consulta-datos { gap: 10px 14px; }
+  #pedidoVista.orden-consulta .orden-consulta-tabla th, #pedidoVista.orden-consulta .orden-consulta-tabla td { padding-inline: 8px; }
+}

@@ -242,7 +242,16 @@ a { text-decoration: none; color: inherit; }
 /* ══════════════════════════════════════════
    PÁGINAS
 ══════════════════════════════════════════ */
-.page-wrapper { flex: 1; padding: 28px 24px; }
+/* Contenedor compartido por todas las vistas cargadas por el router SPA. */
+.page-wrapper {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 28px 24px;
+}
 
 .page { display: none; animation: fadeIn .25s ease; }
 .page.active { display: block; }

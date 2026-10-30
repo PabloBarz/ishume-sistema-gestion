@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { pool } from '../config/db.js';
 import { contratoService } from './contratoService.js';
+import { siguienteCodigoMasivo } from './serieOrdenMasivaService.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const entero = n => Number.isInteger(n) && n > 0 && n <= 2147483647;
@@ -126,22 +127,15 @@ export const solicitudCotizacionService = {
       const data=await construir(conn,ids,id_proveedor,true);
       if(hash(data)!==huella)throw fail('Las órdenes cambiaron. Revisa la selección nuevamente.',409);
       const [[fecha]]=await conn.query("SELECT DATE_FORMAT(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-05:00'),'%d/%m/%Y') AS fecha");
+      const codigo=await siguienteCodigoMasivo(conn,id_proveedor,data.proveedor);
       const [insert]=await conn.query(`INSERT INTO solicitudes_cotizacion (codigo,id_proveedor,fecha_emision,clave_operacion,huella,contenido_json)
         VALUES (?,?,DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-05:00')),?,?,?)`,[`TMP-${randomUUID().replaceAll('-','').slice(0,24)}`,id_proveedor,clave_operacion,huella,'{}']);
-      let secuencia=insert.insertId;
-      let codigo;
-      while (true) {
-        codigo=`OC-MAS-${String(secuencia).padStart(6,'0')}`;
-        const [usados]=await conn.query('SELECT codigo FROM solicitudes_cotizacion WHERE codigo=? UNION ALL SELECT codigo FROM ordenes_compra WHERE codigo=?',[codigo,codigo]);
-        if (!usados.length) break;
-        secuencia++;
-      }
       const documento={...data,codigo,fecha:fecha.fecha,version_documento:4};
       await conn.query('UPDATE solicitudes_cotizacion SET codigo=?,contenido_json=? WHERE id_solicitud=?',[codigo,JSON.stringify(documento),insert.insertId]);
       for(const id of ids)await conn.query('INSERT INTO solicitud_ordenes (id_solicitud,id_orden) VALUES (?,?)',[insert.insertId,id]);
       await conn.commit();
       return {...resumen({id_solicitud:insert.insertId,codigo,estado:'Generada',contenido_json:JSON.stringify(documento)}),repetida:false};
-    }catch(error){await conn.rollback();if(error.code==='ER_DUP_ENTRY')throw fail('Una orden ya pertenece a otra solicitud. Actualiza los pendientes.',409);throw error;}
+    }catch(error){await conn.rollback();if(error.code==='ER_BAD_FIELD_ERROR'&&/ultimo_orden_masiva|prefijo_orden_masiva/.test(error.message))throw fail('Falta aplicar migrations/004_series_ordenes_masivas.sql en MySQL Workbench.',503);if(error.code==='ER_DUP_ENTRY'&&error.message.includes('uq_proveedor_prefijo_masivo'))throw fail('El prefijo de este proveedor ya pertenece a otro proveedor. Revisa su configuracion.',409);if(error.code==='ER_DUP_ENTRY')throw fail('Una orden ya pertenece a otra solicitud. Actualiza los pendientes.',409);throw error;}
     finally{try{try{if(codigoLocked)await conn.query("SELECT RELEASE_LOCK('ishume_codigo_orden_masiva')");}finally{if(locked)await conn.query('SELECT RELEASE_LOCK(?)',[`ishume_solicitud_${clave_operacion}`]);}}finally{conn.release();}}
   },
   async realizadas(q='',pagina=1) {

@@ -2,6 +2,11 @@ import { formatNumber } from '../utils.js';
 
 export const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// Tabla de consulta compartida: conserva cada colegio y cada línea recibida.
+export function tablaColegios(colegios, { totales = false } = {}) {
+  return `<table class="table-custom compras-tabla"><thead><tr><th scope="col">Modelo</th><th scope="col">Cantidad</th></tr></thead>${colegios.map(c => `<tbody><tr class="compras-tabla-grupo"><th colspan="2" scope="rowgroup">${esc(c.nombre)}${totales ? `<span>${formatNumber(c.productos.reduce((s,p)=>s+p.cantidad,0))} unidades</span>` : ''}</th></tr>${c.productos.map(p => `<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td></tr>`).join('')}</tbody>`).join('')}</table>`;
+}
+
 export function tarjetas(ordenes, { detalles = false, baseUrl = '/api/compras-masivas/ordenes' } = {}) {
     return `<div class="ordenes-tarjetas">${ordenes.map((o) => `<article class="orden-tarjeta">
       <div class="compra-totals"><h3 class="panel-title">${esc(o.proveedor)}</h3><span class="badge badge-info">${esc(o.estado)}</span></div>

@@ -34,11 +34,25 @@ export async function init() {
   let guardado = false;
   let resumenValido = false;
 
+  const esLiderBook = v => normalizar(v.razon_social).replace(/\s+/g, '') === 'liderbook';
+  const proveedoresPara = p => proveedores.filter(v => categoria(p) === 'Book' ? esLiderBook(v) : categoria(p) === 'Cuadros' ? !esLiderBook(v) : true);
+  function ajustarProveedores() {
+    for (const c of contratos.values()) c.productos.forEach((p, index) => {
+      const opciones = proveedoresPara(p), anuario = categoria(p) === 'Book';
+      if (anuario) p.id_proveedor = opciones[0]?.id_proveedor ?? null;
+      else if (!opciones.some(v => v.id_proveedor === p.id_proveedor)) p.id_proveedor = null;
+      const card = colegios.querySelector(`[data-contrato="${c.id_contrato}"]`);
+      const select = card?.querySelector(`[data-proveedor="${index}"]`);
+      if (select) { select.value = p.id_proveedor ?? ''; select.disabled = bloqueado || anuario; }
+    });
+  }
+
   function setBloqueado(value) {
     bloqueado = value;
     form.closest('section').hidden = value;
     form.querySelectorAll('input, button').forEach((n) => { n.disabled = value || !proveedores.length || cargandoListado; });
     colegios.querySelectorAll('input, select, button').forEach((n) => { n.disabled = value; });
+    ajustarProveedores();
     preparar.disabled = value || pending || !resumenValido;
     if (!value) filtrarColegios();
   }
@@ -56,28 +70,20 @@ export async function init() {
       return { ...o, colegios: [...colegiosProveedor.values()], total: o.productos.reduce((s,p) => s + p.cantidad, 0) };
     });
     const total = proveedoresRevision.reduce((s,p) => s + p.total, 0);
-    return `<div class="revision-indicadores">
-      <div class="resumen-indicador"><span>Colegios incluidos</span><strong>${colegiosIncluidos.size}</strong></div>
-      <div class="resumen-indicador"><span>Proveedores</span><strong>${proveedoresRevision.length}</strong></div>
-      <div class="resumen-indicador"><span>Total a solicitar</span><strong>${formatNumber(total)}</strong><small>${total === 1 ? 'unidad' : 'unidades'}</small></div>
-    </div>
-    <h2 class="panel-title revision-detalle-titulo">Detalle del pedido por proveedor</h2>
-    <div class="revision-proveedores">${proveedoresRevision.map((o, index) => `<article class="revision-proveedor" aria-labelledby="revision-proveedor-${index}">
-      <header class="revision-proveedor-header"><div><h3 id="revision-proveedor-${index}">${esc(o.razon_social)}</h3>
-      <p>${o.colegios.length} ${o.colegios.length === 1 ? 'colegio' : 'colegios'} · ${o.productos.length} ${o.productos.length === 1 ? 'modelo' : 'modelos'}</p></div>
-      <strong class="revision-proveedor-total">${unidadesTexto(o.total)}</strong></header>
-      <details class="orden-detalle-revision"><summary>Ver colegios y modelos</summary>${o.colegios.map(c => `<section class="revision-colegio"><h4>${esc(c.nombre)}</h4>
+    return `<p class="revision-resumen-linea">${colegiosIncluidos.size} ${colegiosIncluidos.size === 1 ? 'colegio' : 'colegios'} · ${proveedoresRevision.length} ${proveedoresRevision.length === 1 ? 'proveedor' : 'proveedores'} · ${unidadesTexto(total)}</p>
+    <div class="revision-proveedores">${proveedoresRevision.map(o => `<details class="revision-proveedor">
+      <summary class="revision-proveedor-header"><span class="revision-proveedor-nombre">${esc(o.razon_social)}</span><strong class="revision-proveedor-total">${unidadesTexto(o.total)}</strong><small>Ver detalle</small></summary>
+      ${o.colegios.map(c => `<section class="revision-colegio"><h4>${esc(c.nombre)}</h4>
         <table class="table-custom revision-tabla"><thead><tr><th scope="col">Modelo</th><th scope="col">Cantidad</th></tr></thead>
         <tbody>${c.productos.map(p => `<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td></tr>`).join('')}</tbody></table>
-      </section>`).join('')}</details>
-    </article>`).join('')}</div>
-    <div class="revision-final"><div class="revision-total"><span>Total del pedido</span><strong>${unidadesTexto(total)}</strong></div><p>Se guardará un pedido por proveedor.</p></div>`;
+      </section>`).join('')}
+    </details>`).join('')}</div>`;
   }
 
   function actualizarResumen() {
+    ajustarProveedores();
     token = null;
     revision.hidden = true;
-    resumen.hidden = !contratos.size;
     const productos = [...contratos.values()].flatMap(c => c.productos);
     const pedidos = new Map();
     let unidades = 0;
@@ -90,13 +96,13 @@ export async function init() {
       pedido.cantidad += p.cantidad_pedir;
       pedidos.set(proveedor.id_proveedor, pedido);
     }
-    el('colegios-agregados-title').textContent = `Colegios agregados (${contratos.size})`;
     const asignados = productos.filter(p => proveedores.some(v => v.id_proveedor === p.id_proveedor)).length;
     el('compraAccionResumen').textContent = `${contratos.size} ${contratos.size === 1 ? 'colegio' : 'colegios'} · ${asignados} de ${productos.length} modelos asignados · ${formatNumber(unidades)} ${unidades === 1 ? 'unidad' : 'unidades'} a pedir`;
     const asignadas = [...pedidos.values()].reduce((s,p) => s + p.cantidad, 0);
     el('compraPedidosProveedor').innerHTML = [...pedidos.values()].map(p => `<div><dt>${esc(p.nombre)}</dt><dd>${formatNumber(p.cantidad)} ${p.cantidad === 1 ? 'unidad' : 'unidades'}</dd></div>`).join('');
     const invalidos = productos.filter((p) => !p.id_proveedor || !cantidadValida(p.cantidad_pedir, p.cantidad)).length;
     resumenValido = productos.length > 0 && invalidos === 0 && asignadas === unidades;
+    resumen.hidden = !resumenValido;
     if (resumenValido) el('compraAccionResumen').textContent = `Total general: ${formatNumber(unidades)} ${unidades === 1 ? 'unidad' : 'unidades'}`;
     el('compraValidacionTexto').textContent = invalidos
       ? `${invalidos} ${invalidos === 1 ? 'modelo requiere' : 'modelos requieren'} proveedor o una cantidad válida. Las cantidades inválidas no se suman.`
@@ -107,7 +113,7 @@ export async function init() {
   }
 
   function actualizarTotal(c, card) {
-    card.querySelector('[data-total]').textContent = c.productos.every((p) => cantidadValida(p.cantidad_pedir, p.cantidad)) ? `A pedir: ${formatNumber(c.productos.reduce((s, p) => s + p.cantidad_pedir, 0))} unidades` : 'Revisa las cantidades';
+    card.querySelector('[data-total]').textContent = c.productos.every((p) => cantidadValida(p.cantidad_pedir, p.cantidad)) ? `Total: ${formatNumber(c.productos.reduce((s, p) => s + p.cantidad_pedir, 0))} unidades` : 'Revisa las cantidades';
   }
 
   function renderColegio(c) {
@@ -122,22 +128,17 @@ export async function init() {
     card.tabIndex = -1;
     card.id = `colegio-${c.id_contrato}`;
     card.dataset.contrato = c.id_contrato;
-    card.innerHTML = `<div class="panel-header colegio-header"><div><span class="colegio-numero" data-numero></span><h2 class="panel-title">${esc(c.colegio)}</h2><p class="text-sm text-muted">Contrato #${c.id_contrato} · Entrega: ${esc(c.fecha_entrega ? formatDate(c.fecha_entrega) || c.fecha_entrega : 'Sin fecha registrada')}</p></div>
+    card.innerHTML = `<div class="panel-header colegio-header"><div><h2 class="panel-title">${esc(c.colegio)}</h2></div>
       <button type="button" class="btn-action btn-action-delete" data-quitar aria-label="Quitar ${esc(c.colegio)}"><i class="bi bi-trash" aria-hidden="true"></i> Quitar</button></div>
-      ${[...grupos].map(([name, productos]) => `<h3 class="panel-title panel-body ${name === 'Book' ? 'categoria-book' : 'categoria-cuadros'}">${esc(name)}</h3><div class="table-scroll"><table class="table-custom compra-table">
+      ${[...grupos].map(([name, productos]) => `<h3 class="panel-title panel-body ${name === 'Book' ? 'categoria-book' : 'categoria-cuadros'}">${name === 'Book' ? 'Anuarios' : esc(name)}</h3><div class="table-scroll"><table class="table-custom compra-table">
       <thead><tr><th scope="col">Modelo</th><th scope="col">Cantidad del contrato</th><th scope="col">Cantidad a pedir</th><th scope="col">Proveedor</th></tr></thead><tbody>
       ${productos.map((p) => `<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td><td><input type="number" class="input-custom" data-cantidad="${p.index}" value="${p.cantidad_pedir}" min="${Math.max(1, p.cantidad)}" max="2147483647" step="1" aria-label="Cantidad a pedir: ${esc(p.modelo)}" aria-describedby="extra-${c.id_contrato}-${p.index}"><span class="cell-secondary" id="extra-${c.id_contrato}-${p.index}" data-extra="${p.index}"></span></td>
-      <td><select class="input-custom" data-proveedor="${p.index}" aria-label="Proveedor: ${esc(p.modelo)}"><option value="">Seleccionar proveedor</option>${proveedores.map((v) => `<option value="${v.id_proveedor}">${esc(v.razon_social)}</option>`).join('')}</select></td></tr>`).join('')}
+      <td><select class="input-custom" data-proveedor="${p.index}" aria-label="Proveedor: ${esc(p.modelo)}"${categoria(p) === 'Book' ? ' disabled' : ''}>${categoria(p) !== 'Book' || !p.id_proveedor ? '<option value="">Seleccionar proveedor</option>' : ''}${proveedoresPara(p).map((v) => `<option value="${v.id_proveedor}"${v.id_proveedor === p.id_proveedor ? ' selected' : ''}>${esc(v.razon_social)}</option>`).join('')}</select>${categoria(p) === 'Book' && !p.id_proveedor ? '<span class="cell-secondary" role="alert">LíderBook no está disponible. No se puede guardar este anuario sin proveedor.</span>' : ''}</td></tr>`).join('')}
       </tbody></table></div>`).join('')}
-      <div class="table-footer compra-totals"><span>Original: ${formatNumber(c.productos.reduce((s, p) => s + p.cantidad, 0))} unidades</span><strong data-total></strong></div>`;
+      <div class="table-footer compra-totals"><span data-total></span></div>`;
     colegios.append(card);
     actualizarTotal(c, card);
-    numerarColegios();
     return card;
-  }
-
-  function numerarColegios() {
-    colegios.querySelectorAll('[data-numero]').forEach((node, index) => { node.textContent = `Colegio ${index + 1}`; });
   }
 
   const normalizar = texto => String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -147,7 +148,7 @@ export async function init() {
     const texto = normalizar(input.value);
     if (!busquedaAbierta || !texto) {
       resultados.hidden = true; resultados.replaceChildren();
-      estadoBusqueda.textContent = listado.length ? 'Escribe el nombre del colegio para ver coincidencias.' : 'No hay contratos escolares en proceso con colegio registrado.';
+      estadoBusqueda.textContent = listado.length ? '' : 'No hay contratos escolares en proceso con colegio registrado.';
       return;
     }
     resultados.hidden = false;
@@ -196,7 +197,9 @@ export async function init() {
         listado=listado.map(c=>c.id_contrato===id?{...c,modelos_disponibles:false,aviso_modelos:data.aviso_modelos || 'Sin modelos disponibles'}:c);
         throw new Error(data.aviso_modelos || 'Sin modelos disponibles. Completa los modelos en el sistema de contratos.');
       }
-      const c = { ...data, productos: data.productos.map(p => ({ ...p, cantidad_pedir: p.cantidad, id_proveedor: null })) };
+      const liderBook = proveedores.find(esLiderBook);
+      const c = { ...data, productos: data.productos.map(p => ({ ...p, cantidad_pedir: p.cantidad,
+        id_proveedor: categoria(p) === 'Book' ? liderBook?.id_proveedor ?? null : null })) };
       renderColegio(c);
       contratos.set(c.id_contrato, c); actualizarResumen(); input.value = ''; cerrarBusqueda();
       estado.textContent = '';
@@ -212,7 +215,7 @@ export async function init() {
     const quitar = event.target.closest('[data-quitar]');
     if (!quitar || bloqueado) return;
     const card = quitar.closest('[data-contrato]');
-    contratos.delete(Number(card.dataset.contrato)); card.remove(); numerarColegios(); actualizarResumen(); filtrarColegios();
+    contratos.delete(Number(card.dataset.contrato)); card.remove(); actualizarResumen(); filtrarColegios();
   });
   function cambiar(event) {
     if (bloqueado) return;
@@ -235,6 +238,7 @@ export async function init() {
 
   preparar.addEventListener('click', async () => {
     if (pending || bloqueado) return;
+    actualizarResumen();
     const productos = [...contratos.values()].flatMap((c) => c.productos);
     if (!productos.length || productos.some((p) => !p.id_proveedor || !cantidadValida(p.cantidad_pedir, p.cantidad))) {
       estado.textContent = 'Completa todos los proveedores y cantidades antes de preparar las órdenes.'; return;
@@ -253,8 +257,8 @@ export async function init() {
   });
   el('compraEditar').addEventListener('click', () => {
     token = null; editor.inert = false; setBloqueado(false); closeOverlay('compraRevision'); revision.hidden = true;
-    el('contratos-title').textContent = 'Preparar pedidos';
-    el('ordenPaso').textContent = 'Busca colegios, asigna proveedores y prepara pedidos';
+    el('contratos-title').textContent = 'Órdenes de compra';
+    el('ordenPaso').textContent = 'Selecciona colegios y asigna proveedores a sus productos';
     estado.textContent = 'Puedes continuar editando los colegios y modelos seleccionados.';
     preparar.focus();
   });
@@ -277,23 +281,33 @@ export async function init() {
       const { data } = await http('/api/compras-masivas/confirmar', 'POST', { token });
       if (!form.isConnected) return;
       guardado = true; closeOverlay('compraRevision'); revision.hidden = true; editor.inert = false; el('compraConfirmacion').hidden = false;
-      el('compraOrdenesGeneradas').innerHTML = `<p class="confirmacion-cantidad">${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido registrado' : 'pedidos registrados'}</p>
-        <ul class="confirmacion-ordenes" aria-label="Órdenes generadas">${data.ordenes.map(o => `<li><div><strong>${esc(o.proveedor)}</strong></div><strong>${formatNumber(o.total)} ${o.total === 1 ? 'unidad' : 'unidades'}</strong></li>`).join('')}</ul>
-        <p class="confirmacion-ayuda">Estos pedidos se encuentran en <strong>Pedidos pendientes</strong>, donde seguirán acumulándose por proveedor hasta generar una orden de compra masiva.</p>`;
+      el('compraOrdenesGeneradas').innerHTML = `<p class="confirmacion-cantidad">Se ${data.ordenes.length === 1 ? 'registró' : 'registraron'} ${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido' : 'pedidos'} correctamente.</p>`;
       editor.hidden = true;
-      el('compraConfirmacion').querySelector('a').focus();
+      openOverlay('compraConfirmacion');
       estado.textContent = '';
     } catch (error) { if (form.isConnected) { estado.textContent = `${error.message} Puedes reintentar con esta misma revisión.`; el('compraRevisionEstado').textContent = estado.textContent; } }
     finally { pending = false; confirmar.disabled = guardado; if (form.isConnected) el('compraEditar').disabled = guardado; }
   });
-  el('compraNueva').addEventListener('click', () => {
+  function nuevoPedido() {
+    closeOverlay('compraConfirmacion');
     contratos.clear(); colegios.replaceChildren(); guardado = false; token = null;
     el('compraConfirmacion').hidden = true; confirmar.disabled = false; el('compraEditar').disabled = false;
     actualizarResumen(); setBloqueado(false); editor.hidden = false; input.value = ''; filtrarColegios();
-    el('contratos-title').textContent = 'Preparar pedidos';
-    el('ordenPaso').textContent = 'Busca colegios, asigna proveedores y prepara pedidos';
+    el('contratos-title').textContent = 'Órdenes de compra';
+    el('ordenPaso').textContent = 'Selecciona colegios y asigna proveedores a sus productos';
     cerrarBusqueda();
     estado.textContent = 'Busca un colegio para preparar nuevas órdenes.'; input.focus();
+  }
+  el('compraNueva').addEventListener('click', nuevoPedido);
+  el('compraConfirmacionCerrar').addEventListener('click', nuevoPedido);
+  el('compraConfirmacion').addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); nuevoPedido(); }
+    if (event.key === 'Tab') {
+      const controles = [...el('compraConfirmacion').querySelectorAll('button, a[href]')];
+      const primero = controles[0], ultimo = controles.at(-1);
+      if (event.shiftKey && document.activeElement === primero) { event.preventDefault(); ultimo.focus(); }
+      else if (!event.shiftKey && document.activeElement === ultimo) { event.preventDefault(); primero.focus(); }
+    }
   });
   actualizarResumen();
   void cargarColegios();

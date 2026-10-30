@@ -1,55 +1,37 @@
-# Pagos a proveedores: prototipo
+﻿# Pagos: modelo simplificado de 19 tablas
 
-Ruta SPA: `#/pagos`. Utiliza las mismas vistas, navegación y estilos base del proyecto.
+Propuesta preparada, NO aplicada a MySQL. No ejecutar los scripts antiguos que creaban cinco tablas.
 
-## Qué es real y qué es demostrativo
+## Cambios para aprobar en Workbench
 
-- Proveedores activos: `GET /api/proveedores`.
-- Órdenes masivas: `GET /api/compras-masivas/solicitudes?q=PROVEEDOR&pagina=N`.
-  Se consultan las páginas del proveedor elegido y se comprueba su `id_proveedor` real,
-  sin mezclar resultados de otros proveedores. Se incluyen documentos históricos SC.
-- El listado existente añade únicamente `colegios`, contado desde las distribuciones
-  de la instantánea. No se agrega ningún endpoint, tabla ni operación de escritura.
-- Importes acordados, cotizaciones y abonos: **simulación en memoria de la pantalla**.
-  No se leen ni presentan como reales los pagos financieros de etapas anteriores.
-- Cada simulación se identifica por `id_proveedor` e **`id_solicitud` de la orden masiva**,
-  nunca por el nombre del proveedor ni por el ID de un pedido interno.
-- Los archivos JPG/JPEG/PNG/PDF se validan por extensión, MIME y límite de 10 MB;
-  solo se crean URL `blob:` locales para visualizarlos. No se suben ni guardan.
-- Los importes se calculan en céntimos enteros; el saldo y estado se derivan de los abonos.
-  Los pedidos sin importe acordado no entran en los totales monetarios del proveedor.
-- Cambiar proveedor u orden conserva la demostración durante esa pantalla. Salir o recargar
-  la reinicia y revoca las URL locales. No se usa localStorage, IndexedDB ni sesiones del servidor.
-- Se bloquea el sobrepago, pagos antes de cotización, importes no positivos y doble envío
-  del mismo formulario. Se pueden registrar abonos legítimos sucesivos con el mismo importe.
+1. `migrations/propuestas/003_pagos_ordenes_masivas.sql`:
+   - solicitudes_cotizacion: importe_acordado, fecha_documento, archivo_clave, archivo_nombre y archivo_mime.
+   - documento_revision evita sobrescribir cambios concurrentes; documento_operacion y documento_huella protegen reintentos. No son versiones de documentos: existe una sola referencia vigente por solicitud.
+   - pagos_proveedor: cambia id_orden a id_solicitud y sustituye la FK por solicitudes_cotizacion(id_solicitud). Conserva fecha, monto, metodo, numero_operacion y observaciones. Agrega clave_operacion/huella para no duplicar abonos.
+   - La conversion se detiene si existen pagos. No reinterpretar IDs de pedidos internos como IDs de solicitudes. En la revision actual habia 0 pagos.
+2. `migrations/004_series_ordenes_masivas.sql`:
+   - proveedores: prefijo_orden_masiva (UNIQUE) y ultimo_orden_masiva.
+   - Inicializa desde el mayor codigo ORDEN-MAS existente del mismo ID proveedor. No modifica codigos guardados ni series OC-MAS o pedidos internos.
+   - No repetir esta migracion: el contador persistente no se debe reiniciar.
 
-## Adaptación necesaria para pagos reales
+DDL hace commit implicito. Revisar ambos archivos antes de ejecutarlos manualmente. No se ejecuto SQL de escritura desde Codex.
 
-La base actual tiene `pagos_proveedor.id_orden` con clave foránea a `ordenes_compra`:
-son **pedidos internos**. La orden masiva corresponde a `solicitudes_cotizacion.id_solicitud`,
-relacionada con varios pedidos mediante `solicitud_ordenes`. No se deben introducir IDs
-masivos en `pagos_proveedor.id_orden` ni repartir pagos entre pedidos para eludir esta diferencia.
+Para una base vacia, `database/ishume.sql` define directamente las 19 tablas finales. No ejecutar ademas las migraciones 001/003/004 sobre esa instalacion: ya contiene sus columnas y relaciones. No contiene DROP DATABASE ni TRUNCATE.
 
-Antes de implementar persistencia debe acordarse y aprobarse una adaptación aditiva que:
+## Seguridad y funcionamiento
 
-1. Guarde la cotización, importe acordado y referencia del archivo para una orden masiva real.
-2. Vincule cada abono a ese `id_solicitud`, conservando los pagos internos históricos existentes.
-3. Valide proveedor, orden, importe, método y fecha en el servidor; derive el saldo y estado.
-4. Use transacciones y bloqueo de la orden al abonar, con clave de idempotencia persistente.
-5. Incorpore carga de archivos con validación de contenido, tamaño, almacenamiento privado,
-   permisos de acceso y descarga. Las validaciones del navegador por sí solas no bastan.
+El servicio bloquea la solicitud con FOR UPDATE para guardar documento o registrar abonos. Archivo e importe inicial y adelanto se confirman en la misma transaccion SQL; si falla, se revierte y se limpia el archivo nuevo. Adelanto cero no crea un pago. Un reintento con la misma clave y datos devuelve el resultado, sin otro abono. Una correccion no registra un segundo adelanto y no admite un total inferior a lo ya pagado. Un formulario antiguo se rechaza por revision. Se conserva el historial de todos los abonos, sin borrarlos ni reasignarlos.
 
-**No se creó ni ejecutó una migración en esta versión.** No existe backend de registro
-de cotizaciones o abonos. No cambian códigos, estados de compra, PDF ni consolidaciones.
+Saldo = importe_acordado - SUM(pagos_proveedor.monto), calculado, no almacenado. Los importes se validan en centimos. Cada abono conserva fecha y metodo real. La secuencia masiva bloquea la fila del proveedor y actualiza su contador en la transaccion de creacion; UNIQUE protege prefijos y codigos. Un rollback revierte el contador.
 
-## Cómo probar
+Los JPG/PNG/PDF se validan por contenido y se guardan fuera de public, en storage/pagos (o PAGOS_STORAGE_DIR). La base contiene solo la referencia vigente. No hay tablas de versiones ni de anulaciones. Los archivos sustituidos permanecen privados, sin acceso desde la aplicacion; no se borran automaticamente como parte de esta simplificacion.
 
-1. Abre Pagos y selecciona un proveedor y una orden real.
-2. Elige un archivo local e introduce un importe de prueba para registrar la cotización.
-3. Pulsa Registrar abono y prueba varios importes hasta cancelar el saldo.
-4. Cambia de proveedor y verifica que los totales se separan; vuelve para recuperar tu simulación.
-5. Recarga o sal de la pantalla para comprobar el reinicio.
+El router actual permite acceso local y comprueba el origen; no sustituye un sistema de autenticacion para publicar en red. No se ha cambiado ese limite.
 
-Pruebas: `node --test tests/pagos-ui.test.js`. Con `TEST_CHROME` configurado también
-se prueban navegación, archivos, doble clic, estados, proveedores y móvil usando una API
-simulada que rechaza cualquier petición que no sea GET. No escribe en MySQL.
+Hasta aprobar y aplicar las columnas, el listado sigue disponible sin inventar importes y el guardado informa que falta el esquema.
+
+## Comprobacion
+
+Tras aplicar manualmente los cambios y reiniciar Node: abrir Compras > Pagos, buscar una orden, abrir el ojo, adjuntar archivo, introducir importe y adelanto (fecha y metodo si corresponde). Guardar y comprobar Total/Abonado/Saldo. Registrar otro abono y consultar historial. Recargar para verificar persistencia. Probar reintento y sobrepago. Generar dos ordenes para un proveedor y otra para un proveedor diferente para comprobar las series independientes.
+
+Las pruebas automatizadas de servicio usan transacciones simuladas y archivos temporales reales; no aplican migraciones ni escriben en MySQL. La persistencia con el esquema nuevo queda pendiente de su aprobacion y ejecucion manual.

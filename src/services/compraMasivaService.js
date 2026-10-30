@@ -167,18 +167,19 @@ export const compraMasivaService = {
       }
       const generadas = [];
       for (const orden of actual.ordenes) {
-        // El código temporal solo existe dentro de la transacción. El definitivo usa el ID generado.
-        const temporal = `TMP-${randomUUID().replaceAll('-', '').slice(0, 24)}`;
-        const [insert] = await conn.query(`INSERT INTO ordenes_compra (codigo,id_proveedor,fecha_emision,estado,observaciones) VALUES (?,?,DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-05:00')),'Borrador',?)`, [temporal, orden.id_proveedor, marker]);
-        let secuencia = insert.insertId;
-        let codigo;
-        while (true) {
-          codigo = `OC-${iniciales(orden.razon_social)}-${String(secuencia).padStart(4, '0')}`;
-          const [ocupadas] = await conn.query('SELECT id_orden FROM ordenes_compra WHERE codigo=?', [codigo]);
-          if (!ocupadas.length) break;
-          secuencia++;
-        }
-        await conn.query('UPDATE ordenes_compra SET codigo=? WHERE id_orden=?', [codigo, insert.insertId]);
+        // El bloqueo ishume_compra_masiva y la fila del proveedor ya están adquiridos.
+        // La secuencia visible pertenece al proveedor, independientemente del PK global.
+        // Se conservan los sufijos de prefijos anteriores si cambia su razón social.
+        const [[ultimo]] = await conn.query(`SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(codigo,'-',-1) AS UNSIGNED)),0) AS numero
+          FROM ordenes_compra WHERE id_proveedor=? AND codigo REGEXP '^OC-[A-Z0-9]+-[0-9]+$'
+          AND codigo NOT LIKE 'OC-MAS-%'`, [orden.id_proveedor]);
+        const secuencia = Number(ultimo.numero) + 1;
+        if (!Number.isSafeInteger(secuencia) || secuencia < 1) throw fail('La numeración del proveedor supera el límite permitido.',409);
+        const codigo = `OC-${iniciales(orden.razon_social)}-${String(secuencia).padStart(4, '0')}`;
+        if (codigo.length > 30) throw fail('El código del pedido supera el límite permitido.',409);
+        const [ocupadas] = await conn.query('SELECT id_orden FROM ordenes_compra WHERE codigo=?', [codigo]);
+        if (ocupadas.length) throw fail('El código del proveedor coincide con otro pedido. Revisa los prefijos antes de guardar.',409);
+        const [insert] = await conn.query(`INSERT INTO ordenes_compra (codigo,id_proveedor,fecha_emision,estado,observaciones) VALUES (?,?,DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-05:00')),'Borrador',?)`, [codigo, orden.id_proveedor, marker]);
         for (const p of orden.productos) {
           const [linea] = await conn.query('INSERT INTO orden_detalles (id_orden,id_producto,cantidad_pedida) VALUES (?,?,?)', [insert.insertId, productosLocales.get(p.id_modelo), p.cantidad]);
           for (const d of p.distribuciones) await conn.query('INSERT INTO orden_distribuciones (id_orden_detalle,id_detalle_contrato,cantidad_asignada) VALUES (?,?,?)', [linea.insertId, referencias.get(`${d.id_contrato}:${p.id_modelo}`), d.cantidad]);

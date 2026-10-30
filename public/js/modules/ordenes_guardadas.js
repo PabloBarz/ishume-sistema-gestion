@@ -1,5 +1,5 @@
 import { http, formatNumber, openOverlay, closeOverlay } from '../utils.js';
-import { esc, conectarTarjetas } from './ordenesCompraUi.js';
+import { esc, conectarTarjetas, tablaColegios } from './ordenesCompraUi.js';
 
 export async function init() {
   const root = document.getElementById('ordenesGuardadas');
@@ -32,16 +32,27 @@ export async function init() {
       if(!colegios.has(d.id_contrato))colegios.set(d.id_contrato,{nombre:d.colegio,productos:[]});
       colegios.get(d.id_contrato).productos.push(d);
     });
+    if (revisar === 'orden') {
+      return `<dl class="orden-consulta-datos">
+        <div><dt>Orden</dt><dd>${esc(data.codigo)}</dd></div>
+        <div><dt>Proveedor</dt><dd>${esc(data.proveedor)}</dd></div>
+        <div><dt>Fecha de emisión</dt><dd>${esc(data.fecha)}</dd></div>
+        <div><dt>Colegios</dt><dd>${formatNumber(colegios.size)}</dd></div>
+      </dl>
+      ${tablaColegios([...colegios.values()])}
+      <p class="orden-consulta-total">Total de la orden: <strong>${formatNumber(data.total)} ${data.total === 1 ? 'unidad' : 'unidades'}</strong></p>`;
+    }
+    if (revisar === 'vista') {
+      return `<section class="solicitud-revision-resumen"><div class="solicitud-revision-cabecera"><h3>${esc(data.proveedor)}</h3><strong>${formatNumber(data.total)} unidades</strong></div><p>${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido' : 'pedidos'} · ${colegios.size} ${colegios.size === 1 ? 'colegio' : 'colegios'}</p><p class="solicitud-revision-codigos">${data.ordenes.map(o => `${esc(o.codigo)} · ${esc(o.fecha)}`).join(' · ')}</p></section>${tablaColegios([...colegios.values()], {totales:true})}`;
+    }
     if (revisar) {
       const unidades = n => `${formatNumber(n)} ${n === 1 ? 'unidad' : 'unidades'}`;
       return `<section class="solicitud-revision-resumen" aria-label="Resumen del proveedor">
         <div class="solicitud-revision-cabecera"><h3>${esc(data.proveedor)}</h3><strong>${unidades(data.total)}</strong></div>
-        <p>${revisar === 'orden' ? '' : `${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido' : 'pedidos'} · `}${colegios.size} ${colegios.size === 1 ? 'colegio' : 'colegios'}</p>
-        <p class="solicitud-revision-codigos">${revisar === 'orden' ? `${esc(data.codigo)} · Emisión: ${esc(data.fecha)}` : `Pedidos incluidos: ${data.ordenes.map(o => esc(o.codigo) + (revisar === 'vista' ? ` · ${esc(o.fecha)}` : '')).join(' · ')}`}</p>
+        ${revisar === true ? '' : `<p>${revisar === 'orden' ? '' : `${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido' : 'pedidos'} · `}${colegios.size} ${colegios.size === 1 ? 'colegio' : 'colegios'}</p>
+        <p class="solicitud-revision-codigos">${revisar === 'orden' ? `${esc(data.codigo)} · Emisión: ${esc(data.fecha)}` : `Pedidos incluidos: ${data.ordenes.map(o => esc(o.codigo) + (revisar === 'vista' ? ` · ${esc(o.fecha)}` : '')).join(' · ')}`}</p>`}
       </section>
-      <details class="orden-detalle-revision" ${revisar === 'vista' || revisar === 'orden' ? 'open' : ''}><summary>Colegios, modelos y cantidades</summary><div class="solicitud-revision-colegios">${[...colegios.values()].map(c => `<section class="solicitud-revision-colegio">
-        <header class="solicitud-revision-cabecera"><h4>${esc(c.nombre)}</h4><strong>${unidades(c.productos.reduce((s,p) => s + p.cantidad, 0))}</strong></header>
-        ${tabla(c.productos)}</section>`).join('')}</div></details>
+      <details class="orden-detalle-revision"><summary>Colegios, modelos y cantidades</summary>${tablaColegios([...colegios.values()])}</details>
       <div class="solicitud-revision-total"><span>Total de la orden</span><strong>${unidades(data.total)}</strong></div>`;
     }
     return `<p>${data.ordenes.length} ${data.ordenes.length===1?'pedido incluido':'pedidos incluidos'} · ${colegios.size} ${colegios.size===1?'colegio':'colegios'} · <strong>${formatNumber(data.total)} unidades</strong></p>
@@ -59,9 +70,8 @@ export async function init() {
   }
   function renderPendientes() {
     return `<div class="ordenes-tarjetas">${grupos.map(g=>`<article class="orden-tarjeta" data-grupo="${g.id_proveedor}">
-      <div class="compra-totals"><h3 class="panel-title">${esc(g.razon_social)}</h3><button class="btn-link pedido-ver-todos" type="button" data-ver-proveedor="${g.id_proveedor}"><i class="bi bi-eye" aria-hidden="true"></i> Ver todos los pedidos</button></div>
-      <p class="text-sm text-muted">${g.ordenes.length} ${g.ordenes.length===1?'pedido':'pedidos'} · ${g.colegios} ${g.colegios===1?'colegio':'colegios'} · ${formatNumber(g.total)} unidades pendientes</p>
-      <div class="solicitud-pedidos">${g.ordenes.map(o=>`<div class="solicitud-pedido"><label class="pedido-eleccion"><input type="checkbox" data-orden="${o.id_orden}" ${seleccionPendientes.get(o.id_orden) === false ? '' : 'checked'}><span><strong class="cell-code">${esc(o.codigo)}</strong><small>${esc(o.fecha)} · ${o.colegios.length} ${o.colegios.length===1?'colegio':'colegios'}</small></span></label><strong>${formatNumber(o.total)} unidades</strong><button class="btn-icon-outline pedido-ver" type="button" data-ver-pedido="${o.id_orden}" aria-label="Ver detalle del pedido ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button></div>`).join('')}</div>
+      <div class="compra-totals"><h3 class="panel-title">${esc(g.razon_social)}</h3><div class="pendientes-proveedor-total"><strong>${formatNumber(g.total)} unidades pendientes</strong><button class="btn-icon-outline pedido-ver-todos" type="button" data-ver-proveedor="${g.id_proveedor}" aria-label="Ver todos los pedidos de ${esc(g.razon_social)}"><i class="bi bi-eye" aria-hidden="true"></i></button></div></div>
+      <div class="solicitud-pedidos">${g.ordenes.map(o=>`<div class="solicitud-pedido"><label class="pedido-eleccion"><input type="checkbox" data-orden="${o.id_orden}" ${seleccionPendientes.get(o.id_orden) === false ? '' : 'checked'}><span><strong class="cell-code">${esc(o.codigo)}</strong></span></label><strong>${formatNumber(o.total)} unidades</strong><button class="btn-icon-outline pedido-ver" type="button" data-ver-pedido="${o.id_orden}" aria-label="Ver detalle del pedido ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button></div>`).join('')}</div>
       <div class="solicitud-seleccion"><p data-seleccion></p><button class="btn-primary-action" type="button" data-preparar="${g.id_proveedor}">Preparar orden de compra</button></div>
     </article>`).join('')}</div>`;
   }
@@ -77,7 +87,7 @@ export async function init() {
       <ul class="ordenes-generadas-lista">${g.ordenes.map(o=>`<li class="orden-generada-fila" data-orden-generada="${o.id_solicitud}">
         <div class="orden-generada-identidad"><strong class="cell-code">${esc(o.codigo)}</strong><span>${esc(o.fecha)}</span></div>
         <strong class="orden-generada-unidades">${formatNumber(o.total)} unidades</strong><span class="badge badge-info orden-generada-estado">${esc(o.estado)}</span>
-        <div class="orden-generada-acciones"><button class="btn-icon-outline" type="button" data-ver-orden="${o.id_solicitud}" aria-label="Ver detalle de ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button><a class="btn-cancel" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf?vista=1" target="_blank" rel="noopener">Ver PDF</a><a class="btn-primary-action" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf" download aria-label="Descargar PDF de ${esc(o.codigo)}"><i class="bi bi-download" aria-hidden="true"></i> Descargar PDF</a></div>
+        <div class="orden-generada-acciones"><button class="btn-icon-outline" type="button" data-ver-orden="${o.id_solicitud}" aria-label="Ver detalle de ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button><a class="btn-cancel" href="#/pagos?orden=${o.id_solicitud}" aria-label="Gestionar ${esc(o.codigo)}">Gestionar</a><a class="btn-cancel" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf?vista=1" target="_blank" rel="noopener">Ver PDF</a><a class="btn-primary-action" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf" download aria-label="Descargar PDF de ${esc(o.codigo)}"><i class="bi bi-download" aria-hidden="true"></i> Descargar PDF</a></div>
       </li>`).join('')}</ul>
     </section>`).join('')}</div>`;
   }
@@ -104,12 +114,14 @@ export async function init() {
       if(tab==='pendientes'){
         grupos=data.proveedores;
         results.innerHTML=renderPendientes();
-        el('ordenesEstado').textContent=grupos.length?`Página ${pagina} · Selecciona órdenes completas del mismo proveedor.`:'No hay pedidos pendientes para esta búsqueda.';
+        el('ordenesEstado').textContent=grupos.length?'':'No hay pedidos pendientes para esta búsqueda.';
       }else{
         grupos=[];
         results.innerHTML=renderGeneradas(data.solicitudes);
-        el('ordenesEstado').textContent=data.solicitudes.length?`Página ${pagina} · ${data.solicitudes.length} órdenes encontradas.`:'No hay órdenes generadas para esta búsqueda.';
+        el('ordenesEstado').textContent=data.solicitudes.length?'':'No hay órdenes generadas para esta búsqueda.';
       }
+      el('ordenesPaginacion').hidden=pagina===1&&!hayMas;
+      el('ordenesPagina').textContent=`Página ${pagina}`;
     }catch(error){if(root.isConnected&&version===versionBusqueda){el('ordenesEstado').textContent=error.message;results.replaceChildren();}}
     finally{
       controles(false);el('ordenesBuscador').setAttribute('aria-busy','false');
@@ -135,7 +147,8 @@ export async function init() {
     if(verPedido||verProveedor||verOrden){
       clearTimeout(temporizadorBusqueda);
       const consulta=++consultaVista;vistaAbierta=true;controles(true);el('pedidosPanel').inert=true;
-      el('pedido-vista-title').textContent=verOrden?'Detalle de la orden de compra':verPedido?'Detalle del pedido':'Todos los pedidos pendientes del proveedor';
+      el('pedidoVista').classList.toggle('orden-consulta',!!verOrden);
+      el('pedido-vista-title').textContent=verOrden?'Detalle de orden de compra':verPedido?'Detalle del pedido':'Todos los pedidos pendientes del proveedor';
       el('pedidoVistaContenido').textContent=verOrden?'Cargando orden…':'Cargando pedidos…';el('pedidoVista').hidden=false;openOverlay('pedidoVista');
       try{
         const url=verOrden?`/api/compras-masivas/solicitudes/${verOrden.dataset.verOrden}`:verPedido?`/api/compras-masivas/pendientes/${verPedido.dataset.verPedido}/detalle`:`/api/compras-masivas/pendientes/proveedor/${verProveedor.dataset.verProveedor}/detalle`;

@@ -1,7 +1,7 @@
-<section class="ordenes-contenido" aria-labelledby="contratos-title">
+<section class="ordenes-contenido preparar-pedidos" aria-labelledby="contratos-title">
   <div class="page-header"><div>
-    <h1 class="page-title" id="contratos-title">Preparar pedidos</h1>
-    <p class="page-subtitle" id="ordenPaso">Busca colegios, asigna proveedores y prepara pedidos</p>
+    <h1 class="page-title" id="contratos-title">Órdenes de compra</h1>
+    <p class="page-subtitle" id="ordenPaso">Selecciona colegios y asigna proveedores a sus productos</p>
   </div></div>
   <p id="contratoEstado" role="status" aria-live="polite">Cargando proveedores…</p>
   <div id="ordenEditor">
@@ -14,32 +14,33 @@
       <ul id="colegioResultados" class="colegio-resultados" aria-label="Colegios disponibles" hidden></ul>
     </form>
   </section>
-  <section class="colegios-agregados" aria-labelledby="colegios-agregados-title">
-    <h2 class="panel-title" id="colegios-agregados-title">Colegios agregados (0)</h2>
+  <section class="colegios-agregados" aria-label="Colegios seleccionados">
     <div class="panel-stack" id="contratoColegios"></div>
   </section>
   <section class="card-panel orden-accion" id="compraResumen" aria-label="Preparar órdenes" hidden>
     <div class="panel-body resumen-pedido-proveedores"><h2 class="panel-title">Resumen del pedido</h2><dl id="compraPedidosProveedor" class="pedidos-proveedor"></dl></div>
     <div class="panel-body resumen-footer">
-      <div class="orden-accion-texto"><p id="compraAccionResumen"></p><p class="resumen-validacion" id="compraValidacion" role="status" aria-live="polite"><i class="bi bi-check-circle-fill" id="compraValidacionIcono" aria-hidden="true" hidden></i><span id="compraValidacionTexto"></span></p></div>
-      <button class="btn-primary-action" id="compraPreparar" type="button" disabled>Guardar pedidos</button>
+      <div class="orden-accion-texto"><p id="compraAccionResumen"></p><p class="resumen-validacion" id="compraValidacion" role="status" aria-live="polite" hidden><i class="bi bi-check-circle-fill" id="compraValidacionIcono" aria-hidden="true" hidden></i><span id="compraValidacionTexto"></span></p></div>
+      <button class="btn-primary-action" id="compraPreparar" type="button" disabled>Revisar pedido</button>
     </div>
   </section>
   </div>
-  <div class="modal-overlay orden-confirmacion" id="compraRevision" aria-hidden="true" hidden>
+  <div class="modal-overlay orden-confirmacion compras-modal" id="compraRevision" aria-hidden="true" hidden>
   <section class="card-panel revision-pedido modal-panel" aria-labelledby="compra-revision-title">
     <div class="modal-header-custom"><h2 class="modal-title-custom" id="compra-revision-title">Confirmar pedidos</h2></div>
     <div class="panel-body" id="compraRevisionContenido"></div>
     <p class="orden-modal-estado" id="compraRevisionEstado" role="status" aria-live="polite"></p>
     <div class="panel-body compra-totals revision-acciones">
-      <button class="btn-cancel" id="compraEditar" type="button">Volver a editar</button>
+      <button class="btn-cancel" id="compraEditar" type="button">Volver</button>
       <button class="btn-primary-action" id="compraConfirmar" type="button">Confirmar y guardar</button>
     </div>
   </section>
   </div>
-  <section class="card-panel compra-summary" id="compraConfirmacion" aria-labelledby="compra-confirmacion-title" hidden>
-    <div class="panel-header"><h2 class="panel-title" id="compra-confirmacion-title"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedidos guardados correctamente</h2></div>
+  <div class="modal-overlay compras-modal" id="compraConfirmacion" aria-hidden="true" hidden>
+  <section class="modal-panel" aria-labelledby="compra-confirmacion-title">
+    <div class="modal-header-custom"><h2 class="modal-title-custom" id="compra-confirmacion-title"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedidos guardados correctamente</h2><button class="btn-modal-close" id="compraConfirmacionCerrar" type="button" aria-label="Cerrar confirmación"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
     <div class="panel-body" id="compraOrdenesGeneradas" role="status"></div>
     <div class="panel-body compra-totals confirmacion-acciones"><a class="btn-primary-action" href="#/ordenes/guardadas">Ir a pedidos pendientes</a><button class="btn-cancel" id="compraNueva" type="button">Crear otro pedido</button></div>
   </section>
+  </div>
 </section>

@@ -127,3 +127,27 @@ Las claves foráneas vinculan solicitudes con proveedores y órdenes. El índice
 La interfaz utiliza la vista y módulo `ordenes_guardadas`; `ordenesCompraUi.js` admite tarjetas y enlaces de solicitudes conservando su comportamiento predeterminado para Nueva orden. Los estilos adicionales están en `public/css/components.css`.
 
 Prueba MySQL: configurar `TEST_MYSQL=1` y ejecutar `node --test tests/solicitudes-cotizacion.test.js`. Sus datos se revierten: comprueba consolidación parcial, proveedor único, reintentos, restricciones, rollback, historial, PDF y conservación de órdenes originales. Puede consumir valores de autoincremento. La prueba de navegador `tests/compra-masiva-ui.test.js`, con `TEST_CHROME` apuntando a Chrome, verifica selección, revisión, vuelta atrás, doble clic, pendientes restantes, historial y PDF, además del flujo anterior de Nueva orden.
+
+## Numeración de pedidos internos por proveedor
+
+Los nuevos pedidos OC-JOS / OC-LAL / OC-LIB usan el mayor sufijo numérico de los
+pedidos existentes del mismo id_proveedor más uno, con un mínimo de cuatro dígitos.
+El id_orden continúa como PRIMARY KEY global y no determina el número visible.
+La lectura del máximo y la inserción ocurren dentro de la transacción, bajo el bloqueo
+MySQL ishume_compra_masiva y con las filas de proveedores bloqueadas FOR UPDATE.
+El índice UNIQUE de codigo se conserva. Si otro proveedor comparte un código candidato,
+se rechaza la operación para revisar el prefijo; no se toma su secuencia ni se salta en silencio.
+Los reintentos de la misma revisión devuelven los pedidos ya guardados; un fallo revierte
+el lote. Se preservan todos los códigos anteriores, incluidos huecos y pedidos cancelados.
+No se modifica la numeración OC-MAS ni se aplica ninguna migración o reinicio de contadores.
+
+Prueba sin escrituras reales: node --test tests/compra-masiva.test.js (sin TEST_MYSQL).
+Incluye secuencias independientes, concurrencia simulada, doble envío y rollback.
+
+## Numeración definitiva de órdenes masivas
+
+Las órdenes nuevas usan ORDEN-MAS-JOS-001 / ORDEN-MAS-LAL-001 / ORDEN-MAS-LIB-001,
+con series persistentes por id_proveedor en proveedores (prefijo_orden_masiva y ultimo_orden_masiva). Los códigos OC-MAS
+existentes se conservan y siguen siendo consultables. La preparación y numeración de
+pedidos internos no cambian. Antes de consolidar nuevas órdenes debe aplicarse manualmente
+migrations/004_series_ordenes_masivas.sql; database/ishume.sql ya lo incorpora para instalaciones vacías.

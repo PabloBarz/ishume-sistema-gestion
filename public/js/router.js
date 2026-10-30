@@ -3,7 +3,7 @@ import { closeOverlay } from './utils.js';
 
 const routes = {
   pagos: {
-    title: 'Pagos',
+    title: '',
     view: '/views/pagos.html',
     loadModule: () => import('./modules/pagos.js'),
   },
@@ -39,7 +39,7 @@ let started = false;
 let loadSequence = 0;
 
 function getRouteName() {
-  const name = window.location.hash.slice(1).replace(/^\/+/, '') || 'dashboard';
+  const name = window.location.hash.slice(1).split('?')[0].replace(/^\/+/, '') || 'dashboard';
   if (name === 'contratos') {
     window.history.replaceState(null, '', '#/ordenes/nueva');
     return 'ordenes/nueva';
@@ -57,7 +57,7 @@ function updateShell(routeName, title) {
 
   document.getElementById('topbarTitle').textContent = title;
   const ordenesMenu = document.getElementById('ordenesMenu');
-  const active = routeName.startsWith('ordenes/');
+  const active = routeName.startsWith('ordenes/') || routeName === 'pagos';
   ordenesMenu.querySelector('summary').classList.toggle('active', active);
   if (active) ordenesMenu.open = true;
 }
