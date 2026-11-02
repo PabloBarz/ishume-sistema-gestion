@@ -1,5 +1,7 @@
 import { modeloService } from '../services/modeloService.js';
 
+const EDUCATION_LEVELS = ['INICIAL', 'SUPERIOR'];
+
 function idValido(value) {
   return typeof value === 'string' && /^\d+$/.test(value) &&
     Number.isSafeInteger(Number(value)) && Number(value) > 0;
@@ -18,7 +20,7 @@ function nombreValido(value) {
 }
 
 function nivelValido(value) {
-  return value == null || (typeof value === 'string' && Array.from(value).length <= 30);
+  return typeof value === 'string' && EDUCATION_LEVELS.includes(value);
 }
 
 function datosModeloValidos(body) {
@@ -91,14 +93,14 @@ export const modeloController = {
       return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 30 caracteres.' });
     }
     if (!nivelValido(nivelEducativo)) {
-      return res.status(400).json({ success: false, message: 'El nivel educativo debe ser texto de hasta 30 caracteres.' });
+      return res.status(400).json({ success: false, message: 'El nivel educativo es obligatorio y debe ser INICIAL o SUPERIOR.' });
     }
 
     try {
       const modelo = await modeloService.crear({
         idDiseno: Number(idDiseno),
         nombre: nombre.trim(),
-        nivelEducativo: nivelEducativo?.trim() || null,
+        nivelEducativo,
       });
       return res.status(201).json({ success: true, message: 'Modelo creado correctamente.', data: modelo });
     } catch (error) {
@@ -125,14 +127,14 @@ export const modeloController = {
       return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 30 caracteres.' });
     }
     if (!nivelValido(nivelEducativo)) {
-      return res.status(400).json({ success: false, message: 'El nivel educativo debe ser texto de hasta 30 caracteres.' });
+      return res.status(400).json({ success: false, message: 'El nivel educativo es obligatorio y debe ser INICIAL o SUPERIOR.' });
     }
 
     try {
       const modelo = await modeloService.actualizar(Number(id), {
         idDiseno: Number(idDiseno),
         nombre: nombre.trim(),
-        nivelEducativo: nivelEducativo?.trim() || null,
+        nivelEducativo,
       });
       return res.status(200).json({ success: true, message: 'Modelo actualizado correctamente.', data: modelo });
     } catch (error) {

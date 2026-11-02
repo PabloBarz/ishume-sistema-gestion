@@ -42,6 +42,9 @@
       <button class="btn-primary-action" id="designCreateButton" type="button" hidden>
         <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo diseño
       </button>
+      <button class="btn-primary-action" id="modelCreateButton" type="button" hidden>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo modelo
+      </button>
     </div>
 
     <div class="inventory-tablist" role="tablist" aria-label="Catálogos de inventario">
@@ -68,6 +71,12 @@
         <option value="">Todos</option>
         <option value="1">Activos</option>
         <option value="0">Inactivos</option>
+      </select>
+      <select class="filter-select" id="modelCategoryFilter" aria-label="Filtrar modelos por categoría" hidden disabled><option value="">Todas las categorías</option></select>
+      <select class="filter-select" id="modelDesignFilter" aria-label="Filtrar modelos por diseño" hidden disabled><option value="">Todos los diseños</option></select>
+      <select class="filter-select" id="modelLevelFilter" aria-label="Filtrar modelos por nivel educativo" hidden disabled><option value="">Todos los niveles</option></select>
+      <select class="filter-select" id="modelStateFilter" aria-label="Filtrar modelos por estado" hidden disabled>
+        <option value="">Todos</option><option value="1">Activos</option><option value="0">Inactivos</option>
       </select>
       <span class="inventory-filter-placeholder" id="inventory-filter-placeholder">Los filtros estarán disponibles en una próxima fase</span>
     </div>

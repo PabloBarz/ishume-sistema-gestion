@@ -3,6 +3,7 @@ import { appState } from '../appState.js';
 import { createInventoryModal } from '../components/inventoryModal.js';
 import { createCategoriesModule } from './inventario/categorias.js';
 import { createDesignsModule } from './inventario/disenios.js';
+import { createModelsModule } from './inventario/modelos.js';
 import { renderReadonlyCatalog } from './inventario/catalogos.js';
 
 const catalogLabels = {
@@ -24,11 +25,11 @@ let activeCatalog = 'productos';
 function renderStats(root) {
   const productState = appState.catalogos.getStatus('productos');
   const categoryState = appState.catalogos.getStatus('categorias');
-  root.querySelector('[data-stat="products"]').textContent = productState.loaded ? formatNumber(productState.data.length) : productState.error ? '—' : 'Cargando…';
-  root.querySelector('[data-stat="categories"]').textContent = categoryState.loaded ? formatNumber(categoryState.data.length) : categoryState.error ? '—' : 'Cargando…';
+  root.querySelector('[data-stat="products"]').textContent = productState.loaded ? formatNumber(productState.data.length) : productState.loading ? 'Cargando…' : '—';
+  root.querySelector('[data-stat="categories"]').textContent = categoryState.loaded ? formatNumber(categoryState.data.length) : categoryState.loading ? 'Cargando…' : '—';
   const units = root.querySelector('[data-stat="units"]');
   if (!productState.loaded) {
-    units.textContent = productState.error ? '—' : 'Cargando…';
+    units.textContent = productState.loading ? 'Cargando…' : '—';
     return;
   }
   const total = productState.data.reduce((sum, product) => {
@@ -74,7 +75,7 @@ function renderCatalogState(panel, catalog, status, onRetry) {
   return false;
 }
 
-function selectCatalog(root, catalog, categoriesModule, designsModule) {
+function selectCatalog(root, catalog, categoriesModule, designsModule, modelsModule) {
   activeCatalog = catalog;
   root.querySelectorAll('.inventory-tab').forEach((tab) => {
     const selected = tab.dataset.catalog === catalog;
@@ -84,26 +85,29 @@ function selectCatalog(root, catalog, categoriesModule, designsModule) {
   });
   categoriesModule.setVisible(catalog === 'categorias');
   designsModule.setVisible(catalog === 'disenios');
+  modelsModule.setVisible(catalog === 'modelos');
   const search = root.querySelector('#inventory-search');
-  const searchable = catalog === 'categorias' || catalog === 'disenios';
+  const searchable = catalog === 'categorias' || catalog === 'disenios' || catalog === 'modelos';
   search.disabled = !searchable;
   search.placeholder = catalog === 'categorias' ? 'Buscar por nombre de categoría…'
-    : catalog === 'disenios' ? 'Buscar por nombre de diseño…'
+      : catalog === 'disenios' ? 'Buscar por nombre de diseño…'
+        : catalog === 'modelos' ? 'Buscar por nombre de modelo…'
       : 'Búsqueda disponible en una próxima fase';
   search.value = catalog === 'categorias' ? categoriesModule.getSearch()
-    : catalog === 'disenios' ? designsModule.getSearch() : '';
+    : catalog === 'disenios' ? designsModule.getSearch()
+      : catalog === 'modelos' ? modelsModule.getSearch() : '';
   root.querySelector('#inventory-filter-placeholder').hidden = searchable;
-  renderCatalog(root, catalog, categoriesModule, designsModule);
+  renderCatalog(root, catalog, categoriesModule, designsModule, modelsModule);
 }
 
-function renderCatalog(root, catalog, categoriesModule, designsModule) {
+function renderCatalog(root, catalog, categoriesModule, designsModule, modelsModule) {
   if (!root.isConnected) return;
   const panel = root.querySelector('#inventory-panel');
   const status = appState.catalogos.getStatus(catalog);
   panel.setAttribute('aria-labelledby', `tab-${catalog}`);
   root.querySelector('#inventory-caption').textContent = catalogCaptions[catalog];
   panel.replaceChildren();
-  if (renderCatalogState(panel, catalog, status, () => loadCatalog(catalog, root, categoriesModule, designsModule))) return;
+  if (renderCatalogState(panel, catalog, status, () => loadCatalog(catalog, root, categoriesModule, designsModule, modelsModule))) return;
 
   if (catalog === 'categorias') {
     const filtered = categoriesModule.render();
@@ -135,20 +139,35 @@ function renderCatalog(root, catalog, categoriesModule, designsModule) {
     panel.append(filtered);
     return;
   }
+  if (catalog === 'modelos') {
+    const filtered = modelsModule.render();
+    if (!filtered.querySelector('tbody tr')) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.setAttribute('role', 'status');
+      empty.textContent = status.data.length
+        ? 'No hay modelos que coincidan con la búsqueda y los filtros seleccionados.'
+        : 'No hay modelos registrados.';
+      panel.append(empty);
+      return;
+    }
+    panel.append(filtered);
+    return;
+  }
   panel.append(renderReadonlyCatalog(catalog, status.data));
 }
 
-function loadCatalog(catalog, root, categoriesModule, designsModule) {
+function loadCatalog(catalog, root, categoriesModule, designsModule, modelsModule) {
   return appState.catalogos.get(catalog)
     .then(() => {
       if (!root.isConnected) return;
       renderStats(root);
-      renderCatalog(root, activeCatalog, categoriesModule, designsModule);
+      renderCatalog(root, activeCatalog, categoriesModule, designsModule, modelsModule);
     })
     .catch(() => {
       if (!root.isConnected) return;
       renderStats(root);
-      renderCatalog(root, activeCatalog, categoriesModule, designsModule);
+      renderCatalog(root, activeCatalog, categoriesModule, designsModule, modelsModule);
     });
 }
 
@@ -156,15 +175,16 @@ export async function init() {
   const root = document.querySelector('.inventory-page');
   if (!root) return;
 
+  let modelsModule;
   function updateActiveCatalog({ renderOnly = false } = {}) {
     if (!root.isConnected) return;
     if (renderOnly) {
-      renderCatalog(root, activeCatalog, categoriesModule, designsModule);
+      renderCatalog(root, activeCatalog, categoriesModule, designsModule, modelsModule);
       return;
     }
     renderStats(root);
     if (activeCatalog === 'categorias') renderCatalog(root, activeCatalog, categoriesModule, designsModule);
-    else void loadCatalog(activeCatalog, root, categoriesModule, designsModule);
+    else void loadCatalog(activeCatalog, root, categoriesModule, designsModule, modelsModule);
   }
 
   const modal = createInventoryModal(root);
@@ -178,10 +198,16 @@ export async function init() {
     onChanged: updateActiveCatalog,
     modal,
   });
+  modelsModule = createModelsModule(root, {
+    isActive: () => activeCatalog === 'modelos',
+    onChanged: updateActiveCatalog,
+    modal,
+  });
 
   root.querySelector('#inventory-search').addEventListener('input', (event) => {
     if (activeCatalog === 'categorias') categoriesModule.setSearch(event.target.value);
     else if (activeCatalog === 'disenios') designsModule.setSearch(event.target.value);
+    else if (activeCatalog === 'modelos') modelsModule.setSearch(event.target.value);
     else return;
     updateActiveCatalog({ renderOnly: true });
   });
@@ -194,14 +220,16 @@ export async function init() {
     }
     const designButton = event.target.closest('[data-design-action]');
     if (designButton) designsModule.handleAction(designButton.dataset.designAction, designButton.dataset.designId, designButton);
+    const modelButton = event.target.closest('[data-model-action]');
+    if (modelButton) modelsModule.handleAction(modelButton.dataset.modelAction, modelButton.dataset.modelId, modelButton);
   });
 
   const tablist = root.querySelector('.inventory-tablist');
   tablist.addEventListener('click', (event) => {
     const tab = event.target.closest('.inventory-tab');
     if (!tab) return;
-    selectCatalog(root, tab.dataset.catalog, categoriesModule, designsModule);
-    void loadCatalog(tab.dataset.catalog, root, categoriesModule, designsModule);
+    selectCatalog(root, tab.dataset.catalog, categoriesModule, designsModule, modelsModule);
+    void loadCatalog(tab.dataset.catalog, root, categoriesModule, designsModule, modelsModule);
   });
   tablist.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -211,15 +239,15 @@ export async function init() {
       : event.key === 'End' ? tabs.length - 1
         : (currentIndex + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
     event.preventDefault();
-    selectCatalog(root, tabs[nextIndex].dataset.catalog, categoriesModule, designsModule);
+    selectCatalog(root, tabs[nextIndex].dataset.catalog, categoriesModule, designsModule, modelsModule);
     tabs[nextIndex].focus();
-    void loadCatalog(tabs[nextIndex].dataset.catalog, root, categoriesModule, designsModule);
+    void loadCatalog(tabs[nextIndex].dataset.catalog, root, categoriesModule, designsModule, modelsModule);
   });
 
-  selectCatalog(root, activeCatalog, categoriesModule, designsModule);
+  selectCatalog(root, activeCatalog, categoriesModule, designsModule, modelsModule);
   // Productos es la pestaña inicial; categorías se cargan para su indicador. El resto es lazy.
   await Promise.all([
-    loadCatalog(activeCatalog, root, categoriesModule, designsModule),
-    loadCatalog('categorias', root, categoriesModule, designsModule),
+    loadCatalog(activeCatalog, root, categoriesModule, designsModule, modelsModule),
+    loadCatalog('categorias', root, categoriesModule, designsModule, modelsModule),
   ]);
 }
