@@ -36,6 +36,9 @@
         <h2 class="panel-title" id="inventory-catalog-title">Catálogo de inventario</h2>
         <span class="panel-caption" id="inventory-caption">Consulta los registros del sistema</span>
       </div>
+      <button class="btn-primary-action" id="productCreateButton" type="button" hidden>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo producto
+      </button>
       <button class="btn-primary-action" id="categoryCreateButton" type="button" hidden>
         <i class="bi bi-plus-lg" aria-hidden="true"></i> Nueva categoría
       </button>
@@ -77,6 +80,15 @@
       <select class="filter-select" id="modelLevelFilter" aria-label="Filtrar modelos por nivel educativo" hidden disabled><option value="">Todos los niveles</option></select>
       <select class="filter-select" id="modelStateFilter" aria-label="Filtrar modelos por estado" hidden disabled>
         <option value="">Todos</option><option value="1">Activos</option><option value="0">Inactivos</option>
+      </select>
+      <select class="filter-select" id="productCategoryFilter" aria-label="Filtrar productos por categoría" hidden disabled><option value="">Todas las categorías</option></select>
+      <select class="filter-select" id="productDesignFilter" aria-label="Filtrar productos por diseño" hidden disabled><option value="">Todos los diseños</option></select>
+      <select class="filter-select" id="productLevelFilter" aria-label="Filtrar productos por nivel educativo" hidden disabled><option value="">Todos los niveles</option></select>
+      <select class="filter-select" id="productStateFilter" aria-label="Filtrar productos por estado" hidden disabled>
+        <option value="">Todos</option><option value="1">Activos</option><option value="0">Inactivos</option>
+      </select>
+      <select class="filter-select" id="productAvailabilityFilter" aria-label="Filtrar productos por disponibilidad" hidden disabled>
+        <option value="">Toda disponibilidad</option><option value="stock">Con stock</option><option value="no-stock">Sin stock</option>
       </select>
       <span class="inventory-filter-placeholder" id="inventory-filter-placeholder">Los filtros estarán disponibles en una próxima fase</span>
     </div>
