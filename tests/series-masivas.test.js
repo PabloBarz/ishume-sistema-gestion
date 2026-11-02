@@ -23,3 +23,24 @@ test('series masivas: por ID, bloqueo, más de 999 y conservación tras eliminar
   ordenes.pop(); // Eliminar/cancelar una orden no modifica la fila de secuencia persistente.
   assert.equal(await generar(42,'Joselito'),'ORDEN-MAS-JOS-008');
 });
+
+test('primera orden: prefijo por proveedor y contador revertible en la transaccion',async()=>{
+  const proveedores=new Map([[1,{prefijo:null,numero:'0'}],[2,{prefijo:null,numero:'0'}],[3,{prefijo:null,numero:'0'}]]);
+  const generar=async(id,nombre,confirmar=true)=>{
+    const copia=structuredClone(proveedores);
+    const conn={async query(sql,args){
+      if(sql.startsWith('SELECT')){assert.match(sql,/FROM proveedores.*FOR UPDATE/);return [[copia.get(args[0])]];}
+      if(sql.startsWith('UPDATE')){assert.match(sql,/UPDATE proveedores/);copia.set(args[2],{numero:args[0],prefijo:args[1]});return [{affectedRows:1}];}
+      throw Error(sql);
+    }};
+    const codigo=await siguienteCodigoMasivo(conn,id,nombre);
+    if(confirmar)for(const [clave,valor] of copia)proveedores.set(clave,valor);
+    return codigo;
+  };
+  assert.equal(await generar(1,'Joselito',false),'ORDEN-MAS-JOS-001');
+  assert.equal(proveedores.get(1).numero,'0','Rollback no consume correlativo');
+  assert.equal(await generar(1,'Joselito'),'ORDEN-MAS-JOS-001');
+  assert.equal(await generar(2,'LALO'),'ORDEN-MAS-LAL-001');
+  assert.equal(await generar(3,'L\u00edderBook'),'ORDEN-MAS-LIB-001');
+  assert.equal(await generar(1,'Joselito'),'ORDEN-MAS-JOS-002');
+});

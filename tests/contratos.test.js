@@ -1,3 +1,5 @@
+import {contratoPedidoService} from '../src/services/contratoPedidoService.js';
+import {pool} from '../src/config/db.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -6,6 +8,8 @@ import express from 'express';
 import contratoRouter from '../src/routes/contratoRouter.js';
 
 test('consulta contratos mediante la API externa sin persistencia', async () => {
+  const registradosOriginal=contratoPedidoService.registrados;
+  contratoPedidoService.registrados=async ids=>new Set(ids.filter(id=>id===8));
   const originalUrl = process.env.CONTRATOS_API_URL;
   let listado = [];
   const external = createServer((req, res) => {
@@ -67,6 +71,7 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     assert.equal(colegios.data[0].colegio, escolar.colegio);
     assert.equal(colegios.data[0].cliente, escolar.cliente);
     assert.equal(colegios.data[0].modelos_disponibles,true);
+    assert.equal(colegios.data[0].pedido_registrado,true);assert.equal(colegios.data[1].pedido_registrado,false,'Mismo colegio y distinto contrato disponible');
     for(const productos of [[],null,[{id_modelo:1,modelo:'Modelo',cantidad:0}],[{id_modelo:0,modelo:'Modelo',cantidad:1}],
       [{id_modelo:1,modelo:' ',cantidad:1}],[{id_modelo:1,modelo:'A',cantidad:1},{id_modelo:1,modelo:'A',cantidad:1}]]){
       listado=[{...escolar,productos}];
@@ -83,6 +88,7 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     assert.equal((await fetch(`${base}/colegios`)).status, 503);
     assert.equal((await fetch(`${base}?id=1`)).status, 503);
   } finally {
+    contratoPedidoService.registrados=registradosOriginal;
     if (originalUrl === undefined) delete process.env.CONTRATOS_API_URL;
     else process.env.CONTRATOS_API_URL = originalUrl;
     await Promise.all([external, local].map((server) => new Promise((resolve) => {
@@ -91,3 +97,5 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     })));
   }
 });
+
+test.after(async()=>{await pool.end();});

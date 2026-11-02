@@ -141,7 +141,7 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
     productos:[{id_modelo:100,modelo:'Modelo',categoria:'Cuadro',cantidad:1}]});
   // Simula transacciones y el bloqueo compartido de MySQL, incluso entre conexiones.
   pool.getConnection=async()=>{
-    let liberar, transaccion=null, bloqueado=false;
+    let liberar, transaccion=null, bloqueado=false, contratoActual=null;
     const filas=()=>transaccion??registros;
     return {
       async query(sql,args=[]) {
@@ -152,6 +152,7 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
         if(sql.includes('RELEASE_LOCK')){bloqueado=false;liberar();return [[{}]];}
         if(sql.includes('WHERE observaciones = ?')) return [filas().filter(o=>o.observaciones===args[0])];
         if(sql.includes('AS modelos')) return [filas().filter(o=>args[0].includes(o.id_orden)).map(o=>({...o,proveedor:catalogo.find(p=>p.id_proveedor===o.id_proveedor).razon_social,total:1,modelos:1}))];
+        if(sql.startsWith('SELECT DISTINCT cr.id_contrato_api')){assert.ok(bloqueado&&transaccion,'Comprobar contrato dentro del bloqueo y transaccion');contratoActual=args[0][0];return [filas().filter(o=>args[0].includes(o.id_contrato_api)).map(o=>({id_contrato_api:o.id_contrato_api}))];}
         if(sql.includes('FOR UPDATE')) {assert.ok(bloqueado&&transaccion);return [catalogo.filter(p=>args[0].includes(p.id_proveedor))];}
         if(sql.includes('SUBSTRING_INDEX')) {
           assert.ok(bloqueado&&transaccion,'El máximo se lee dentro de la transacción y el bloqueo');
@@ -161,7 +162,7 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
         if(sql.startsWith('SELECT id_orden FROM ordenes_compra WHERE codigo=')) return [filas().filter(o=>o.codigo===args[0])];
         if(sql.startsWith('INSERT INTO ordenes_compra')) {
           assert.ok(!filas().some(o=>o.codigo===args[0]),'Código único');
-          const id_orden=++siguienteId;transaccion.push({id_orden,codigo:args[0],id_proveedor:args[1],observaciones:args[2],estado:'Borrador'});
+          const id_orden=++siguienteId;transaccion.push({id_orden,codigo:args[0],id_proveedor:args[1],observaciones:args[2],estado:'Borrador',id_contrato_api:contratoActual});
           return [{insertId:id_orden}];
         }
         if(sql.startsWith('SELECT id_contrato FROM'))return [[{id_contrato:1}]];
@@ -177,7 +178,8 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
       release(){assert.equal(bloqueado,false,'Siempre libera el bloqueo');},
     };
   };
-  const revisar=id=>compraMasivaService.revisar([{id_contrato:8,productos:[{id_modelo:100,cantidad:1,id_proveedor:id}]}]);
+  let siguienteContrato=10000;
+  const revisar=(id,contrato=++siguienteContrato)=>compraMasivaService.revisar([{id_contrato:contrato,productos:[{id_modelo:100,cantidad:1,id_proveedor:id}]}]);
   const guardar=async id=>compraMasivaService.confirmar((await revisar(id)).token);
   try {
     assert.equal((await guardar(73)).ordenes[0].codigo,'OC-JOS-0008');
@@ -196,6 +198,15 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
     assert.equal((await compraMasivaService.confirmar(fallida.token)).ordenes[0].codigo,'OC-LIB-0008','Reintento tras fallo no consume correlativo visible');
     assert.deepEqual(registros.slice(0,historicos.length),historicos,'No renumera registros previos ni OC-MAS');
     assert.equal(new Set(registros.map(o=>o.codigo)).size,registros.length);
+    const uno=await revisar(73,99999),dos=await revisar(42,99999),conteo=registros.length;
+    const concurrentes=await Promise.allSettled([compraMasivaService.confirmar(uno.token),compraMasivaService.confirmar(dos.token)]);
+    assert.equal(concurrentes.filter(r=>r.status==='fulfilled').length,1,'Solo una operacion compra el mismo contrato');
+    const rechazo=concurrentes.find(r=>r.status==='rejected');assert.equal(rechazo.reason.status,409);assert.match(rechazo.reason.message,/ya tiene un pedido registrado/);
+    assert.equal(registros.length,conteo+1,'No deja pedidos parciales');
+    const conservados=structuredClone(registros);const otra=await revisar(84,99999);await assert.rejects(compraMasivaService.confirmar(otra.token),e=>e.status===409);assert.deepEqual(registros,conservados);
+    registros.find(o=>o.id_contrato_api===99999).estado='Cancelada';
+    const cancelada=await revisar(84,99999);await assert.rejects(compraMasivaService.confirmar(cancelada.token),e=>e.status===409);
+
   } finally {
     pool.getConnection=originales.conexion;contratoService.obtenerPorId=originales.contrato;proveedorService.listarActivos=originales.proveedores;
   }
