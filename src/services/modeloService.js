@@ -27,7 +27,8 @@ async function enTransaccion(callback) {
 async function buscarPorId(id, connection = pool, bloquear = false) {
   const [rows] = await connection.query(
     `SELECT m.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado,
-            m.id_diseno, d.nombre_diseno, d.id_categoria, c.nombre_categoria
+            m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
+            d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria
      FROM modelos AS m
      INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
      INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
@@ -96,7 +97,8 @@ export const modeloService = {
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
     const [rows] = await pool.query(
       `SELECT m.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado,
-              m.id_diseno, d.nombre_diseno, d.id_categoria, c.nombre_categoria
+              m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
+              d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria
        FROM modelos AS m
        INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
        INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
@@ -131,8 +133,11 @@ export const modeloService = {
 
   async actualizar(id, { idDiseno, nombre, nivelEducativo }) {
     return enTransaccion(async (connection) => {
-      await buscarPorId(id, connection);
-      await bloquearDiseno(connection, idDiseno);
+      const modeloActual = await buscarPorId(id, connection);
+      // Preserve an existing inactive relation when editing unrelated model fields;
+      // assigning a different design still requires an active design and category.
+      const conservaRelacionHistorica = String(modeloActual.id_diseno) === String(idDiseno);
+      await bloquearDiseno(connection, idDiseno, !conservaRelacionHistorica);
       const [result] = await connection.query(
         `UPDATE modelos
          SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?

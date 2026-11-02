@@ -9,11 +9,29 @@ function traducirDuplicado(error) {
   throw apiError('Ya existe una categoría con ese nombre.', 409);
 }
 
+const columnasCategoria = `c.id_categoria, c.nombre_categoria, c.estado,
+  COALESCE(d.total_disenios, 0) AS total_disenios,
+  COALESCE(m.total_modelos, 0) AS total_modelos`;
+
+const relacionesConteos = `
+  FROM categorias AS c
+  LEFT JOIN (
+    SELECT id_categoria, COUNT(DISTINCT id_diseno) AS total_disenios
+    FROM disenios
+    GROUP BY id_categoria
+  ) AS d ON d.id_categoria = c.id_categoria
+  LEFT JOIN (
+    SELECT d.id_categoria, COUNT(DISTINCT m.id_modelo) AS total_modelos
+    FROM disenios AS d
+    INNER JOIN modelos AS m ON m.id_diseno = d.id_diseno
+    GROUP BY d.id_categoria
+  ) AS m ON m.id_categoria = c.id_categoria`;
+
 async function buscarPorId(id) {
   const [rows] = await pool.query(
-    `SELECT id_categoria, nombre_categoria, estado
-     FROM categorias
-     WHERE id_categoria = ?`,
+    `SELECT ${columnasCategoria}
+     ${relacionesConteos}
+     WHERE c.id_categoria = ?`,
     [id],
   );
   if (!rows.length) throw apiError('Categoría no encontrada.', 404);
@@ -22,13 +40,13 @@ async function buscarPorId(id) {
 
 export const categoriaService = {
   async obtenerTodas(estado = null) {
-    const filtro = estado === null ? '' : 'WHERE estado = ?';
+    const filtro = estado === null ? '' : 'WHERE c.estado = ?';
     const parametros = estado === null ? [] : [estado];
     const [rows] = await pool.query(
-      `SELECT id_categoria, nombre_categoria, estado
-       FROM categorias
+      `SELECT ${columnasCategoria}
+       ${relacionesConteos}
        ${filtro}
-       ORDER BY id_categoria DESC`,
+       ORDER BY c.id_categoria DESC`,
       parametros,
     );
     return rows;

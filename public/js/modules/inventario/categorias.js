@@ -1,9 +1,16 @@
 import { appState } from '../../appState.js';
-import { closeOverlay, http, openOverlay, showToast } from '../../utils.js';
-import { createActionButton, createCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
+import { http, showToast } from '../../utils.js';
+import { createActionButton, createCell, createNumericCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
 
 let categorySearch = '';
 let categoryStateFilter = '';
+let countFieldsWarningShown = false;
+
+function relationshipCount(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const count = Number(value);
+  return Number.isSafeInteger(count) && count >= 0 ? count : null;
+}
 
 export function filterCategories(categories, search = '', state = '') {
   const normalizedSearch = search.trim().toLocaleLowerCase('es-PE');
@@ -17,10 +24,11 @@ export function filterCategories(categories, search = '', state = '') {
 function renderCategoryTable(categories) {
   const rows = categories.map((category) => {
     const active = Number(category.estado) === 1;
+    const totalDisenios = relationshipCount(category.total_disenios);
+    const totalModelos = relationshipCount(category.total_modelos);
     const actions = document.createElement('td');
     actions.className = 'inventory-category-actions';
     actions.append(
-      createActionButton({ action: 'view', id: category.id_categoria, label: 'Consultar categoría', icon: 'bi bi-eye', className: 'btn-action-view' }),
       createActionButton({ action: 'edit', id: category.id_categoria, label: 'Editar categoría', icon: 'bi bi-pencil-square', className: 'btn-action-edit' }),
       createActionButton({
         action: 'toggle', id: category.id_categoria,
@@ -29,49 +37,32 @@ function renderCategoryTable(categories) {
         className: active ? 'inventory-state-off' : 'inventory-state-on',
       }),
     );
-    return [createCell(category.id_categoria), createCell(category.nombre_categoria), createStatusCell(category.estado), actions];
+    return [
+      createCell(category.nombre_categoria, `ID: ${category.id_categoria}`),
+      createNumericCell(totalDisenios, 'inventory-category-count'),
+      createNumericCell(totalModelos, 'inventory-category-count'),
+      createStatusCell(category.estado),
+      actions,
+    ];
   });
-  return createTable(['ID', 'Categoría', 'Estado', 'Acciones'], rows);
+  return createTable(['Categoría', 'Diseños asociados', 'Modelos relacionados', 'Estado', 'Acciones'], rows, { className: 'inventory-category-table' });
 }
 
-export function createCategoriesModule(root, { isActive, onChanged }) {
-  const modal = root.querySelector('#inventoryModal');
-  const modalTitle = root.querySelector('#inventoryModalTitle');
-  const modalSubtitle = root.querySelector('#inventoryModalSubtitle');
-  const modalBody = root.querySelector('#inventoryModalBody');
-  const modalFooter = root.querySelector('#inventoryModalFooter');
+export function createCategoriesModule(root, { isActive, onChanged, modal }) {
+  const closeCategoryModal = () => modal.close();
 
-  function closeCategoryModal() {
-    closeOverlay('inventoryModal');
-  }
-
-  function openCategoryModal(title, subtitle, body, footer) {
-    modalTitle.textContent = title;
-    modalSubtitle.textContent = subtitle;
-    modalBody.replaceChildren(body);
-    modalFooter.replaceChildren(...footer);
-    openOverlay('inventoryModal');
-  }
-
-  function createModalButton(label, className, onClick) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = className;
-    button.textContent = label;
-    button.addEventListener('click', onClick);
-    return button;
-  }
-
-  async function refreshCategories(nameChanged = false) {
+  async function refreshCategories({ nameChanged = false, stateChanged = false } = {}) {
     if (nameChanged) {
       ['disenios', 'modelos', 'productos'].forEach((catalog) => appState.catalogos.invalidate(catalog));
+    } else if (stateChanged) {
+      appState.catalogos.invalidate('disenios');
     }
     try {
       await appState.catalogos.reload('categorias');
-      await onChanged({ nameChanged });
+      await onChanged({ nameChanged, stateChanged });
       return true;
     } catch {
-      await onChanged({ nameChanged });
+      await onChanged({ nameChanged, stateChanged });
       return false;
     }
   }
@@ -139,7 +130,7 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
         return;
       }
 
-      const submit = modalFooter.querySelector('[type="submit"]');
+      const submit = root.querySelector('#inventoryModalFooter [type="submit"]');
       submit.disabled = true;
       form.setAttribute('aria-busy', 'true');
       try {
@@ -147,7 +138,7 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
         const response = await http(url, isEdit ? 'PUT' : 'POST', { nombre_categoria: name });
         closeCategoryModal();
         showToast(response.message || (isEdit ? 'Categoría actualizada correctamente.' : 'Categoría creada correctamente.'), 'success');
-        if (!await refreshCategories(isEdit)) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
+        if (!await refreshCategories({ nameChanged: isEdit })) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
       } catch (requestError) {
         if (requestError.status === 409) {
           input.classList.add('is-invalid');
@@ -162,36 +153,14 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
       }
     });
 
-    const cancel = createModalButton('Cancelar', 'btn-cancel', closeCategoryModal);
+    const cancel = modal.createButton('Cancelar', 'btn-cancel', closeCategoryModal);
     const submit = document.createElement('button');
     submit.type = 'submit';
     submit.className = 'btn-primary-action';
     submit.setAttribute('form', form.id);
     submit.textContent = isEdit ? 'Guardar cambios' : 'Guardar categoría';
-    openCategoryModal(isEdit ? 'Editar categoría' : 'Nueva categoría', 'El nombre debe ser único y tener hasta 30 caracteres.', form, [cancel, submit]);
+    modal.open(isEdit ? 'Editar categoría' : 'Nueva categoría', 'El nombre debe ser único y tener hasta 30 caracteres.', form, [cancel, submit]);
     input.focus();
-  }
-
-  async function showCategoryDetails(id) {
-    try {
-      const { data } = await http(`/api/categorias/${encodeURIComponent(id)}`);
-      const details = document.createElement('dl');
-      details.className = 'detail-list category-detail-list';
-      [['Identificador', data.id_categoria], ['Nombre', data.nombre_categoria], ['Estado', Number(data.estado) === 1 ? 'Activa' : 'Inactiva']]
-        .forEach(([labelText, value]) => {
-          const group = document.createElement('div');
-          const label = document.createElement('dt');
-          label.className = 'text-muted';
-          label.textContent = labelText;
-          const detail = document.createElement('dd');
-          detail.textContent = String(value ?? '—');
-          group.append(label, detail);
-          details.append(group);
-        });
-      openCategoryModal('Detalle de categoría', `Registro #${data.id_categoria}`, details, [createModalButton('Cerrar', 'btn-cancel', closeCategoryModal)]);
-    } catch (error) {
-      showToast(error.message || 'No se pudo consultar la categoría.', 'error');
-    }
   }
 
   async function changeCategoryState(category, state, actionButton = null) {
@@ -201,9 +170,9 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
       const response = await http(`/api/categorias/${encodeURIComponent(category.id_categoria)}/estado`, 'PATCH', { estado: state });
       closeCategoryModal();
       showToast(response.message || (state === 1 ? 'Categoría activada correctamente.' : 'Categoría desactivada correctamente.'), 'success');
-      if (!await refreshCategories()) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
+      if (!await refreshCategories({ stateChanged: true })) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
     } catch (error) {
-      const modalError = modalBody.querySelector('#categoryModalError');
+      const modalError = root.querySelector('#categoryModalError');
       if (modalError) {
         modalError.hidden = false;
         modalError.textContent = error.message;
@@ -228,9 +197,9 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
     error.setAttribute('role', 'alert');
     error.hidden = true;
     content.append(message, error);
-    const cancel = createModalButton('Cancelar', 'btn-cancel', closeCategoryModal);
-    const deactivate = createModalButton('Desactivar', 'btn-danger-action', () => changeCategoryState(category, 0, deactivate));
-    openCategoryModal('Confirmar desactivación', 'La categoría no estará disponible para nuevas asignaciones.', content, [cancel, deactivate]);
+    const cancel = modal.createButton('Cancelar', 'btn-cancel', closeCategoryModal);
+    const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => changeCategoryState(category, 0, deactivate));
+    modal.open('Confirmar desactivación', 'La categoría no estará disponible para nuevas asignaciones.', content, [cancel, deactivate]);
   }
 
   function handleCategoryAction(action, id, actionButton) {
@@ -240,45 +209,36 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
       showToast('La categoría ya no está disponible. Actualiza el listado.', 'warning');
       return;
     }
-    if (action === 'view') void showCategoryDetails(id);
-    else if (action === 'edit') openCategoryForm(category);
+    if (action === 'edit') openCategoryForm(category);
     else if (action === 'toggle' && Number(category.estado) === 1) confirmCategoryDeactivation(category);
     else if (action === 'toggle') void changeCategoryState(category, 1, actionButton);
   }
 
-  const search = root.querySelector('#inventory-search');
   const stateFilter = root.querySelector('#categoryStateFilter');
-  root.querySelector('#inventoryModalClose').addEventListener('click', closeCategoryModal);
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) closeCategoryModal();
-  });
   root.querySelector('#categoryCreateButton').addEventListener('click', () => openCategoryForm());
-  search.addEventListener('input', (event) => {
-    categorySearch = event.target.value;
-    if (isActive()) onChanged({ renderOnly: true });
-  });
   stateFilter.addEventListener('change', (event) => {
     categoryStateFilter = event.target.value;
     if (isActive()) onChanged({ renderOnly: true });
   });
-  root.querySelector('#inventory-panel').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-category-action]');
-    if (button) handleCategoryAction(button.dataset.categoryAction, button.dataset.categoryId, button);
-  });
 
   return {
     setVisible(visible) {
-      search.disabled = !visible;
-      search.placeholder = visible ? 'Buscar por nombre de categoría…' : 'Búsqueda disponible en una próxima fase';
-      search.value = visible ? categorySearch : '';
       stateFilter.hidden = !visible;
       stateFilter.disabled = !visible;
       stateFilter.value = categoryStateFilter;
-      root.querySelector('#inventory-filter-placeholder').hidden = visible;
       root.querySelector('#categoryCreateButton').hidden = !visible;
     },
+    getSearch() { return categorySearch; },
+    setSearch(value) { categorySearch = value; },
+    handleAction: handleCategoryAction,
     render() {
       const { data = [] } = appState.catalogos.getStatus('categorias');
+      const hasInvalidCounts = data.some((category) =>
+        relationshipCount(category.total_disenios) === null || relationshipCount(category.total_modelos) === null);
+      if (hasInvalidCounts && !countFieldsWarningShown) {
+        showToast('La API de categorías no devolvió conteos válidos; revisa el servicio antes de confiar en esos valores.', 'error');
+      }
+      countFieldsWarningShown = hasInvalidCounts;
       return renderCategoryTable(filterCategories(data, categorySearch, categoryStateFilter));
     },
   };

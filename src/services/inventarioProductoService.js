@@ -4,6 +4,14 @@ function apiError(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
+const referenciaOperativaProducto = `
+  CASE WHEN EXISTS (SELECT 1 FROM contrato_detalles AS cd WHERE cd.id_producto = p.id_producto)
+         OR EXISTS (SELECT 1 FROM orden_compra_detalles AS od WHERE od.id_producto = p.id_producto)
+         OR EXISTS (SELECT 1 FROM recepcion_detalles AS rd WHERE rd.id_producto = p.id_producto)
+         OR EXISTS (SELECT 1 FROM despacho_detalles AS dd WHERE dd.id_producto = p.id_producto)
+         OR EXISTS (SELECT 1 FROM kardex_movimientos AS km WHERE km.id_producto = p.id_producto)
+       THEN 1 ELSE 0 END AS tiene_referencias_operativas`;
+
 async function enTransaccion(callback) {
   const connection = await pool.getConnection();
   let iniciada = false;
@@ -27,8 +35,10 @@ async function enTransaccion(callback) {
 async function buscarPorId(id, connection = pool) {
   const [rows] = await connection.query(
     `SELECT p.id_producto, p.sku, p.precio, p.stock_actual, p.estado,
-            p.id_modelo, m.nombre_modelo, m.nivel_educativo,
-            m.id_diseno, d.nombre_diseno, d.id_categoria, c.nombre_categoria
+            p.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado AS estado_modelo,
+            m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
+            d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria,
+            ${referenciaOperativaProducto}
      FROM inventario_productos AS p
      INNER JOIN modelos AS m ON m.id_modelo = p.id_modelo
      INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
@@ -40,7 +50,7 @@ async function buscarPorId(id, connection = pool) {
   return rows[0];
 }
 
-async function validarModeloActivo(connection, idModelo) {
+async function validarModeloActivo(connection, idModelo, validarActivo = true) {
   const [modelos] = await connection.query(
     `SELECT id_diseno
      FROM modelos
@@ -91,13 +101,13 @@ async function validarModeloActivo(connection, idModelo) {
     throw apiError('El diseño del modelo cambió durante la operación. Intenta nuevamente.', 409);
   }
 
-  if (categorias[0].estado !== 1) {
+  if (validarActivo && categorias[0].estado !== 1) {
     throw apiError('No se puede asignar el producto porque la categoría está inactiva.', 409);
   }
-  if (disenios[0].estado !== 1) {
+  if (validarActivo && disenios[0].estado !== 1) {
     throw apiError('No se puede asignar el producto porque el diseño está inactivo.', 409);
   }
-  if (modelo[0].estado !== 1) {
+  if (validarActivo && modelo[0].estado !== 1) {
     throw apiError('No se puede asignar el producto a un modelo inactivo.', 409);
   }
 }
@@ -125,8 +135,10 @@ export const inventarioProductoService = {
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
     const [rows] = await pool.query(
       `SELECT p.id_producto, p.sku, p.precio, p.stock_actual, p.estado,
-              p.id_modelo, m.nombre_modelo, m.nivel_educativo,
-              m.id_diseno, d.nombre_diseno, d.id_categoria, c.nombre_categoria
+              p.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado AS estado_modelo,
+              m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
+              d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria,
+              ${referenciaOperativaProducto}
        FROM inventario_productos AS p
        INNER JOIN modelos AS m ON m.id_modelo = p.id_modelo
        INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
@@ -157,14 +169,21 @@ export const inventarioProductoService = {
   async actualizar(id, { idModelo, sku, precio }) {
     return enTransaccion(async (connection) => {
       const [productos] = await connection.query(
-        `SELECT id_producto
-         FROM inventario_productos
-         WHERE id_producto = ?`,
+        `SELECT p.id_producto, p.id_modelo, ${referenciaOperativaProducto}
+         FROM inventario_productos AS p
+         WHERE p.id_producto = ?
+         FOR UPDATE`,
         [id],
       );
       if (!productos.length) throw apiError('Producto no encontrado.', 404);
 
-      await validarModeloActivo(connection, idModelo);
+      const cambiaModelo = Number(productos[0].id_modelo) !== Number(idModelo);
+      if (cambiaModelo && Number(productos[0].tiene_referencias_operativas) === 1) {
+        throw apiError('No se puede cambiar el modelo del producto porque tiene movimientos o dependencias operativas.', 409);
+      }
+
+      // An unchanged historical model may be inactive; only new assignments require an active chain.
+      await validarModeloActivo(connection, idModelo, cambiaModelo);
       await connection.query(
         `UPDATE inventario_productos
          SET id_modelo = ?, sku = ?, precio = ?
