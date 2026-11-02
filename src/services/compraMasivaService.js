@@ -1,3 +1,4 @@
+import {contratoPedidoService} from './contratoPedidoService.js';
 import { randomUUID, createHash } from 'node:crypto';
 import { pool } from '../config/db.js';
 import { contratoService } from './contratoService.js';
@@ -88,12 +89,12 @@ export const compraMasivaService = {
         FROM ordenes_compra o JOIN proveedores p ON p.id_proveedor=o.id_proveedor
         WHERE o.id_orden=?`, [id]);
       if (!orden) throw fail('Orden de compra no encontrada.', 404);
-      const [productos] = await conn.query(`SELECT od.id_orden_detalle, p.nombre AS modelo,
+      const [productos] = await conn.query(`SELECT od.id_orden_detalle, p.id_producto, p.nombre AS modelo,
         p.categoria, od.cantidad_pedida AS cantidad
         FROM orden_detalles od JOIN productos p ON p.id_producto=od.id_producto
         WHERE od.id_orden=? ORDER BY p.categoria, p.nombre, od.id_orden_detalle`, [id]);
       const [distribuciones] = await conn.query(`SELECT cr.id_contrato, cr.id_contrato_api,
-        cr.cliente_colegio AS colegio, p.nombre AS modelo, p.categoria,
+        cr.cliente_colegio AS colegio, p.id_producto, p.nombre AS modelo, p.categoria,
         SUM(d.cantidad_asignada) AS cantidad
         FROM orden_distribuciones d
         JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle
@@ -138,6 +139,10 @@ export const compraMasivaService = {
       const actual = await preparar(revision.entrada);
       if (huella(actual) !== huella(revision.plan)) throw fail('Los contratos o proveedores cambiaron. Revisa las órdenes nuevamente.', 409);
       await conn.beginTransaction();
+      // GET_LOCK ya adquirido: la comprobacion y las inserciones se serializan
+      // entre conexiones/procesos, tambien con tokens de revision diferentes.
+      const registrados=await contratoPedidoService.registrados(actual.contratos.map(c=>c.id_contrato),conn);
+      if(registrados.size)throw fail('Este contrato ya tiene un pedido registrado: '+[...registrados].map(id=>'#'+id).join(', ')+'.',409);
       const proveedoresIds = actual.ordenes.map((o) => o.id_proveedor);
       const [activos] = await conn.query("SELECT id_proveedor FROM proveedores WHERE id_proveedor IN (?) AND estado = 'Activo' FOR UPDATE", [proveedoresIds]);
       if (activos.length !== proveedoresIds.length) throw fail('Un proveedor dejó de estar activo. Revisa la compra.', 409);

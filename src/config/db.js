@@ -14,6 +14,14 @@ export const pool = mysql.createPool({
   timezone: "-05:00",
 });
 
+// Zona de las sesiones SQL: America/Lima (UTC-05:00). timezone del driver
+// solo controla conversiones JavaScript; no configura CURRENT_TIMESTAMP en MySQL.
+pool.on('connection', connection => {
+  connection.query("SET time_zone = '-05:00'", error => {
+    if(error)connection.destroy();
+  });
+});
+
 // Comprueba la conexión al cargar este archivo.
 (async () => {
   try {

@@ -6,6 +6,7 @@ import contratoRouter from './routes/contratoRouter.js';
 import proveedorRouter from './routes/proveedorRouter.js';
 import compraMasivaRouter from './routes/compraMasivaRouter.js';
 import pagosRouter from './routes/pagosRouter.js';
+import colegioComprasRouter from './routes/colegioComprasRouter.js';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +23,7 @@ app.use('/api/contratos', contratoRouter);
 app.use('/api/proveedores', proveedorRouter);
 app.use('/api/compras-masivas', compraMasivaRouter);
 app.use('/api/pagos', pagosRouter);
+app.use('/api/colegios-compras', colegioComprasRouter);
 
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada.' });

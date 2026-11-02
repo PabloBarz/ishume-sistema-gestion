@@ -1,3 +1,4 @@
+import {consolidarOrden} from '../../public/js/shared/consolidacionProductos.js';
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 
@@ -22,12 +23,7 @@ export function generarOrdenCompraPdf(orden) {
   const width = doc.internal.pageSize.getWidth() - left * 2;
   const bottom = doc.internal.pageSize.getHeight() - 60;
   let y = 46;
-  const colegios = new Map();
-  for (const d of orden.distribuciones) {
-    if (formal && (typeof d.colegio !== 'string' || !d.colegio.trim())) throw Object.assign(new Error('Falta el nombre del colegio en la orden guardada.'),{status:409});
-    if (!colegios.has(d.id_contrato)) colegios.set(d.id_contrato, { nombre: d.colegio, productos: [] });
-    colegios.get(d.id_contrato).productos.push(d);
-  }
+  const consolidado=consolidarOrden(orden);
 
   function espacio(height) {
     if (y + height > bottom) { doc.addPage(); y = 46; }
@@ -49,34 +45,6 @@ export function generarOrdenCompraPdf(orden) {
     doc.setFontSize(11).setTextColor(...tinta).text(lines,left+110,y+11);
     y+=height+7;
   }
-  function tabla(nombre, productos, sinColegio = false, ultima = false) {
-    const cantidadColumna=1;
-    const totalColegio=productos.reduce((s,p)=>s+p.cantidad,0);
-    doc.setFont('helvetica', 'bold').setFontSize(11);
-    espacio(doc.splitTextToSize(nombre, width - 16).length * 13 + 70);
-    autoTable(doc, {
-      startY: y,
-      // La última sección reserva espacio para que el total general no quede solo en otra página.
-      margin: { top: 46, right: left, bottom: ultima ? (actual ? 130 : formal ? 170 : 140) : 60, left },
-      head: [
-        [{ content: nombre, colSpan: cantidadColumna+1, styles: { fillColor: formal ? [242, 244, 247] : [236, 239, 246], textColor: tinta, fontSize: 11 } }],
-        [actual ? 'Modelo' : 'Descripción del modelo','Cantidad'],
-      ],
-      body: productos.map((p) => [p.modelo,numero(p.cantidad)]),
-      foot: actual ? [[{content:`${sinColegio?'Total sin distribuir':'Total del colegio'}: ${numero(totalColegio)} unidades`,colSpan:cantidadColumna+1,styles:{halign:'right'}}]]
-        : [[sinColegio ? 'Total de unidades sin distribuir' : 'Total de unidades del colegio', numero(totalColegio)]],
-      theme: 'grid', rowPageBreak: 'avoid', showHead: 'everyPage', showFoot: 'lastPage',
-      styles: { font: 'helvetica', fontSize: actual ? 10 : formal ? 10.5 : 10, cellPadding: formal ? {top:5,bottom:5,left:7,right:7} : 7, textColor: tinta, lineColor: [219, 224, 233], lineWidth: formal ? 0.25 : 0.4, overflow: 'linebreak' },
-      headStyles: { fillColor: [248, 249, 251], textColor: tinta, fontStyle: 'bold', halign: 'left' },
-      footStyles: { fillColor: [248, 249, 251], textColor: tinta, fontStyle: 'bold', halign: 'left' },
-      columnStyles: { [cantidadColumna]: { halign: 'right', cellWidth: 80 } },
-      didParseCell: (cell) => {
-        if (cell.column.index === cantidadColumna && cell.cell.colSpan === 1) cell.cell.styles.halign = 'right';
-      },
-    });
-    y = doc.lastAutoTable.finalY + (formal ? 12 : 18);
-  }
-
   if (formal) {
     doc.setFont('helvetica','bold').setFontSize(25).setTextColor(...(actual ? colorCorporativo : naranja)).text('ISHUME',left,y+22);
     if (!actual) doc.setFont('helvetica','normal').setFontSize(9).setTextColor(...gris).text('Gestión de compras',left,y+39);
@@ -101,7 +69,6 @@ export function generarOrdenCompraPdf(orden) {
     if (!actual) dato('Fecha de emisión',orden.fecha);
     dato('Proveedor',orden.proveedor);
     if (actual) dato('Fecha de emisión',orden.fecha);
-    dato('Colegios incluidos',colegios.size);
   } else {
   texto(`Fecha de emisión: ${orden.fecha}`, 10, false, gris);
   if (!formal) {
@@ -109,31 +76,22 @@ export function generarOrdenCompraPdf(orden) {
   y += 17;
   }
   texto(`Proveedor: ${orden.proveedor}`, 12, true);
-  texto(`Cantidad de colegios incluidos: ${colegios.size}`, 10, false, gris);
   }
   y += 8;
   texto('DETALLE DE PRODUCTOS SOLICITADOS', 11, true);
   if (!formal) texto(masiva ? 'Documento enviado para cotización de precios y condiciones' : 'Solicitamos cotización de los siguientes modelos y cantidades', 10, false, gris);
   y += 8;
 
-  // Las filas se presentan solo en su colegio; no hay una segunda tabla de totales por modelo.
-  // Conserva productos de órdenes antiguas que no tengan distribución completa, sin inventar colegios.
-  const pendientes = new Map();
-  const clave = (p) => JSON.stringify([p.modelo, p.categoria ?? null]);
-  for (const p of orden.productos) {
-    const key = clave(p);
-    const anterior = pendientes.get(key);
-    pendientes.set(key, { ...p, cantidad: (anterior?.cantidad || 0) + p.cantidad });
-  }
-  for (const d of orden.distribuciones) {
-    const p = pendientes.get(clave(d));
-    if (!p || p.cantidad < d.cantidad) throw new Error('La distribución de la orden no coincide con sus productos.');
-    p.cantidad -= d.cantidad;
-  }
-  const sinDistribuir = [...pendientes.values()].filter(p => p.cantidad > 0);
-  const secciones = [...colegios.values()];
-  if (sinDistribuir.length) secciones.push({ nombre: 'Productos sin distribución por colegio registrada', productos: sinDistribuir, sinColegio: true });
-  secciones.forEach((c, index) => tabla(c.nombre, c.productos, c.sinColegio, index === secciones.length - 1));
+  autoTable(doc, {
+    startY:y,margin:{top:46,left,right:left,bottom:110},
+    head:[['Modelo','Cantidad']],body:consolidado.productos.map(p=>[p.modelo,numero(p.cantidad)]),
+    theme:'grid',rowPageBreak:'avoid',showHead:'everyPage',
+    styles:{font:'helvetica',fontSize:10,cellPadding:{top:6,bottom:6,left:7,right:7},textColor:tinta,lineColor:[219,224,233],lineWidth:.25,overflow:'linebreak'},
+    headStyles:{fillColor:[248,249,251],textColor:tinta,fontStyle:'bold',halign:'left'},
+    columnStyles:{1:{halign:'right',cellWidth:80}},
+    didParseCell:cell=>{if(cell.column.index===1)cell.cell.styles.halign='right';},
+  });
+  y=doc.lastAutoTable.finalY+14;
   espacio(actual ? 55 : formal ? 95 : 55);
   const boxWidth = formal ? 280 : 245;
   const boxX = left + width - boxWidth;

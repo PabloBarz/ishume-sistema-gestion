@@ -15,12 +15,12 @@ export function fechaValida(valor,opcional=false) {
   return valor;
 }
 export function validarAbono(p,saldo) {
-  const monto=importeCentimos(p.monto),fecha=fechaValida(p.fecha_pago);
+  const monto=importeCentimos(p.monto);
   if(monto>saldo)throw fallo('El abono no puede superar el saldo pendiente.',409);
-  if(!['Transferencia','Efectivo','Yape','Plin'].includes(p.metodo_pago))throw fallo('Selecciona un método de pago válido.');
+  if(!['Yape','Transferencia'].includes(p.metodo_pago))throw fallo('Selecciona un método de pago válido.');
   const operacion=p.numero_operacion??'';
   if(typeof operacion!=='string'||operacion.length>100)throw fallo('Número de operación inválido.');
-  return {monto,fecha,metodo:p.metodo_pago,operacion:operacion.trim()||null};
+  return {monto,metodo:p.metodo_pago,operacion:operacion.trim()||null};
 }
 export function claveValida(clave) {
   if(typeof clave!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(clave))throw fallo('La operación no tiene una clave válida.');
