@@ -201,6 +201,14 @@
 .inventory-panel-header .panel-title { font-size: 16px; }
 .inventory-panel-header .panel-caption { display: inline-block; margin-top: 5px; }
 .inventory-table { min-width: 900px; }
+.inventory-category-table { min-width: 760px; }
+.inventory-category-table th:first-child,
+.inventory-category-table td:first-child { min-width: 210px; }
+.inventory-category-table th:nth-child(2),
+.inventory-category-table th:nth-child(3),
+.inventory-category-table td:nth-child(2),
+.inventory-category-table td:nth-child(3) { text-align: center; }
+.inventory-category-count { font-weight: 600; }
 .inventory-table th { padding: 13px 16px; }
 .inventory-table td { padding: 15px 16px; }
 .inventory-number { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -224,8 +232,6 @@
 .inventory-state-off:hover { background: var(--danger-light); }
 .inventory-state-on:hover { background: rgba(16,185,129,.13); }
 .category-confirm-message { margin: 0; line-height: 1.6; }
-.category-detail-list dt { margin-bottom: 4px; font-size: 12px; }
-.category-detail-list dd { font-weight: 600; }
 
 
 /* ══════════════════════════════════════════

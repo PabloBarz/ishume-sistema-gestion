@@ -1,9 +1,16 @@
 import { appState } from '../../appState.js';
 import { closeOverlay, http, openOverlay, showToast } from '../../utils.js';
-import { createActionButton, createCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
+import { createActionButton, createCell, createNumericCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
 
 let categorySearch = '';
 let categoryStateFilter = '';
+let countFieldsWarningShown = false;
+
+function relationshipCount(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const count = Number(value);
+  return Number.isSafeInteger(count) && count >= 0 ? count : null;
+}
 
 export function filterCategories(categories, search = '', state = '') {
   const normalizedSearch = search.trim().toLocaleLowerCase('es-PE');
@@ -17,10 +24,11 @@ export function filterCategories(categories, search = '', state = '') {
 function renderCategoryTable(categories) {
   const rows = categories.map((category) => {
     const active = Number(category.estado) === 1;
+    const totalDisenios = relationshipCount(category.total_disenios);
+    const totalModelos = relationshipCount(category.total_modelos);
     const actions = document.createElement('td');
     actions.className = 'inventory-category-actions';
     actions.append(
-      createActionButton({ action: 'view', id: category.id_categoria, label: 'Consultar categoría', icon: 'bi bi-eye', className: 'btn-action-view' }),
       createActionButton({ action: 'edit', id: category.id_categoria, label: 'Editar categoría', icon: 'bi bi-pencil-square', className: 'btn-action-edit' }),
       createActionButton({
         action: 'toggle', id: category.id_categoria,
@@ -29,9 +37,15 @@ function renderCategoryTable(categories) {
         className: active ? 'inventory-state-off' : 'inventory-state-on',
       }),
     );
-    return [createCell(category.id_categoria), createCell(category.nombre_categoria), createStatusCell(category.estado), actions];
+    return [
+      createCell(category.nombre_categoria, `ID: ${category.id_categoria}`),
+      createNumericCell(totalDisenios, 'inventory-category-count'),
+      createNumericCell(totalModelos, 'inventory-category-count'),
+      createStatusCell(category.estado),
+      actions,
+    ];
   });
-  return createTable(['ID', 'Categoría', 'Estado', 'Acciones'], rows);
+  return createTable(['Categoría', 'Diseños asociados', 'Modelos relacionados', 'Estado', 'Acciones'], rows, { className: 'inventory-category-table' });
 }
 
 export function createCategoriesModule(root, { isActive, onChanged }) {
@@ -172,28 +186,6 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
     input.focus();
   }
 
-  async function showCategoryDetails(id) {
-    try {
-      const { data } = await http(`/api/categorias/${encodeURIComponent(id)}`);
-      const details = document.createElement('dl');
-      details.className = 'detail-list category-detail-list';
-      [['Identificador', data.id_categoria], ['Nombre', data.nombre_categoria], ['Estado', Number(data.estado) === 1 ? 'Activa' : 'Inactiva']]
-        .forEach(([labelText, value]) => {
-          const group = document.createElement('div');
-          const label = document.createElement('dt');
-          label.className = 'text-muted';
-          label.textContent = labelText;
-          const detail = document.createElement('dd');
-          detail.textContent = String(value ?? '—');
-          group.append(label, detail);
-          details.append(group);
-        });
-      openCategoryModal('Detalle de categoría', `Registro #${data.id_categoria}`, details, [createModalButton('Cerrar', 'btn-cancel', closeCategoryModal)]);
-    } catch (error) {
-      showToast(error.message || 'No se pudo consultar la categoría.', 'error');
-    }
-  }
-
   async function changeCategoryState(category, state, actionButton = null) {
     if (actionButton?.disabled) return;
     if (actionButton) actionButton.disabled = true;
@@ -240,8 +232,7 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
       showToast('La categoría ya no está disponible. Actualiza el listado.', 'warning');
       return;
     }
-    if (action === 'view') void showCategoryDetails(id);
-    else if (action === 'edit') openCategoryForm(category);
+    if (action === 'edit') openCategoryForm(category);
     else if (action === 'toggle' && Number(category.estado) === 1) confirmCategoryDeactivation(category);
     else if (action === 'toggle') void changeCategoryState(category, 1, actionButton);
   }
@@ -279,6 +270,12 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
     },
     render() {
       const { data = [] } = appState.catalogos.getStatus('categorias');
+      const hasInvalidCounts = data.some((category) =>
+        relationshipCount(category.total_disenios) === null || relationshipCount(category.total_modelos) === null);
+      if (hasInvalidCounts && !countFieldsWarningShown) {
+        showToast('La API de categorías no devolvió conteos válidos; revisa el servicio antes de confiar en esos valores.', 'error');
+      }
+      countFieldsWarningShown = hasInvalidCounts;
       return renderCategoryTable(filterCategories(data, categorySearch, categoryStateFilter));
     },
   };
