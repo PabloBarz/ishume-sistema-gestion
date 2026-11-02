@@ -1,5 +1,6 @@
-import { http, formatNumber, openOverlay, closeOverlay } from '../utils.js';
-import { esc, conectarTarjetas, tablaColegios } from './ordenesCompraUi.js';
+import {consolidarOrden} from '../shared/consolidacionProductos.js';
+import { http, formatNumber, openOverlay, closeOverlay, showToast } from '../utils.js';
+import { esc, conectarTarjetas } from './ordenesCompraUi.js';
 
 export async function init() {
   const root = document.getElementById('ordenesGuardadas');
@@ -27,37 +28,20 @@ export async function init() {
     return `<div class="table-scroll"><table class="table-custom solicitud-tabla"><thead><tr><th scope="col">Modelo</th><th scope="col">Cantidad</th></tr></thead><tbody>${productos.map(p=>`<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   function detalle(data, revisar = false) {
-    const colegios = new Map();
-    data.distribuciones.forEach(d=>{
-      if(!colegios.has(d.id_contrato))colegios.set(d.id_contrato,{nombre:d.colegio,productos:[]});
-      colegios.get(d.id_contrato).productos.push(d);
-    });
-    if (revisar === 'orden') {
-      return `<dl class="orden-consulta-datos">
-        <div><dt>Orden</dt><dd>${esc(data.codigo)}</dd></div>
-        <div><dt>Proveedor</dt><dd>${esc(data.proveedor)}</dd></div>
-        <div><dt>Fecha de emisión</dt><dd>${esc(data.fecha)}</dd></div>
-        <div><dt>Colegios</dt><dd>${formatNumber(colegios.size)}</dd></div>
-      </dl>
-      ${tablaColegios([...colegios.values()])}
-      <p class="orden-consulta-total">Total de la orden: <strong>${formatNumber(data.total)} ${data.total === 1 ? 'unidad' : 'unidades'}</strong></p>`;
+    const consolidado=consolidarOrden(data);
+    const ordenes=data.ordenes??[];
+    const multiple=revisar===true||revisar==='proveedor';
+    let informacion;
+    if(multiple){
+      informacion='<dl class="orden-consulta-datos"><div><dt>Proveedor</dt><dd>'+esc(data.proveedor)+'</dd></div><div><dt>Pedidos incluidos</dt><dd>'+formatNumber(ordenes.length)+'</dd></div></dl>'+ 
+        '<div class="orden-consulta-pedidos"><span class="orden-consulta-etiqueta">Códigos de los pedidos</span><ul class="orden-consulta-codigos">'+ordenes.map(o=>'<li>'+esc(o.codigo)+'</li>').join('')+'</ul></div>';
+    }else{
+      const generada=revisar==='orden';
+      const codigo=generada?data.codigo:ordenes[0]?.codigo??data.codigo;
+      const fecha=generada?data.fecha:ordenes[0]?.fecha??data.fecha;
+      informacion='<dl class="orden-consulta-datos"><div><dt>'+ (generada?'Orden':'Pedido')+'</dt><dd>'+esc(codigo)+'</dd></div><div><dt>Proveedor</dt><dd>'+esc(data.proveedor)+'</dd></div>'+(fecha?'<div><dt>Fecha '+(generada?'de emisión':'del pedido')+'</dt><dd>'+esc(fecha)+'</dd></div>':'')+'</dl>';
     }
-    if (revisar === 'vista') {
-      return `<section class="solicitud-revision-resumen"><div class="solicitud-revision-cabecera"><h3>${esc(data.proveedor)}</h3><strong>${formatNumber(data.total)} unidades</strong></div><p>${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido' : 'pedidos'} · ${colegios.size} ${colegios.size === 1 ? 'colegio' : 'colegios'}</p><p class="solicitud-revision-codigos">${data.ordenes.map(o => `${esc(o.codigo)} · ${esc(o.fecha)}`).join(' · ')}</p></section>${tablaColegios([...colegios.values()], {totales:true})}`;
-    }
-    if (revisar) {
-      const unidades = n => `${formatNumber(n)} ${n === 1 ? 'unidad' : 'unidades'}`;
-      return `<section class="solicitud-revision-resumen" aria-label="Resumen del proveedor">
-        <div class="solicitud-revision-cabecera"><h3>${esc(data.proveedor)}</h3><strong>${unidades(data.total)}</strong></div>
-        ${revisar === true ? '' : `<p>${revisar === 'orden' ? '' : `${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido' : 'pedidos'} · `}${colegios.size} ${colegios.size === 1 ? 'colegio' : 'colegios'}</p>
-        <p class="solicitud-revision-codigos">${revisar === 'orden' ? `${esc(data.codigo)} · Emisión: ${esc(data.fecha)}` : `Pedidos incluidos: ${data.ordenes.map(o => esc(o.codigo) + (revisar === 'vista' ? ` · ${esc(o.fecha)}` : '')).join(' · ')}`}</p>`}
-      </section>
-      <details class="orden-detalle-revision"><summary>Colegios, modelos y cantidades</summary>${tablaColegios([...colegios.values()])}</details>
-      <div class="solicitud-revision-total"><span>Total de la orden</span><strong>${unidades(data.total)}</strong></div>`;
-    }
-    return `<p>${data.ordenes.length} ${data.ordenes.length===1?'pedido incluido':'pedidos incluidos'} · ${colegios.size} ${colegios.size===1?'colegio':'colegios'} · <strong>${formatNumber(data.total)} unidades</strong></p>
-      <p class="text-sm text-muted">${data.ordenes.map(o=>esc(o.codigo)).join(' · ')}</p>
-      ${[...colegios.values()].map(c=>`<section class="solicitud-colegio"><h4 class="panel-title">${esc(c.nombre)}</h4>${tabla(c.productos)}</section>`).join('')}`;
+    return informacion+tabla(consolidado.productos)+'<p class="orden-consulta-total">Total de unidades: <strong>'+formatNumber(consolidado.total)+' unidades</strong></p>';
   }
   function controles(value, permitirBusqueda = false) {
     ocupado = value;
@@ -86,8 +70,8 @@ export async function init() {
       <header class="ordenes-generadas-encabezado"><h3 id="ordenes-proveedor-${index}">${esc(g.nombre)}</h3><p>${g.ordenes.length} ${g.ordenes.length===1?'orden':'órdenes'}${hayMas||pagina>1?' en esta página':''} · <strong>${formatNumber(g.total)} unidades</strong></p></header>
       <ul class="ordenes-generadas-lista">${g.ordenes.map(o=>`<li class="orden-generada-fila" data-orden-generada="${o.id_solicitud}">
         <div class="orden-generada-identidad"><strong class="cell-code">${esc(o.codigo)}</strong><span>${esc(o.fecha)}</span></div>
-        <strong class="orden-generada-unidades">${formatNumber(o.total)} unidades</strong><span class="badge badge-info orden-generada-estado">${esc(o.estado)}</span>
-        <div class="orden-generada-acciones"><button class="btn-icon-outline" type="button" data-ver-orden="${o.id_solicitud}" aria-label="Ver detalle de ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button><a class="btn-cancel" href="#/pagos?orden=${o.id_solicitud}" aria-label="Gestionar ${esc(o.codigo)}">Gestionar</a><a class="btn-cancel" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf?vista=1" target="_blank" rel="noopener">Ver PDF</a><a class="btn-primary-action" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf" download aria-label="Descargar PDF de ${esc(o.codigo)}"><i class="bi bi-download" aria-hidden="true"></i> Descargar PDF</a></div>
+        <strong class="orden-generada-unidades">${formatNumber(o.total)} unidades</strong>
+        <div class="orden-generada-acciones"><button class="btn-icon-outline" type="button" data-ver-orden="${o.id_solicitud}" title="Ver detalle" aria-label="Ver detalle de ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button><a class="btn-cancel" href="#/pagos?localizar=${o.id_solicitud}" aria-label="Pagos de ${esc(o.codigo)}">Pagos</a><a class="btn-primary-action" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf" download aria-label="Descargar PDF de ${esc(o.codigo)}"><i class="bi bi-download" aria-hidden="true"></i> Descargar PDF</a><a class="btn-icon-outline orden-seguimiento-link" href="#/inventario/demo-seguimiento?orden=${o.id_solicitud}" data-seguimiento-orden="${o.id_solicitud}" title="Seguimiento de entrega" aria-label="Seguimiento de entrega"><i class="bi bi-truck" aria-hidden="true"></i></a></div>
       </li>`).join('')}</ul>
     </section>`).join('')}</div>`;
   }
@@ -101,10 +85,10 @@ export async function init() {
       card.querySelector('[data-preparar]').disabled=ocupado||!ordenes.length;
     }
   }
-  async function cargar(next=1,mensaje='') {
+  async function cargar(next=1) {
     if(ocupado)return;
     const version=versionBusqueda;
-    controles(true,true);el('ordenesBuscador').setAttribute('aria-busy','true');el('ordenesEstado').textContent='Buscando…';estado.textContent=mensaje;
+    controles(true,true);el('ordenesBuscador').setAttribute('aria-busy','true');el('ordenesEstado').textContent='Buscando…';estado.textContent='';
     try{
       const endpoint=tab==='pendientes'?'pendientes':'solicitudes';
       const {data}=await http(`/api/compras-masivas/${endpoint}?q=${encodeURIComponent(filtro)}&pagina=${next}`);
@@ -120,9 +104,15 @@ export async function init() {
         results.innerHTML=renderGeneradas(data.solicitudes);
         el('ordenesEstado').textContent=data.solicitudes.length?'':'No hay órdenes generadas para esta búsqueda.';
       }
+      const destino=new URLSearchParams(location.hash.split('?')[1]||'');
+      const id=destino.get('localizar');
+      if(/^\d+$/.test(id||'')){
+        const fila=tab==='pendientes'?results.querySelector('[data-orden="'+id+'"]')?.closest('.solicitud-pedido'):results.querySelector('[data-orden-generada="'+id+'"]');
+        if(fila){fila.classList.add('colegio-orden-localizada');fila.scrollIntoView({block:'nearest'});}
+      }
       el('ordenesPaginacion').hidden=pagina===1&&!hayMas;
       el('ordenesPagina').textContent=`Página ${pagina}`;
-    }catch(error){if(root.isConnected&&version===versionBusqueda){el('ordenesEstado').textContent=error.message;results.replaceChildren();}}
+    }catch(error){if(root.isConnected&&version===versionBusqueda){el('ordenesEstado').textContent=error.message;results.replaceChildren();showToast(error.message,'error');}}
     finally{
       controles(false);el('ordenesBuscador').setAttribute('aria-busy','false');
       if(busquedaEnCola&&root.isConnected){busquedaEnCola=false;void cargar();}
@@ -148,15 +138,16 @@ export async function init() {
       clearTimeout(temporizadorBusqueda);
       const consulta=++consultaVista;vistaAbierta=true;controles(true);el('pedidosPanel').inert=true;
       el('pedidoVista').classList.toggle('orden-consulta',!!verOrden);
+      const vistaPdf=el('pedidoVistaPdf');vistaPdf.hidden=true;vistaPdf.removeAttribute('href');
       el('pedido-vista-title').textContent=verOrden?'Detalle de orden de compra':verPedido?'Detalle del pedido':'Todos los pedidos pendientes del proveedor';
       el('pedidoVistaContenido').textContent=verOrden?'Cargando orden…':'Cargando pedidos…';el('pedidoVista').hidden=false;openOverlay('pedidoVista');
       try{
         const url=verOrden?`/api/compras-masivas/solicitudes/${verOrden.dataset.verOrden}`:verPedido?`/api/compras-masivas/pendientes/${verPedido.dataset.verPedido}/detalle`:`/api/compras-masivas/pendientes/proveedor/${verProveedor.dataset.verProveedor}/detalle`;
         const {data}=await http(url);
         if(!root.isConnected||consulta!==consultaVista)return;
-        if(data.distribuciones.some(d=>typeof d.colegio!=='string'||!d.colegio.trim()))throw new Error('Falta el nombre del colegio en este pedido. Revisa la referencia del contrato.');
-        el('pedidoVistaContenido').innerHTML=detalle(data,verOrden?'orden':'vista');
-      }catch(error){if(root.isConnected&&consulta===consultaVista)el('pedidoVistaContenido').innerHTML=`<p role="alert">${esc(error.message)}</p>`;}
+        el('pedidoVistaContenido').innerHTML=detalle(data,verOrden?'orden':verProveedor?'proveedor':'pedido');
+        if(verOrden){vistaPdf.href=`/api/compras-masivas/solicitudes/${verOrden.dataset.verOrden}/pdf?vista=1`;vistaPdf.hidden=false;}
+      }catch(error){if(root.isConnected&&consulta===consultaVista){el('pedidoVistaContenido').innerHTML=`<p role="alert">${esc(error.message)}</p>`;showToast(error.message,'error');}}
       finally{if(consulta===consultaVista)controles(false);}
       return;
     }
@@ -174,7 +165,7 @@ export async function init() {
         el('pedidosPanel').inert=true;el('solicitudRevision').hidden=false;
         el('solicitudRevisionEstado').textContent='';
         openOverlay('solicitudRevision');estado.textContent='';
-      }catch(error){if(root.isConnected)estado.textContent=error.message;}
+      }catch(error){if(root.isConnected){estado.textContent=error.message;showToast(error.message,'error');}}
       finally{controles(false);}
     }
   });
@@ -199,12 +190,12 @@ export async function init() {
     estado.textContent='Generando orden de compra…';
     el('solicitudRevisionEstado').textContent='Generando orden de compra…';
     try{
-      const {data}=await http('/api/compras-masivas/solicitudes/confirmar','POST',revision);
+      await http('/api/compras-masivas/solicitudes/confirmar','POST',revision);
       if(!root.isConnected)return;
       revision=null;closeOverlay('solicitudRevision');el('solicitudRevision').hidden=true;el('pedidosPanel').inert=false;
       activarTab('realizadas');filtro='';el('ordenesFiltro').value='';el('ordenesLimpiar').hidden=true;
-      controles(false);await cargar(1,`Orden ${data.codigo} generada correctamente.`);
-    }catch(error){if(root.isConnected){estado.textContent=`${error.message} Puedes reintentar esta misma confirmación sin duplicar la solicitud.`;el('solicitudRevisionEstado').textContent=estado.textContent;}}
+      controles(false);showToast('Orden de compra generada','success');await cargar(1);
+    }catch(error){if(root.isConnected){estado.textContent=`${error.message} Puedes reintentar esta misma confirmación sin duplicar la solicitud.`;el('solicitudRevisionEstado').textContent=estado.textContent;showToast(error.message,'error');}}
     finally{controles(false);el('solicitudConfirmar').disabled=false;el('solicitudVolver').disabled=false;}
   });
   function buscarAutomatico(inmediato=false){
@@ -225,7 +216,7 @@ export async function init() {
   el('pedidoVista').addEventListener('keydown',event=>{
     if(event.key==='Escape'){event.preventDefault();event.stopPropagation();el('pedidoVistaCerrar').click();}
     if(event.key==='Tab'){
-      const elementos=[...el('pedidoVista').querySelectorAll('summary,button:not(:disabled)')];
+      const elementos=[...el('pedidoVista').querySelectorAll('summary,select:not(:disabled),button:not(:disabled),a[href]:not([hidden])')];
       const primero=elementos[0],ultimo=elementos.at(-1);
       if(event.shiftKey&&document.activeElement===primero){event.preventDefault();ultimo?.focus();}
       else if(!event.shiftKey&&document.activeElement===ultimo){event.preventDefault();primero?.focus();}
@@ -233,5 +224,10 @@ export async function init() {
   });
   el('ordenesAnterior').addEventListener('click',()=>void cargar(pagina-1));
   el('ordenesSiguiente').addEventListener('click',()=>void cargar(pagina+1));
+  if(new URLSearchParams(location.hash.split('?')[1]||'').get('vista')==='generadas')activarTab('realizadas');
+  const destino=new URLSearchParams(location.hash.split('?')[1]||'');
+  if(destino.get('codigo')&&/^\d+$/.test(destino.get('localizar')||'')){
+    filtro=destino.get('codigo');el('ordenesFiltro').value=filtro;el('ordenesLimpiar').hidden=false;
+  }
   void cargar();
 }

@@ -73,7 +73,7 @@ function handleSubmit(event) {
 
   appendExampleRow(values);
   form.reset();
-  showToast('El registro de demostración se agregó a la tabla.', 'success');
+  showToast('Registro de demostración agregado', 'success');
 }
 
 // Inicializa eventos en los elementos recién insertados por el router.

@@ -44,7 +44,7 @@ body:has(#pagosProductos.open) { overflow: hidden; }
 #pagos #pagosArchivoAyuda { display: block; }
 @media(max-width:600px) { #pagos .pagos-general-busqueda { grid-template-columns: 1fr; } }
 #pagos .pagos-lista { min-width: 540px; }
-#pagos .pagos-lista th:last-child, #pagos .pagos-lista td:last-child { width: 76px; text-align: center; }
+#pagos .pagos-lista th:last-child, #pagos .pagos-lista td:last-child { width: 128px; text-align: center; }
 #pagosProductos .pagos-detalle { margin: 0; }
 #pagosProductos .pagos-documento, #pagosProductos .pagos-economia { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
 #pagosProductos .pagos-economia dl { margin: 12px 0 18px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
@@ -58,5 +58,89 @@ body:has(#pagosProductos.open) { overflow: hidden; }
 #pagos .pagos-importes dt { color: var(--text-muted); font-size: 12px; }
 #pagos .pagos-importes dd { font-size: 16px; font-weight: 600; margin: 5px 0 0; overflow-wrap: anywhere; }
 #pagos .pagos-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-#pagos progress { width: 100%; height: 8px; accent-color: var(--primary); }
+
 #pagos #pagosHistorial { overflow-x: auto; }
+
+#pagos .pagos-fila-acciones { display: flex; align-items: center; justify-content: flex-end; gap: 8px; white-space: nowrap; }
+#pagos .pagos-fila-acciones .btn-icon-outline { width: 32px; height: 32px; padding: 0; flex: 0 0 32px; color: var(--text-muted); border-color: var(--border); }
+#pagos .pagos-fila-acciones .btn-icon-outline:hover:not(:disabled) { background: #f4f5f8; color: var(--text); border-color: #cbd0da; }
+#pagosProductos.pagos-modal-abono { --compras-modal-ancho: 420px; }
+#pagos #pagosModalEstado:empty { display: none; }
+#pagos .pagos-historial-tabla { width: 100%; min-width: 340px; }
+#pagos .pagos-historial-tabla :is(th,td) { padding: 9px 8px; font-size: 12px; border-bottom: 1px solid var(--border); }
+#pagos .pagos-historial-tabla :is(th,td):nth-child(2) { text-align: right; white-space: nowrap; }
+#pagos #pagosHistorial h3 { margin: 18px 0 8px; font-size: 14px; }
+
+#pagos .pagos-lista tr.pago-localizado td { background: #f3efff; }
+#pagos .pagos-lista tr.pago-localizado td:first-child { box-shadow: inset 3px 0 var(--primary); }
+
+#pagos #pagosProveedorNombre { margin: 4px 0 0; overflow-wrap: anywhere; }
+#pagos #pagosHistorialSolo { overflow-x: auto; }
+#pagos .pagos-imagen-toggle { display: block; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+#pagos .pagos-imagen-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+
+/* Resumenes de solo lectura dentro de los formularios de Pagos. */
+#pagos .pagos-resumen-formulario { margin: 0; padding-top: 10px; border-top: 1px solid var(--border); }
+#pagos .pagos-resumen-formulario h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+#pagos .pagos-resumen-formulario .pagos-importes { margin: 0; }
+#pagos .pagos-resumen-formulario dd { font-size: 14px; margin-top: 4px; }
+#pagos .pagos-saldo-destacado dd { color: var(--text); font-weight: 700; }
+#pagos .pagos-saldo-estimado { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding-top: 10px; border-top: 1px solid var(--border); font-size: 13px; }
+#pagos .pagos-saldo-estimado strong { color: var(--text); }
+@media(max-width:400px) { #pagos .pagos-resumen-formulario.pagos-importes, #pagos .pagos-resumen-formulario .pagos-importes { gap: 8px; } }
+
+#pagos .pagos-documento-seleccionado { position: relative; width: fit-content; max-width: 100%; padding-right: 30px; }
+#pagos .pagos-documento-seleccionado > p { overflow-wrap: anywhere; }
+#pagos .pagos-quitar-documento { position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; background: white; border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 11px; }
+#pagos .pagos-quitar-documento:hover { background: #f4f5f7; color: var(--text); }
+#pagos .pagos-quitar-documento:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Organizacion del formulario de cotizacion; conserva el resto de los modales. */
+#pagosCotizacionForm .pagos-form-seccion { min-width: 0; }
+#pagosCotizacionForm .pagos-economica-seccion { border-top: 1px solid var(--border); padding-top: 12px; }
+#pagosCotizacionForm h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
+#pagosCotizacionForm #pagosDatosAdelanto { margin-top: 10px; }
+#pagosCotizacionForm .pagos-resumen-formulario { background: #f8f9fb; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+#pagosCotizacionForm .pagos-documento-seleccionado { display: grid; grid-template-columns: 64px minmax(0,1fr); gap: 4px 12px; width: 100%; box-sizing: border-box; padding: 10px 42px 10px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+#pagosCotizacionForm .pagos-documento-seleccionado > p { grid-column: 2; grid-row: 1; margin: 0; font-size: 12px; align-self: end; }
+#pagosCotizacionForm .pagos-documento-seleccionado .pagos-miniatura { display: contents; }
+#pagosCotizacionForm .pagos-documento-seleccionado :is(.pagos-imagen-area,.pagos-pdf-icono) { grid-column: 1; grid-row: 1 / 3; align-self: center; }
+#pagosCotizacionForm .pagos-documento-seleccionado img { display: block; width: 64px; height: 64px; object-fit: contain; }
+#pagosCotizacionForm .pagos-documento-seleccionado .btn-link { grid-column: 2; grid-row: 2; justify-self: start; padding: 0; font-size: 12px; }
+#pagosCotizacionForm .pagos-pdf-icono { font-size: 32px; color: var(--text-muted); text-align: center; }
+#pagosCotizacionForm .pagos-quitar-documento { top: 8px; right: 8px; }
+#pagosProductos.pagos-modal-cotizacion > .modal-panel > .compra-totals { justify-content: flex-end; gap: 8px; }
+#pagosProductos.pagos-modal-cotizacion #pagosModalCerrar { order: 0; }
+#pagosProductos.pagos-modal-cotizacion #pagosGuardar { order: 1; }
+
+/* Enlace de consulta del documento en registro y edicion. */
+#pagosCotizacionForm .pagos-documento-seleccionado .btn-link { border: 0; background: transparent; box-shadow: none; border-radius: 0; min-height: 0; height: auto; font-family: inherit; font-weight: 400; color: var(--primary-dark); text-decoration: none; cursor: pointer; }
+#pagosCotizacionForm .pagos-documento-seleccionado .btn-link:hover { text-decoration: underline; }
+#pagosCotizacionForm .pagos-documento-seleccionado .btn-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+
+#pagos .pagos-ultimo-abono { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+#pagos .pagos-ultimo-abono h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+#pagos .pagos-ultimo-abono p { margin: 0 0 6px; font-size: 13px; overflow-wrap: anywhere; }
+#pagos .pagos-enlace-historial { border: 0; padding: 0; background: transparent; box-shadow: none; color: var(--primary-dark); font: inherit; font-size: 12px; cursor: pointer; }
+#pagos .pagos-enlace-historial:hover { text-decoration: underline; }
+#pagos .pagos-enlace-historial:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+
+/* Agrupacion de lectura por proveedor; importes y acciones conservados. */
+#pagos .pagos-proveedor-grupo { margin-bottom: 16px; overflow: hidden; }
+#pagos .pagos-proveedor-grupo > summary { padding: 13px 16px; cursor: pointer; background: #f8f9fb; color: var(--text); }
+#pagos .pagos-proveedor-grupo > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: -3px; }
+#pagos .pagos-proveedor-cabecera { display: inline-flex; flex-direction: column; gap: 5px; vertical-align: middle; max-width: calc(100% - 24px); }
+#pagos .pagos-proveedor-cabecera > strong { font-size: 14px; overflow-wrap: anywhere; }
+#pagos .pagos-proveedor-cabecera > span { font-size: 12px; line-height: 1.6; color: var(--text-muted); overflow-wrap: anywhere; }
+#pagos .pagos-proveedor-grupo[open] > summary { border-bottom: 1px solid var(--border); }
+
+#pagos .pagos-fila-acciones { gap: 6px; }
+
+/* Refinamiento exclusivo de Registrar abono. */
+#pagosProductos.pagos-modal-abono #pagosAbonoForm { gap: 10px; }
+#pagosProductos.pagos-modal-abono #pagosAbonoResumen { margin: 0 0 2px; padding-top: 0; border-top: 0; }
+#pagosProductos.pagos-modal-abono .pagos-saldo-estimado { padding-top: 8px; }
+#pagosProductos.pagos-modal-abono > .modal-panel > .modal-body-custom { padding-block: 14px; }
+#pagosProductos.pagos-modal-abono > .modal-panel > .compra-totals { justify-content: flex-end; gap: 8px; }
+#pagosProductos.pagos-modal-abono #pagosModalCerrar { order: 0; }
+#pagosProductos.pagos-modal-abono #pagosAbonoGuardar { order: 1; }

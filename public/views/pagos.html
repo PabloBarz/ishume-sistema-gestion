@@ -1,6 +1,6 @@
 ﻿<section id="pagos" class="ordenes-contenido" aria-labelledby="pagos-title">
   <div class="page-header"><h1 class="page-title" id="pagos-title">Pagos a proveedores</h1></div>
-  <p class="pagos-limitacion" id="pagosAviso">Guardado no disponible.</p>
+  <p class="pagos-limitacion" id="pagosAviso">Guardado no disponible: falta preparar el esquema de Pagos.</p>
   <section id="pagosGeneral" hidden>
     <form class="pagos-general-busqueda" id="pagosBuscador" role="search">
       <input class="input-custom" id="pagosBusqueda" type="search" maxlength="200" placeholder="Buscar proveedor o código..." aria-label="Buscar proveedor o código" autocomplete="off">
@@ -19,37 +19,46 @@
   <button class="btn-cancel" id="pagosReintentar" type="button" hidden>Reintentar consulta</button>
   <div class="modal-overlay compras-modal" id="pagosProductos" aria-hidden="true" hidden>
     <section class="modal-panel" aria-labelledby="pagosProductosTitulo">
-      <header class="modal-header-custom"><h2 class="modal-title-custom" id="pagosProductosTitulo"></h2><button class="btn-modal-close" id="pagosProductosCerrar" type="button" aria-label="Cerrar documento"><i class="bi bi-x-lg" aria-hidden="true"></i></button></header>
+      <header class="modal-header-custom"><div><h2 class="modal-title-custom" id="pagosProductosTitulo"></h2><p id="pagosProveedorNombre" class="text-sm text-muted"></p></div><button class="btn-modal-close" id="pagosProductosCerrar" type="button" aria-label="Cerrar documento"><i class="bi bi-x-lg" aria-hidden="true"></i></button></header>
       <div class="modal-body-custom">
-        <p class="pagos-limitacion">Guardado no disponible.</p>
+        <p class="pagos-limitacion">Guardado no disponible: falta preparar el esquema de Pagos.</p>
         <p id="pagosModalEstado" role="status" aria-live="polite"></p>
         <section id="pagosDetalle" hidden aria-label="Documento del proveedor">
           <form id="pagosCotizacionForm" class="pagos-form" novalidate>
-            <div><label class="form-label-custom" for="pagosArchivo">Documento del proveedor</label><button class="btn-cancel pagos-adjuntar" id="pagosAdjuntar" type="button">Adjuntar imagen o PDF</button><input id="pagosArchivo" type="file" aria-label="Archivo del proveedor" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" aria-describedby="err-pagosArchivo" hidden><p class="field-error" id="err-pagosArchivo" aria-live="polite"></p></div>
-            <div id="pagosArchivoVista" class="pagos-archivo-vista"></div>
-            <div><label class="form-label-custom" for="pagosFechaCotizacion">Fecha del documento</label><input class="input-custom" id="pagosFechaCotizacion" type="date"></div>
+            <section class="pagos-form-seccion pagos-documento-seccion"><div><label class="form-label-custom" for="pagosArchivo">Documento del proveedor</label><button class="btn-cancel pagos-adjuntar" id="pagosAdjuntar" type="button">Adjuntar imagen o PDF</button><input id="pagosArchivo" type="file" aria-label="Archivo del proveedor" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" aria-describedby="err-pagosArchivo" hidden><p class="field-error" id="err-pagosArchivo" aria-live="polite"></p></div>
+            <div id="pagosArchivoVista" class="pagos-archivo-vista"></div></section>
+            <div id="pagosMotivoCampo" hidden><label class="form-label-custom" for="pagosMotivo">Motivo de la correcci&#243;n</label><textarea class="input-custom" id="pagosMotivo" maxlength="500" rows="2"></textarea></div>
+            <section class="pagos-form-seccion pagos-economica-seccion">
             <div class="pagos-form-fila">
               <div><label class="form-label-custom" for="pagosImporte">Importe total (S/)</label><input class="input-custom" id="pagosImporte" type="text" inputmode="decimal" maxlength="13" placeholder="0.00" aria-describedby="err-pagosImporte"><p class="field-error" id="err-pagosImporte" aria-live="polite"></p></div>
-              <div><label class="form-label-custom" for="pagosAdelanto">Adelanto (S/)</label><input class="input-custom" id="pagosAdelanto" type="text" inputmode="decimal" maxlength="13" value="0.00" aria-describedby="err-pagosAdelanto"><p class="field-error" id="err-pagosAdelanto" aria-live="polite"></p></div>
+              <div id="pagosAdelantoCampo"><label class="form-label-custom" for="pagosAdelanto">Adelanto inicial (S/)</label><input class="input-custom" id="pagosAdelanto" type="text" inputmode="decimal" maxlength="13" placeholder="0.00" aria-describedby="err-pagosAdelanto"><p class="field-error" id="err-pagosAdelanto" aria-live="polite"></p></div>
             </div>
-            <div class="pagos-form-fila" id="pagosDatosAdelanto" hidden><div><label class="form-label-custom" for="pagosFechaAdelanto">Fecha del pago</label><input class="input-custom" id="pagosFechaAdelanto" type="date"></div><div><label class="form-label-custom" for="pagosMetodoAdelanto">Método</label><select class="input-custom" id="pagosMetodoAdelanto"><option value="">Seleccionar</option><option>Transferencia</option><option>Efectivo</option><option>Yape</option><option>Plin</option></select></div></div>
+            <div class="pagos-form-fila" id="pagosDatosAdelanto" hidden><div><label class="form-label-custom" for="pagosMetodoAdelanto">Método</label><select class="input-custom" id="pagosMetodoAdelanto"><option value="">Seleccionar</option><option>Yape</option><option>Transferencia</option></select></div></div></section>
+            <section class="pagos-resumen-formulario" id="pagosCotizacionResumen" aria-labelledby="pagosResumenTitulo" hidden>
+              <h3 id="pagosResumenTitulo">Resumen del pago</h3>
+              <dl class="pagos-importes"><div><dt>Total</dt><dd id="pagosCotizacionTotal">&#8212;</dd></div><div><dt>Abonado</dt><dd id="pagosCotizacionAbonado">&#8212;</dd></div><div class="pagos-saldo-destacado"><dt>Saldo pendiente</dt><dd id="pagosCotizacionSaldo">&#8212;</dd></div></dl>
+            </section>
+            
           </form>
           <section id="pagosSeguimiento" hidden>
             <div id="pagosArchivoGuardado" class="pagos-archivo-vista"></div>
             <dl class="pagos-importes"><div><dt>Total</dt><dd id="pagosTotalReal"></dd></div><div><dt>Abonado</dt><dd id="pagosAbonadoReal"></dd></div><div><dt>Saldo</dt><dd id="pagosSaldoReal"></dd></div></dl>
-            <p class="text-sm" id="pagosEstadoReal"></p><progress id="pagosProgreso" max="100" aria-label="Porcentaje abonado"></progress>
-            <div class="pagos-acciones"><button class="btn-primary-action" id="pagosNuevoAbono" type="button">Registrar abono</button><button class="btn-cancel" id="pagosVerHistorial" type="button">Ver historial</button><button class="btn-link" id="pagosCorregir" type="button">Corregir documento</button></div>
+            <section class="pagos-ultimo-abono" aria-labelledby="pagosUltimoTitulo"><h3 id="pagosUltimoTitulo">Último abono</h3><p id="pagosUltimoAbono"></p><button class="btn-link pagos-enlace-historial" type="button" id="pagosVerHistorial">Ver historial de abonos</button></section>
+            <section id="pagosHistorial"></section>
+
           </section>
+          <section id="pagosHistorialSolo" hidden></section>
           <form id="pagosAbonoForm" class="pagos-form" hidden>
-            <div><label class="form-label-custom" for="pagosAbonoMonto">Importe (S/)</label><input class="input-custom" id="pagosAbonoMonto" inputmode="decimal" type="text" required></div>
-            <div class="pagos-form-fila"><div><label class="form-label-custom" for="pagosAbonoFecha">Fecha</label><input class="input-custom" id="pagosAbonoFecha" type="date" required></div><div><label class="form-label-custom" for="pagosAbonoMetodo">Método</label><select class="input-custom" id="pagosAbonoMetodo" required><option value="">Seleccionar</option><option>Transferencia</option><option>Efectivo</option><option>Yape</option><option>Plin</option></select></div></div>
-            <div><label class="form-label-custom" for="pagosAbonoOperacion">Número de operación (opcional)</label><input class="input-custom" id="pagosAbonoOperacion" type="text" maxlength="100"></div>
-            <button class="btn-primary-action" type="submit" id="pagosAbonoGuardar">Guardar abono</button>
+            <dl class="pagos-importes pagos-resumen-formulario" id="pagosAbonoResumen"></dl>
+            <div><label class="form-label-custom" for="pagosAbonoMonto">Importe (S/)</label><input class="input-custom" id="pagosAbonoMonto" inputmode="decimal" type="text" placeholder="0.00" required aria-describedby="err-pagosAbonoMonto"><p class="field-error" id="err-pagosAbonoMonto" aria-live="polite"></p></div>
+            <div class="pagos-form-fila"><div><label class="form-label-custom" for="pagosAbonoMetodo">Método</label><select class="input-custom" id="pagosAbonoMetodo" required><option value="">Seleccionar</option><option>Yape</option><option>Transferencia</option></select></div></div>
+
+            <p class="pagos-saldo-estimado">Nuevo saldo estimado: <strong id="pagosAbonoEstimado">&#8212;</strong></p>
           </form>
-          <section id="pagosHistorial" hidden></section>
+
         </section>
       </div>
-      <div class="panel-body compra-totals"><button class="btn-primary-action" id="pagosGuardar" type="submit" form="pagosCotizacionForm" disabled>Guardar documento</button><button class="btn-cancel" id="pagosSeguimientoVolver" type="button" hidden>Volver</button><button class="btn-cancel" id="pagosModalCerrar" type="button">Cerrar</button></div>
+      <div class="panel-body compra-totals"><button class="btn-primary-action" id="pagosGuardar" type="submit" form="pagosCotizacionForm" disabled>Guardar documento</button><button class="btn-primary-action" id="pagosAbonoGuardar" type="submit" form="pagosAbonoForm" hidden>Guardar abono</button><button class="btn-cancel" id="pagosModalCerrar" type="button">Cerrar</button></div>
     </section>
   </div>
 </section>

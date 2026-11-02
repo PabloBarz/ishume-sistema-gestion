@@ -2,6 +2,16 @@
 import { closeOverlay } from './utils.js';
 
 const routes = {
+  'compras/colegios': {
+    title: '',
+    view: '/views/consultar_colegios.html',
+    loadModule: () => import('./modules/consultarColegios.js'),
+  },
+  'inventario/demo-seguimiento': {
+    title: '',
+    view: '/views/seguimiento_entrega_demo.html',
+    loadModule: () => import('./modules/seguimientoEntregaDemo.js'),
+  },
   pagos: {
     title: '',
     view: '/views/pagos.html',
@@ -48,6 +58,7 @@ function getRouteName() {
 }
 
 function updateShell(routeName, title) {
+  document.body.classList.toggle('seguimiento-entrega-activo',routeName==='inventario/demo-seguimiento');
   document.querySelectorAll('.nav-item[data-page]').forEach((link) => {
     const isActive = link.dataset.page === routeName;
     link.classList.toggle('active', isActive);
@@ -57,7 +68,7 @@ function updateShell(routeName, title) {
 
   document.getElementById('topbarTitle').textContent = title;
   const ordenesMenu = document.getElementById('ordenesMenu');
-  const active = routeName.startsWith('ordenes/') || routeName === 'pagos';
+  const active = routeName.startsWith('ordenes/') || routeName === 'pagos' || routeName === 'compras/colegios';
   ordenesMenu.querySelector('summary').classList.toggle('active', active);
   if (active) ordenesMenu.open = true;
 }

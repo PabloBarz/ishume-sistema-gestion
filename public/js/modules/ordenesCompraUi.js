@@ -1,4 +1,4 @@
-import { formatNumber } from '../utils.js';
+import { formatNumber, showToast } from '../utils.js';
 
 export const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -35,9 +35,9 @@ export function conectarTarjetas(container, estado) {
       link.download = response.headers.get('Content-Disposition')?.match(/filename="?([^";]+)"?/)?.[1] || nombre;
       link.click();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-      if (estado.isConnected) estado.textContent = 'PDF descargado desde la orden guardada en MySQL.';
+      if (estado.isConnected) { estado.textContent = ''; showToast('PDF descargado.','success'); }
     } catch (error) {
-      if (estado.isConnected) estado.textContent = error.message;
+      if (estado.isConnected) { estado.textContent = error.message; showToast(error.message,'error'); }
     }
   }
 

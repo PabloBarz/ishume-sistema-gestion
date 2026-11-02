@@ -1,0 +1,12 @@
+<section class="ordenes-contenido" id="consultarColegios" aria-labelledby="consultarColegiosTitulo">
+  <div class="page-header"><h1 class="page-title" id="consultarColegiosTitulo">Consultar colegios</h1></div>
+  <section class="card-panel">
+    <form class="panel-body colegio-buscador" id="colegiosConsultaForm" role="search">
+      <label class="form-label-custom" for="colegiosConsultaBusqueda">Colegio</label>
+      <div class="colegio-buscador-campo"><i class="bi bi-search" aria-hidden="true"></i><input class="input-custom" id="colegiosConsultaBusqueda" type="search" maxlength="200" placeholder="Buscar colegio por nombre..." autocomplete="off" aria-controls="colegiosConsultaResultados" aria-describedby="colegiosConsultaEstado"></div>
+      <p class="text-sm text-muted" id="colegiosConsultaEstado" role="status" aria-live="polite"></p>
+      <ul class="colegio-resultados" id="colegiosConsultaResultados" aria-label="Colegios encontrados" hidden></ul>
+    </form>
+  </section>
+  <section class="card-panel colegios-consulta-detalle" id="colegiosConsultaDetalle" aria-live="polite" hidden></section>
+</section>

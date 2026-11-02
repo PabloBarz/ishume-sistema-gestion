@@ -1,0 +1,14 @@
+<section id="seguimientoEntregaDemo" class="ordenes-contenido" aria-labelledby="seguimientoTitulo">
+  <div class="page-header seguimiento-demo-encabezado"><h1 class="page-title" id="seguimientoTitulo">Seguimiento de entrega</h1>
+  <p class="seguimiento-demo-volver"><a class="btn-cancel seguimiento-volver-boton" href="#/ordenes/guardadas?vista=generadas">← Volver a órdenes generadas</a></p></div>
+  <section class="card-panel" id="seguimientoDemoSelector" hidden>
+    <div class="panel-body">
+      <p class="text-sm text-muted">Selecciona una orden masiva.</p>
+      <label class="form-label-custom" for="seguimientoDemoOrden">Orden de compra</label>
+      <select class="input-custom" id="seguimientoDemoOrden"><option value="">Seleccionar orden</option></select>
+      <div class="compra-totals seguimiento-demo-paginacion"><button class="btn-cancel" id="seguimientoDemoAnterior" type="button">Anterior</button><span id="seguimientoDemoPagina"></span><button class="btn-cancel" id="seguimientoDemoSiguiente" type="button">Siguiente</button></div>
+    </div>
+  </section>
+  <p id="seguimientoDemoEstado" role="status" aria-live="polite"></p>
+  <section class="card-panel"><div class="panel-body" id="seguimientoDemoContenido"></div></section>
+</section>

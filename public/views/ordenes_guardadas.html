@@ -1,5 +1,5 @@
 <section class="ordenes-contenido" id="ordenesGuardadas" aria-labelledby="ordenes-guardadas-title">
-  <div class="page-header"><div><h1 class="page-title" id="ordenes-guardadas-title">Órdenes guardadas</h1></div><a class="btn-primary-action" href="#/ordenes/nueva">Preparar pedidos</a></div>
+  <div class="page-header"><div><h1 class="page-title" id="ordenes-guardadas-title">Órdenes guardadas</h1></div></div>
   <div class="solicitud-tabs" role="tablist" aria-label="Pedidos">
     <button class="btn-cancel" id="tabPendientes" type="button" role="tab" aria-selected="true" aria-controls="pedidosPanel">Pedidos pendientes</button>
     <button class="btn-cancel" id="tabRealizados" type="button" role="tab" aria-selected="false" aria-controls="pedidosPanel" tabindex="-1">Órdenes generadas</button>
@@ -14,7 +14,7 @@
   </section>
   <div class="modal-overlay orden-confirmacion compras-modal" id="solicitudRevision" aria-hidden="true" hidden>
   <section class="card-panel modal-panel" aria-labelledby="solicitud-revision-title">
-    <div class="panel-header"><h2 class="panel-title" id="solicitud-revision-title">Confirmar orden de compra masiva</h2></div>
+    <div class="modal-header-custom"><h2 class="modal-title-custom" id="solicitud-revision-title">Confirmar orden de compra masiva</h2></div>
     <div class="panel-body" id="solicitudRevisionContenido"></div>
     <p class="orden-modal-estado" id="solicitudRevisionEstado" role="status" aria-live="polite"></p>
     <div class="panel-body compra-totals"><button class="btn-cancel" id="solicitudVolver" type="button">Volver</button><button class="btn-primary-action" id="solicitudConfirmar" type="button">Confirmar</button></div>
@@ -24,7 +24,7 @@
     <section class="card-panel modal-panel" aria-labelledby="pedido-vista-title">
       <div class="modal-header-custom"><h2 class="modal-title-custom" id="pedido-vista-title">Vista de pedidos pendientes</h2></div>
       <div class="panel-body pedido-vista-contenido" id="pedidoVistaContenido" aria-live="polite"></div>
-      <div class="panel-body compra-totals"><button class="btn-cancel" id="pedidoVistaCerrar" type="button">Cerrar</button></div>
+      <div class="panel-body compra-totals"><a class="btn-cancel" id="pedidoVistaPdf" target="_blank" rel="noopener" hidden>Ver PDF</a><button class="btn-cancel" id="pedidoVistaCerrar" type="button">Cerrar</button></div>
     </section>
   </div>
   <p id="solicitudEstado" class="text-sm" role="status" aria-live="polite"></p>

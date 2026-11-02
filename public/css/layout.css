@@ -283,3 +283,7 @@ a { text-decoration: none; color: inherit; }
   margin: 4px 0 0;
 }
 
+
+.nav-inventario-pendiente { cursor: default; }
+.nav-inventario-pendiente small { display: block; margin-top: 3px; font-size: 10px; font-weight: 400; line-height: 1.4; }
+.nav-inventario-pendiente:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }

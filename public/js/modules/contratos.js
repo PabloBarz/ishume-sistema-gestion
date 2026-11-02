@@ -1,5 +1,5 @@
 import { esc } from './ordenesCompraUi.js';
-import { http, formatDate, formatNumber, openOverlay, closeOverlay } from '../utils.js';
+import { http, formatDate, formatNumber, openOverlay, closeOverlay, showToast } from '../utils.js';
 
 const cantidadValida = (n, original) => Number.isInteger(n) && n >= Math.max(1, original) && n <= 2147483647;
 const categoria = (p) => {
@@ -116,6 +116,10 @@ export async function init() {
     card.querySelector('[data-total]').textContent = c.productos.every((p) => cantidadValida(p.cantidad_pedir, p.cantidad)) ? `Total: ${formatNumber(c.productos.reduce((s, p) => s + p.cantidad_pedir, 0))} unidades` : 'Revisa las cantidades';
   }
 
+  function actualizarBuscador() {
+    colegios.parentElement.hidden = contratos.size === 0;
+    input.placeholder = contratos.size ? 'Buscar otro colegio...' : 'Buscar colegio por nombre...';
+  }
   function renderColegio(c) {
     const grupos = new Map();
     c.productos.forEach((p, index) => {
@@ -155,7 +159,7 @@ export async function init() {
     const coincidencias = listado.filter(c => normalizar(c.colegio).includes(texto));
     estadoBusqueda.textContent = !listado.length ? 'No hay contratos escolares en proceso con colegio registrado.'
       : !coincidencias.length ? 'No se encontraron colegios' : `${coincidencias.length} contratos encontrados. Selecciona un colegio para agregarlo.`;
-    resultados.innerHTML = coincidencias.map(c => `<li><button type="button" data-colegio="${c.id_contrato}" ${c.modelos_disponibles === false || contratos.has(c.id_contrato) || pending || bloqueado || !proveedores.length ? 'disabled' : ''}><strong>${esc(c.colegio)}</strong><span>${c.cliente ? esc(c.cliente) + ' · ' : ''}Contrato #${c.id_contrato} · Entrega: ${esc(fecha(c.fecha_entrega))}${contratos.has(c.id_contrato) ? ' · Agregado' : ''}</span>${c.modelos_disponibles === false ? `<span class="colegio-sin-modelos">${esc(c.aviso_modelos || 'Sin modelos disponibles')}</span>` : ''}</button></li>`).join('');
+    resultados.innerHTML = coincidencias.map(c => `<li><button type="button" class="${c.pedido_registrado ? 'colegio-pedido-registrado' : ''}" data-colegio="${c.id_contrato}" ${c.pedido_registrado || c.modelos_disponibles === false || contratos.has(c.id_contrato) || pending || bloqueado || !proveedores.length ? 'disabled' : ''}><strong>${esc(c.colegio)}</strong><span>${c.cliente ? esc(c.cliente) + ' · ' : ''}Contrato #${c.id_contrato} · Entrega: ${esc(fecha(c.fecha_entrega))}${c.pedido_registrado ? ' · Pedido registrado' : contratos.has(c.id_contrato) ? ' · Agregado' : ''}</span>${c.modelos_disponibles === false ? `<span class="colegio-sin-modelos">${esc(c.aviso_modelos || 'Sin modelos disponibles')}</span>` : ''}</button></li>`).join('');
   }
   async function cargarColegios() {
     if (cargandoListado) return;
@@ -168,7 +172,7 @@ export async function init() {
       listado = data;
       cargandoListado = false; filtrarColegios();
     } catch (error) {
-      if (form.isConnected) { estadoBusqueda.textContent = error.message; reintentar.hidden = false; }
+      if (form.isConnected) { estadoBusqueda.textContent = error.message; reintentar.hidden = false; showToast(error.message,'error'); }
     } finally { cargandoListado = false; input.disabled = bloqueado || pending; }
   }
   input.addEventListener('input', () => { busquedaAbierta = true; filtrarColegios(); });
@@ -183,7 +187,7 @@ export async function init() {
     const seleccion = event.target.closest('[data-colegio]');
     if (!seleccion || pending || bloqueado || !proveedores.length) return;
     const id = Number(seleccion.dataset.colegio);
-    if (listado.find(c=>c.id_contrato===id)?.modelos_disponibles === false) return;
+    if (listado.find(c=>c.id_contrato===id)?.pedido_registrado || listado.find(c=>c.id_contrato===id)?.modelos_disponibles === false) return;
     if (contratos.has(id)) { estado.textContent = `El contrato ${id} ya está agregado.`; return; }
     pending = true; preparar.disabled = true; input.disabled = true;
     filtrarColegios(); form.setAttribute('aria-busy', 'true');
@@ -191,6 +195,7 @@ export async function init() {
     try {
       const { data } = await http(`/api/contratos?id=${id}`);
       if (!form.isConnected) return;
+      if(data.pedido_registrado){listado=listado.map(c=>c.id_contrato===id?{...c,pedido_registrado:true}:c);throw new Error('Este contrato ya tiene un pedido registrado.');}
       if (typeof data.colegio !== 'string' || !data.colegio.trim()) { listado=listado.filter(c=>c.id_contrato!==id); throw new Error('El contrato no tiene un colegio registrado.'); }
       if (data.estado_trabajo !== 'en_proceso' || normalizar(data.promocion || '') !== 'promocion') { listado=listado.filter(c=>c.id_contrato!==id); throw new Error('El contrato ya no es un contrato escolar en proceso.'); }
       if (!data.productos.length || data.modelos_disponibles === false) {
@@ -200,14 +205,16 @@ export async function init() {
       const liderBook = proveedores.find(esLiderBook);
       const c = { ...data, productos: data.productos.map(p => ({ ...p, cantidad_pedir: p.cantidad,
         id_proveedor: categoria(p) === 'Book' ? liderBook?.id_proveedor ?? null : null })) };
-      renderColegio(c);
-      contratos.set(c.id_contrato, c); actualizarResumen(); input.value = ''; cerrarBusqueda();
+      const card = renderColegio(c);
+      contratos.set(c.id_contrato, c); actualizarResumen(); actualizarBuscador(); input.value = ''; cerrarBusqueda();
+      card.focus({ preventScroll: true });
+      card.scrollIntoView({ block: 'start', behavior: 'instant' });
       estado.textContent = '';
-    } catch (error) { if (form.isConnected) { if(error.status===404)listado=listado.filter(c=>c.id_contrato!==id); estado.textContent = error.message; } }
+    } catch (error) { if (form.isConnected) { if(error.status===404)listado=listado.filter(c=>c.id_contrato!==id); estado.textContent = error.message; showToast(error.message,'error'); } }
     finally {
       pending = false; preparar.disabled = bloqueado || !resumenValido; input.disabled = false;
       form.setAttribute('aria-busy', 'false'); filtrarColegios();
-      if (contratos.has(id)) input.focus({ preventScroll: true });
+
     }
   });
 
@@ -215,7 +222,7 @@ export async function init() {
     const quitar = event.target.closest('[data-quitar]');
     if (!quitar || bloqueado) return;
     const card = quitar.closest('[data-contrato]');
-    contratos.delete(Number(card.dataset.contrato)); card.remove(); actualizarResumen(); filtrarColegios();
+    contratos.delete(Number(card.dataset.contrato)); card.remove(); actualizarResumen(); actualizarBuscador(); filtrarColegios(); showToast('Colegio quitado del pedido','info');
   });
   function cambiar(event) {
     if (bloqueado) return;
@@ -241,7 +248,7 @@ export async function init() {
     actualizarResumen();
     const productos = [...contratos.values()].flatMap((c) => c.productos);
     if (!productos.length || productos.some((p) => !p.id_proveedor || !cantidadValida(p.cantidad_pedir, p.cantidad))) {
-      estado.textContent = 'Completa todos los proveedores y cantidades antes de preparar las órdenes.'; return;
+      estado.textContent = 'Completa todos los proveedores y cantidades antes de preparar las \u00f3rdenes.'; showToast(estado.textContent,'warning'); return;
     }
     setBloqueado(true); estado.textContent = 'Verificando contratos y proveedores antes de guardar…';
     try {
@@ -253,7 +260,7 @@ export async function init() {
       editor.inert = true;
       el('compraRevisionEstado').textContent = '';
       revision.hidden = false; openOverlay('compraRevision'); estado.textContent = '';
-    } catch (error) { if (form.isConnected) { estado.textContent = error.message; setBloqueado(false); } }
+    } catch (error) { if (form.isConnected) { estado.textContent = error.message; showToast(error.message,'error'); setBloqueado(false); } }
   });
   el('compraEditar').addEventListener('click', () => {
     token = null; editor.inert = false; setBloqueado(false); closeOverlay('compraRevision'); revision.hidden = true;
@@ -280,35 +287,24 @@ export async function init() {
     try {
       const { data } = await http('/api/compras-masivas/confirmar', 'POST', { token });
       if (!form.isConnected) return;
-      guardado = true; closeOverlay('compraRevision'); revision.hidden = true; editor.inert = false; el('compraConfirmacion').hidden = false;
-      el('compraOrdenesGeneradas').innerHTML = `<p class="confirmacion-cantidad">Se ${data.ordenes.length === 1 ? 'registró' : 'registraron'} ${data.ordenes.length} ${data.ordenes.length === 1 ? 'pedido' : 'pedidos'} correctamente.</p>`;
-      editor.hidden = true;
-      openOverlay('compraConfirmacion');
-      estado.textContent = '';
-    } catch (error) { if (form.isConnected) { estado.textContent = `${error.message} Puedes reintentar con esta misma revisión.`; el('compraRevisionEstado').textContent = estado.textContent; } }
+      guardado=true;closeOverlay('compraRevision');revision.hidden=true;editor.inert=false;
+      const cantidad=data.ordenes.length;
+      const guardados=new Set(contratos.keys());
+      listado=listado.map(c=>guardados.has(c.id_contrato)?{...c,pedido_registrado:true}:c);
+      nuevoPedido();
+      showToast(cantidad+' '+(cantidad===1?'pedido guardado':'pedidos guardados'),'success');
+    } catch (error) { if (form.isConnected) { estado.textContent = error.status===409&&error.message.includes('ya tiene un pedido registrado')?error.message:`${error.message} Puedes reintentar con esta misma revisión.`; el('compraRevisionEstado').textContent = estado.textContent; showToast(error.message,'error'); if(error.status===409)void cargarColegios(); } }
     finally { pending = false; confirmar.disabled = guardado; if (form.isConnected) el('compraEditar').disabled = guardado; }
   });
   function nuevoPedido() {
-    closeOverlay('compraConfirmacion');
-    contratos.clear(); colegios.replaceChildren(); guardado = false; token = null;
-    el('compraConfirmacion').hidden = true; confirmar.disabled = false; el('compraEditar').disabled = false;
+    contratos.clear(); colegios.replaceChildren(); actualizarBuscador(); guardado = false; token = null;
+    confirmar.disabled = false; el('compraEditar').disabled = false;
     actualizarResumen(); setBloqueado(false); editor.hidden = false; input.value = ''; filtrarColegios();
     el('contratos-title').textContent = 'Órdenes de compra';
     el('ordenPaso').textContent = 'Selecciona colegios y asigna proveedores a sus productos';
     cerrarBusqueda();
-    estado.textContent = 'Busca un colegio para preparar nuevas órdenes.'; input.focus();
+    estado.textContent = ''; input.focus();
   }
-  el('compraNueva').addEventListener('click', nuevoPedido);
-  el('compraConfirmacionCerrar').addEventListener('click', nuevoPedido);
-  el('compraConfirmacion').addEventListener('keydown', event => {
-    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); nuevoPedido(); }
-    if (event.key === 'Tab') {
-      const controles = [...el('compraConfirmacion').querySelectorAll('button, a[href]')];
-      const primero = controles[0], ultimo = controles.at(-1);
-      if (event.shiftKey && document.activeElement === primero) { event.preventDefault(); ultimo.focus(); }
-      else if (!event.shiftKey && document.activeElement === ultimo) { event.preventDefault(); primero.focus(); }
-    }
-  });
   actualizarResumen();
   void cargarColegios();
   try {
@@ -316,5 +312,5 @@ export async function init() {
     if (!form.isConnected) return;
     proveedores = data; filtrarColegios();
     estado.textContent = proveedores.length ? '' : 'No hay proveedores activos en MySQL. Activa un proveedor antes de comenzar.';
-  } catch (error) { if (form.isConnected) estado.textContent = error.message; }
+  } catch (error) { if (form.isConnected) { estado.textContent = error.message; showToast(error.message,'error'); } }
 }
