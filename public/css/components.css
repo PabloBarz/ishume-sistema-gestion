@@ -209,6 +209,13 @@
 .inventory-category-table td:nth-child(2),
 .inventory-category-table td:nth-child(3) { text-align: center; }
 .inventory-category-count { font-weight: 600; }
+.inventory-design-table { min-width: 980px; }
+.inventory-design-table th:first-child,
+.inventory-design-table td:first-child { min-width: 210px; }
+.inventory-design-table th:nth-child(4),
+.inventory-design-table td:nth-child(4) { text-align: center; }
+.inventory-design-table td:nth-child(3) { min-width: 180px; max-width: 320px; white-space: normal; }
+.inventory-design-count { font-weight: 600; }
 .inventory-table th { padding: 13px 16px; }
 .inventory-table td { padding: 15px 16px; }
 .inventory-number { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -225,13 +232,23 @@
 .inventory-page [hidden] { display: none !important; }
 .inventory-toolbar .filter-select { min-width: 150px; }
 .inventory-panel-header .btn-primary-action { flex: 0 0 auto; }
-.inventory-category-actions { white-space: nowrap; }
-.inventory-category-actions .btn-action { margin-right: 3px; }
+.inventory-category-actions, .inventory-design-actions { white-space: nowrap; }
+.inventory-category-actions .btn-action, .inventory-design-actions .btn-action { margin-right: 3px; }
+.inventory-design-actions .btn-action:disabled { color: var(--text-muted); opacity: .55; cursor: not-allowed; }
 .inventory-state-off { color: var(--danger); }
 .inventory-state-on { color: var(--success); }
 .inventory-state-off:hover { background: var(--danger-light); }
 .inventory-state-on:hover { background: rgba(16,185,129,.13); }
 .category-confirm-message { margin: 0; line-height: 1.6; }
+.inventory-design-note { display: block; margin-top: 6px; color: var(--text-muted); line-height: 1.45; }
+.inventory-design-description { resize: vertical; min-height: 80px; }
+
+@media (max-width: 760px) {
+  .inventory-toolbar { flex-wrap: wrap; }
+  .inventory-toolbar .search-input-wrap { flex: 1 1 100%; max-width: none; }
+  .inventory-toolbar .filter-select { flex: 1 1 140px; min-width: 0; }
+  .inventory-panel-header { flex-wrap: wrap; gap: 12px; }
+}
 
 
 /* ══════════════════════════════════════════

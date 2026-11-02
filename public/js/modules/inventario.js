@@ -1,6 +1,8 @@
 import { formatNumber } from '../utils.js';
 import { appState } from '../appState.js';
+import { createInventoryModal } from '../components/inventoryModal.js';
 import { createCategoriesModule } from './inventario/categorias.js';
+import { createDesignsModule } from './inventario/disenios.js';
 import { renderReadonlyCatalog } from './inventario/catalogos.js';
 
 const catalogLabels = {
@@ -72,7 +74,7 @@ function renderCatalogState(panel, catalog, status, onRetry) {
   return false;
 }
 
-function selectCatalog(root, catalog, categoriesModule) {
+function selectCatalog(root, catalog, categoriesModule, designsModule) {
   activeCatalog = catalog;
   root.querySelectorAll('.inventory-tab').forEach((tab) => {
     const selected = tab.dataset.catalog === catalog;
@@ -81,17 +83,27 @@ function selectCatalog(root, catalog, categoriesModule) {
     tab.tabIndex = selected ? 0 : -1;
   });
   categoriesModule.setVisible(catalog === 'categorias');
-  renderCatalog(root, catalog, categoriesModule);
+  designsModule.setVisible(catalog === 'disenios');
+  const search = root.querySelector('#inventory-search');
+  const searchable = catalog === 'categorias' || catalog === 'disenios';
+  search.disabled = !searchable;
+  search.placeholder = catalog === 'categorias' ? 'Buscar por nombre de categoría…'
+    : catalog === 'disenios' ? 'Buscar por nombre de diseño…'
+      : 'Búsqueda disponible en una próxima fase';
+  search.value = catalog === 'categorias' ? categoriesModule.getSearch()
+    : catalog === 'disenios' ? designsModule.getSearch() : '';
+  root.querySelector('#inventory-filter-placeholder').hidden = searchable;
+  renderCatalog(root, catalog, categoriesModule, designsModule);
 }
 
-function renderCatalog(root, catalog, categoriesModule) {
+function renderCatalog(root, catalog, categoriesModule, designsModule) {
   if (!root.isConnected) return;
   const panel = root.querySelector('#inventory-panel');
   const status = appState.catalogos.getStatus(catalog);
   panel.setAttribute('aria-labelledby', `tab-${catalog}`);
   root.querySelector('#inventory-caption').textContent = catalogCaptions[catalog];
   panel.replaceChildren();
-  if (renderCatalogState(panel, catalog, status, () => loadCatalog(catalog, root, categoriesModule))) return;
+  if (renderCatalogState(panel, catalog, status, () => loadCatalog(catalog, root, categoriesModule, designsModule))) return;
 
   if (catalog === 'categorias') {
     const filtered = categoriesModule.render();
@@ -108,20 +120,35 @@ function renderCatalog(root, catalog, categoriesModule) {
     panel.append(filtered);
     return;
   }
+  if (catalog === 'disenios') {
+    const filtered = designsModule.render();
+    if (!filtered.querySelector('tbody tr')) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.setAttribute('role', 'status');
+      empty.textContent = status.data.length
+        ? 'No hay diseños que coincidan con la búsqueda y los filtros seleccionados.'
+        : 'No hay diseños registrados.';
+      panel.append(empty);
+      return;
+    }
+    panel.append(filtered);
+    return;
+  }
   panel.append(renderReadonlyCatalog(catalog, status.data));
 }
 
-function loadCatalog(catalog, root, categoriesModule) {
+function loadCatalog(catalog, root, categoriesModule, designsModule) {
   return appState.catalogos.get(catalog)
     .then(() => {
       if (!root.isConnected) return;
       renderStats(root);
-      renderCatalog(root, activeCatalog, categoriesModule);
+      renderCatalog(root, activeCatalog, categoriesModule, designsModule);
     })
     .catch(() => {
       if (!root.isConnected) return;
       renderStats(root);
-      renderCatalog(root, activeCatalog, categoriesModule);
+      renderCatalog(root, activeCatalog, categoriesModule, designsModule);
     });
 }
 
@@ -129,28 +156,52 @@ export async function init() {
   const root = document.querySelector('.inventory-page');
   if (!root) return;
 
-  function updateActiveCatalog({ renderOnly = false, nameChanged = false } = {}) {
+  function updateActiveCatalog({ renderOnly = false } = {}) {
     if (!root.isConnected) return;
     if (renderOnly) {
-      renderCatalog(root, activeCatalog, categoriesModule);
+      renderCatalog(root, activeCatalog, categoriesModule, designsModule);
       return;
     }
     renderStats(root);
-    if (activeCatalog === 'categorias') renderCatalog(root, activeCatalog, categoriesModule);
-    else void loadCatalog(activeCatalog, root, categoriesModule);
+    if (activeCatalog === 'categorias') renderCatalog(root, activeCatalog, categoriesModule, designsModule);
+    else void loadCatalog(activeCatalog, root, categoriesModule, designsModule);
   }
 
+  const modal = createInventoryModal(root);
   const categoriesModule = createCategoriesModule(root, {
     isActive: () => activeCatalog === 'categorias',
     onChanged: updateActiveCatalog,
+    modal,
+  });
+  const designsModule = createDesignsModule(root, {
+    isActive: () => activeCatalog === 'disenios',
+    onChanged: updateActiveCatalog,
+    modal,
+  });
+
+  root.querySelector('#inventory-search').addEventListener('input', (event) => {
+    if (activeCatalog === 'categorias') categoriesModule.setSearch(event.target.value);
+    else if (activeCatalog === 'disenios') designsModule.setSearch(event.target.value);
+    else return;
+    updateActiveCatalog({ renderOnly: true });
+  });
+
+  root.querySelector('#inventory-panel').addEventListener('click', (event) => {
+    const categoryButton = event.target.closest('[data-category-action]');
+    if (categoryButton) {
+      categoriesModule.handleAction(categoryButton.dataset.categoryAction, categoryButton.dataset.categoryId, categoryButton);
+      return;
+    }
+    const designButton = event.target.closest('[data-design-action]');
+    if (designButton) designsModule.handleAction(designButton.dataset.designAction, designButton.dataset.designId, designButton);
   });
 
   const tablist = root.querySelector('.inventory-tablist');
   tablist.addEventListener('click', (event) => {
     const tab = event.target.closest('.inventory-tab');
     if (!tab) return;
-    selectCatalog(root, tab.dataset.catalog, categoriesModule);
-    void loadCatalog(tab.dataset.catalog, root, categoriesModule);
+    selectCatalog(root, tab.dataset.catalog, categoriesModule, designsModule);
+    void loadCatalog(tab.dataset.catalog, root, categoriesModule, designsModule);
   });
   tablist.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -160,12 +211,15 @@ export async function init() {
       : event.key === 'End' ? tabs.length - 1
         : (currentIndex + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
     event.preventDefault();
-    selectCatalog(root, tabs[nextIndex].dataset.catalog, categoriesModule);
+    selectCatalog(root, tabs[nextIndex].dataset.catalog, categoriesModule, designsModule);
     tabs[nextIndex].focus();
-    void loadCatalog(tabs[nextIndex].dataset.catalog, root, categoriesModule);
+    void loadCatalog(tabs[nextIndex].dataset.catalog, root, categoriesModule, designsModule);
   });
 
-  selectCatalog(root, activeCatalog, categoriesModule);
+  selectCatalog(root, activeCatalog, categoriesModule, designsModule);
   // Productos es la pestaña inicial; categorías se cargan para su indicador. El resto es lazy.
-  await Promise.all([loadCatalog(activeCatalog, root, categoriesModule), loadCatalog('categorias', root, categoriesModule)]);
+  await Promise.all([
+    loadCatalog(activeCatalog, root, categoriesModule, designsModule),
+    loadCatalog('categorias', root, categoriesModule, designsModule),
+  ]);
 }

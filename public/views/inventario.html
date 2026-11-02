@@ -39,6 +39,9 @@
       <button class="btn-primary-action" id="categoryCreateButton" type="button" hidden>
         <i class="bi bi-plus-lg" aria-hidden="true"></i> Nueva categoría
       </button>
+      <button class="btn-primary-action" id="designCreateButton" type="button" hidden>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo diseño
+      </button>
     </div>
 
     <div class="inventory-tablist" role="tablist" aria-label="Catálogos de inventario">
@@ -54,6 +57,14 @@
         <input class="search-input" id="inventory-search" type="search" placeholder="Búsqueda disponible en una próxima fase" disabled aria-label="Buscar en el catálogo">
       </label>
       <select class="filter-select" id="categoryStateFilter" aria-label="Filtrar categorías por estado" hidden disabled>
+        <option value="">Todos</option>
+        <option value="1">Activos</option>
+        <option value="0">Inactivos</option>
+      </select>
+      <select class="filter-select" id="designCategoryFilter" aria-label="Filtrar diseños por categoría" hidden disabled>
+        <option value="">Todas las categorías</option>
+      </select>
+      <select class="filter-select" id="designStateFilter" aria-label="Filtrar diseños por estado" hidden disabled>
         <option value="">Todos</option>
         <option value="1">Activos</option>
         <option value="0">Inactivos</option>

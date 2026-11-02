@@ -1,5 +1,5 @@
 import { appState } from '../../appState.js';
-import { closeOverlay, http, openOverlay, showToast } from '../../utils.js';
+import { http, showToast } from '../../utils.js';
 import { createActionButton, createCell, createNumericCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
 
 let categorySearch = '';
@@ -48,44 +48,21 @@ function renderCategoryTable(categories) {
   return createTable(['Categoría', 'Diseños asociados', 'Modelos relacionados', 'Estado', 'Acciones'], rows, { className: 'inventory-category-table' });
 }
 
-export function createCategoriesModule(root, { isActive, onChanged }) {
-  const modal = root.querySelector('#inventoryModal');
-  const modalTitle = root.querySelector('#inventoryModalTitle');
-  const modalSubtitle = root.querySelector('#inventoryModalSubtitle');
-  const modalBody = root.querySelector('#inventoryModalBody');
-  const modalFooter = root.querySelector('#inventoryModalFooter');
+export function createCategoriesModule(root, { isActive, onChanged, modal }) {
+  const closeCategoryModal = () => modal.close();
 
-  function closeCategoryModal() {
-    closeOverlay('inventoryModal');
-  }
-
-  function openCategoryModal(title, subtitle, body, footer) {
-    modalTitle.textContent = title;
-    modalSubtitle.textContent = subtitle;
-    modalBody.replaceChildren(body);
-    modalFooter.replaceChildren(...footer);
-    openOverlay('inventoryModal');
-  }
-
-  function createModalButton(label, className, onClick) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = className;
-    button.textContent = label;
-    button.addEventListener('click', onClick);
-    return button;
-  }
-
-  async function refreshCategories(nameChanged = false) {
+  async function refreshCategories({ nameChanged = false, stateChanged = false } = {}) {
     if (nameChanged) {
       ['disenios', 'modelos', 'productos'].forEach((catalog) => appState.catalogos.invalidate(catalog));
+    } else if (stateChanged) {
+      appState.catalogos.invalidate('disenios');
     }
     try {
       await appState.catalogos.reload('categorias');
-      await onChanged({ nameChanged });
+      await onChanged({ nameChanged, stateChanged });
       return true;
     } catch {
-      await onChanged({ nameChanged });
+      await onChanged({ nameChanged, stateChanged });
       return false;
     }
   }
@@ -153,7 +130,7 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
         return;
       }
 
-      const submit = modalFooter.querySelector('[type="submit"]');
+      const submit = root.querySelector('#inventoryModalFooter [type="submit"]');
       submit.disabled = true;
       form.setAttribute('aria-busy', 'true');
       try {
@@ -161,7 +138,7 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
         const response = await http(url, isEdit ? 'PUT' : 'POST', { nombre_categoria: name });
         closeCategoryModal();
         showToast(response.message || (isEdit ? 'Categoría actualizada correctamente.' : 'Categoría creada correctamente.'), 'success');
-        if (!await refreshCategories(isEdit)) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
+        if (!await refreshCategories({ nameChanged: isEdit })) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
       } catch (requestError) {
         if (requestError.status === 409) {
           input.classList.add('is-invalid');
@@ -176,13 +153,13 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
       }
     });
 
-    const cancel = createModalButton('Cancelar', 'btn-cancel', closeCategoryModal);
+    const cancel = modal.createButton('Cancelar', 'btn-cancel', closeCategoryModal);
     const submit = document.createElement('button');
     submit.type = 'submit';
     submit.className = 'btn-primary-action';
     submit.setAttribute('form', form.id);
     submit.textContent = isEdit ? 'Guardar cambios' : 'Guardar categoría';
-    openCategoryModal(isEdit ? 'Editar categoría' : 'Nueva categoría', 'El nombre debe ser único y tener hasta 30 caracteres.', form, [cancel, submit]);
+    modal.open(isEdit ? 'Editar categoría' : 'Nueva categoría', 'El nombre debe ser único y tener hasta 30 caracteres.', form, [cancel, submit]);
     input.focus();
   }
 
@@ -193,9 +170,9 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
       const response = await http(`/api/categorias/${encodeURIComponent(category.id_categoria)}/estado`, 'PATCH', { estado: state });
       closeCategoryModal();
       showToast(response.message || (state === 1 ? 'Categoría activada correctamente.' : 'Categoría desactivada correctamente.'), 'success');
-      if (!await refreshCategories()) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
+      if (!await refreshCategories({ stateChanged: true })) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
     } catch (error) {
-      const modalError = modalBody.querySelector('#categoryModalError');
+      const modalError = root.querySelector('#categoryModalError');
       if (modalError) {
         modalError.hidden = false;
         modalError.textContent = error.message;
@@ -220,9 +197,9 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
     error.setAttribute('role', 'alert');
     error.hidden = true;
     content.append(message, error);
-    const cancel = createModalButton('Cancelar', 'btn-cancel', closeCategoryModal);
-    const deactivate = createModalButton('Desactivar', 'btn-danger-action', () => changeCategoryState(category, 0, deactivate));
-    openCategoryModal('Confirmar desactivación', 'La categoría no estará disponible para nuevas asignaciones.', content, [cancel, deactivate]);
+    const cancel = modal.createButton('Cancelar', 'btn-cancel', closeCategoryModal);
+    const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => changeCategoryState(category, 0, deactivate));
+    modal.open('Confirmar desactivación', 'La categoría no estará disponible para nuevas asignaciones.', content, [cancel, deactivate]);
   }
 
   function handleCategoryAction(action, id, actionButton) {
@@ -237,37 +214,23 @@ export function createCategoriesModule(root, { isActive, onChanged }) {
     else if (action === 'toggle') void changeCategoryState(category, 1, actionButton);
   }
 
-  const search = root.querySelector('#inventory-search');
   const stateFilter = root.querySelector('#categoryStateFilter');
-  root.querySelector('#inventoryModalClose').addEventListener('click', closeCategoryModal);
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) closeCategoryModal();
-  });
   root.querySelector('#categoryCreateButton').addEventListener('click', () => openCategoryForm());
-  search.addEventListener('input', (event) => {
-    categorySearch = event.target.value;
-    if (isActive()) onChanged({ renderOnly: true });
-  });
   stateFilter.addEventListener('change', (event) => {
     categoryStateFilter = event.target.value;
     if (isActive()) onChanged({ renderOnly: true });
   });
-  root.querySelector('#inventory-panel').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-category-action]');
-    if (button) handleCategoryAction(button.dataset.categoryAction, button.dataset.categoryId, button);
-  });
 
   return {
     setVisible(visible) {
-      search.disabled = !visible;
-      search.placeholder = visible ? 'Buscar por nombre de categoría…' : 'Búsqueda disponible en una próxima fase';
-      search.value = visible ? categorySearch : '';
       stateFilter.hidden = !visible;
       stateFilter.disabled = !visible;
       stateFilter.value = categoryStateFilter;
-      root.querySelector('#inventory-filter-placeholder').hidden = visible;
       root.querySelector('#categoryCreateButton').hidden = !visible;
     },
+    getSearch() { return categorySearch; },
+    setSearch(value) { categorySearch = value; },
+    handleAction: handleCategoryAction,
     render() {
       const { data = [] } = appState.catalogos.getStatus('categorias');
       const hasInvalidCounts = data.some((category) =>

@@ -4,6 +4,18 @@ function apiError(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
+const columnasDisenio = `d.id_diseno, d.id_categoria, c.nombre_categoria,
+  c.estado AS estado_categoria, d.nombre_diseno, d.descripcion, d.estado,
+  COALESCE(mc.total_modelos, 0) AS total_modelos`;
+
+const joinConteoModelos = `
+  INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
+  LEFT JOIN (
+    SELECT id_diseno, COUNT(DISTINCT id_modelo) AS total_modelos
+    FROM modelos
+    GROUP BY id_diseno
+  ) AS mc ON mc.id_diseno = d.id_diseno`;
+
 async function enTransaccion(callback) {
   const connection = await pool.getConnection();
   let iniciada = false;
@@ -25,16 +37,27 @@ async function enTransaccion(callback) {
 }
 
 async function buscarPorId(id, connection = pool, bloquear = false) {
+  let referenciaBloqueada = null;
+  if (bloquear) {
+    const [lockedRows] = await connection.query(
+      `SELECT id_categoria, estado
+       FROM disenios
+       WHERE id_diseno = ?
+       FOR UPDATE`,
+      [id],
+    );
+    if (!lockedRows.length) throw apiError('Diseño no encontrado.', 404);
+    referenciaBloqueada = lockedRows[0];
+  }
   const [rows] = await connection.query(
-    `SELECT d.id_diseno, d.id_categoria, c.nombre_categoria,
-            d.nombre_diseno, d.descripcion, d.estado
+    `SELECT ${columnasDisenio}
      FROM disenios AS d
-     INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
-     WHERE d.id_diseno = ?${bloquear ? ' FOR UPDATE' : ''}`,
+     ${joinConteoModelos}
+     WHERE d.id_diseno = ?`,
     [id],
   );
   if (!rows.length) throw apiError('Diseño no encontrado.', 404);
-  return rows[0];
+  return referenciaBloqueada ? { ...rows[0], ...referenciaBloqueada } : rows[0];
 }
 
 async function buscarCategoriaActiva(connection, idCategoria) {
@@ -70,10 +93,9 @@ export const disenioService = {
     }
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
     const [rows] = await pool.query(
-      `SELECT d.id_diseno, d.id_categoria, c.nombre_categoria,
-              d.nombre_diseno, d.descripcion, d.estado
+      `SELECT ${columnasDisenio}
        FROM disenios AS d
-       INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
+       ${joinConteoModelos}
        ${where}
        ORDER BY d.id_diseno DESC`,
       parametros,
@@ -105,7 +127,15 @@ export const disenioService = {
 
   async actualizar(id, { idCategoria, nombre, descripcion }) {
     return enTransaccion(async (connection) => {
-      await buscarCategoriaActiva(connection, idCategoria);
+      const categoriaAnterior = await buscarPorId(id, connection);
+      const categoriaDestino = await buscarCategoria(connection, idCategoria);
+      const disenioBloqueado = await buscarPorId(id, connection, true);
+      if (Number(categoriaAnterior.id_categoria) !== Number(disenioBloqueado.id_categoria)) {
+        throw apiError('La categoría del diseño cambió durante la operación. Intenta nuevamente.', 409);
+      }
+      if (Number(categoriaDestino.estado) !== 1 && Number(categoriaDestino.id_categoria) !== Number(disenioBloqueado.id_categoria)) {
+        throw apiError('No se puede asignar el diseño a una categoría inactiva.', 409);
+      }
       const [result] = await connection.query(
         `UPDATE disenios
          SET id_categoria = ?, nombre_diseno = ?, descripcion = ?
