@@ -10,6 +10,7 @@
 
 CREATE DATABASE IF NOT EXISTS bd_ishume CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE bd_ishume;
+SET time_zone = '-05:00';
 
 -- 1. Proveedores: una orden pertenece a un solo proveedor.
 CREATE TABLE IF NOT EXISTS proveedores (
@@ -245,7 +246,7 @@ CREATE TABLE solicitudes_cotizacion (
   huella CHAR(64) NOT NULL,
   contenido_json JSON NOT NULL,
   importe_acordado DECIMAL(12,2) NULL,
-  fecha_documento DATE NULL,
+  fecha_registro_documento DATETIME NULL COMMENT 'Registro del documento en America/Lima; no es emision del proveedor',
   archivo_clave VARCHAR(100) NULL,
   archivo_nombre VARCHAR(255) NULL,
   archivo_mime VARCHAR(50) NULL,
@@ -266,6 +267,7 @@ CREATE TABLE pagos_proveedor (
   id_pago INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   id_solicitud INT NOT NULL,
   fecha_pago DATE NOT NULL,
+  fecha_registro DATETIME NULL COMMENT 'Registro automatico en America/Lima, NULL para pagos anteriores',
   monto DECIMAL(12,2) NOT NULL,
   metodo_pago VARCHAR(50) NOT NULL,
   numero_operacion VARCHAR(100) NULL,
@@ -276,6 +278,30 @@ CREATE TABLE pagos_proveedor (
   CONSTRAINT fk_pago_solicitud FOREIGN KEY (id_solicitud) REFERENCES solicitudes_cotizacion(id_solicitud),
   CONSTRAINT ck_pago_positivo CHECK (monto > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Definicion para instalacion limpia; en una base existente requiere autorizacion de la propuesta 007.
+CREATE TABLE correcciones_pago_proveedor (
+  id_correccion INT NOT NULL AUTO_INCREMENT,
+  id_pago INT NOT NULL,
+  monto_anterior DECIMAL(12,2) NOT NULL,
+  monto_nuevo DECIMAL(12,2) NOT NULL,
+  metodo_anterior VARCHAR(50) NOT NULL,
+  metodo_nuevo VARCHAR(50) NOT NULL,
+  motivo VARCHAR(500) NOT NULL,
+  fecha_correccion DATETIME NOT NULL COMMENT 'Fecha y hora America/Lima asignada por el backend',
+  responsable_identificador VARCHAR(191) NULL COMMENT 'Identidad autenticada del servidor; NULL sin autenticacion',
+  clave_operacion CHAR(36) NOT NULL,
+  huella CHAR(64) NOT NULL,
+  PRIMARY KEY (id_correccion),
+  UNIQUE KEY uq_correccion_operacion (clave_operacion),
+  KEY idx_correccion_pago (id_pago, id_correccion),
+  CONSTRAINT fk_correccion_pago FOREIGN KEY (id_pago) REFERENCES pagos_proveedor (id_pago) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT ck_correccion_montos CHECK (monto_anterior > 0 AND monto_nuevo > 0),
+  CONSTRAINT ck_correccion_motivo CHECK (CHAR_LENGTH(TRIM(motivo)) > 0),
+  CONSTRAINT ck_correccion_metodo CHECK (metodo_nuevo IN ('Yape','Transferencia')),
+  CONSTRAINT ck_correccion_cambio CHECK (monto_anterior <> monto_nuevo OR metodo_anterior <> metodo_nuevo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 CREATE TABLE solicitud_ordenes (
   id_solicitud INT NOT NULL,
