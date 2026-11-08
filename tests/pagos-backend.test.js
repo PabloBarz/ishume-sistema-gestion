@@ -153,6 +153,41 @@ test('Pagos: transacciones simuladas y archivos privados reales; reintentos, abo
     await rm(directorio,{recursive:true,force:true});
   }
 });
+test('corregir abono no depende de observaciones ni las consulta o modifica',async()=>{
+  const originales={query:pool.query,getConnection:pool.getConnection};
+  const permiso=process.env.PAGOS_CORREGIR_ABONOS;process.env.PAGOS_CORREGIR_ABONOS='true';
+  const observacion='  Observación original que debe conservarse  ';
+  let pago,auditoria;
+  const consultar=async(sql,args=[])=>{
+    assert.doesNotMatch(sql,/observaci(?:on|ones)/i);
+    if(sql.includes('information_schema'))return [[{n:11,columnas:13,relacion:1,unica:1,cambio:1,registro:1}]];
+    if(sql.startsWith('SELECT s.id_solicitud'))return [[{id_solicitud:1,id_proveedor:1,codigo:'ORDEN-MAS-PRU-001',estado:'Generada'}]];
+    if(sql.startsWith('SELECT id_pago,id_solicitud'))return [[{...pago}]];
+    if(sql.startsWith('SELECT id_pago,huella'))return [[]];
+    if(sql.startsWith('SELECT s.*'))return [[{version:1,importe_acordado:'1000.00',archivo_nombre:'archivo.pdf',archivo_mime:'application/pdf'}]];
+    if(sql.startsWith('SELECT a.id_pago')){const {observaciones,...campos}=pago;return [[{...campos,id_abono:10}]];}
+    if(sql.startsWith('SELECT c.id_correccion'))return [auditoria];
+    if(sql.startsWith('UPDATE pagos_proveedor')){
+      assert.doesNotMatch(sql,/observaciones\s*=/);
+      [pago.monto,pago.fecha_pago,pago.metodo_pago]=args;return [{affectedRows:1}];
+    }
+    if(sql.startsWith('INSERT INTO correcciones_pago_proveedor')){
+      assert.equal(args[7],'Motivo separado');
+      auditoria.push({id_correccion:1,id_pago:10,motivo:args[7]});return [{insertId:1}];
+    }
+    throw Error('Consulta inesperada '+sql);
+  };
+  pool.query=consultar;
+  pool.getConnection=async()=>({query:consultar,async beginTransaction(){},async commit(){},async rollback(){},release(){}});
+  try{
+    for(const extra of [{},{observaciones:''},{observaciones:null},{observaciones:'Reemplazo no permitido'}]){
+      pago={id_pago:10,id_solicitud:1,monto:'200.00',fecha_pago:'2026-11-01',metodo_pago:'Yape',observaciones:observacion};auditoria=[];
+      const data=await pagosService.corregirAbono(1,10,{clave_operacion:randomUUID(),version_esperada:0,monto:'300.00',fecha_pago:'2026-11-02',metodo_pago:'Transferencia',motivo:'Motivo separado',...extra});
+      assert.equal(pago.observaciones,observacion);assert.equal(Object.hasOwn(data.historial[0],'observaciones'),false);
+      assert.equal(data.abonado,'300.00');assert.equal(data.saldo,'700.00');assert.equal(auditoria.length,1);
+    }
+  }finally{pool.query=originales.query;pool.getConnection=originales.getConnection;if(permiso===undefined)delete process.env.PAGOS_CORREGIR_ABONOS;else process.env.PAGOS_CORREGIR_ABONOS=permiso;}
+});
 test.after(async()=>{await pool.end();});
 
 
@@ -165,7 +200,7 @@ test('instalacion limpia: 19 tablas base y auditoria propuesta; pagos vinculados
   const migracionPagos=await readFile(new URL('../migrations/propuestas/003_pagos_ordenes_masivas.sql',import.meta.url),'utf8');
   assert.ok(migracionPagos.indexOf('IF EXISTS')<migracionPagos.indexOf('ALTER TABLE'),'Verifica pagos antes de cualquier DDL');
   assert.doesNotMatch(sql,/CREATE TABLE (?:cotizaciones_masivas|abonos_masivos|series_ordenes_masivas)/);
-  const pagos=sql.slice(sql.indexOf('CREATE TABLE pagos_proveedor'),sql.indexOf('CREATE TABLE solicitud_ordenes'));
+  const pagos=sql.match(/CREATE TABLE (?:IF NOT EXISTS )?pagos_proveedor\s*\([\s\S]*?\) ENGINE=InnoDB/)[0];
   assert.match(pagos,/FOREIGN KEY \(id_solicitud\) REFERENCES solicitudes_cotizacion/);
   assert.doesNotMatch(pagos,/id_orden/);
   assert.match(sql,/uq_proveedor_prefijo_masivo/);

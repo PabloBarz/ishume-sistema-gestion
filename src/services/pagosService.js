@@ -1,7 +1,7 @@
 import {permisosPagos} from '../config/pagosConfig.js';
 ﻿import { pool } from '../config/db.js';
 import {createHash} from 'node:crypto';
-import {fallo,esOrdenMasiva,importeCentimos,decimal,validarAbono,claveValida} from './pagoValidaciones.js';
+import {fallo,esOrdenMasiva,importeCentimos,decimal,validarAbono,claveValida,validarCorreccionAbono} from './pagoValidaciones.js';
 import {validarContenidoArchivo,almacenarArchivo,borrarArchivo,comprobarArchivo} from './archivoPagoService.js';
 
 const hash=p=>createHash('sha256').update(JSON.stringify(p)).digest('hex');
@@ -11,6 +11,15 @@ async function capacidad(conn=pool,registro=false) {
   return Number(r?.n)===11&&Number(r?.relacion)===1&&(!registro||Number(r?.registro)===1);
 }
 async function exigirEsquema(registro=false){if(!await capacidad(pool,registro))throw fallo(registro?'Falta aplicar migrations/006_fecha_registro_pagos.sql para registrar fecha y hora de los abonos. No se guardo ningun pago.':'Falta aplicar el esquema de Pagos en MySQL Workbench. No se guardo ningun dato.',503);}
+async function capacidadCorrecciones(conn=pool){
+  const [[r]]=await conn.query(`SELECT COUNT(*) AS columnas,
+    EXISTS(SELECT 1 FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='correcciones_pago_proveedor' AND COLUMN_NAME='id_pago' AND REFERENCED_TABLE_NAME='pagos_proveedor' AND REFERENCED_COLUMN_NAME='id_pago') AS relacion,
+    EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='correcciones_pago_proveedor' AND COLUMN_NAME='clave_operacion' AND NON_UNIQUE=0) AS unica,
+    EXISTS(SELECT 1 FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='correcciones_pago_proveedor' AND CONSTRAINT_NAME='ck_correccion_cambio_completo' AND CONSTRAINT_TYPE='CHECK') AS cambio
+    FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='correcciones_pago_proveedor'
+    AND COLUMN_NAME IN ('id_correccion','id_pago','monto_anterior','monto_nuevo','metodo_anterior','metodo_nuevo','motivo','fecha_correccion','responsable_identificador','clave_operacion','huella','fecha_pago_anterior','fecha_pago_nueva')`);
+  return Number(r?.columnas)===13&&Number(r?.relacion)===1&&Number(r?.unica)===1&&Number(r?.cambio)===1;
+}
 async function cabecera(conn,id,bloquear=false) {
   idValido(id);
   const [[o]]=await conn.query("SELECT s.id_solicitud,s.id_proveedor,s.codigo,s.estado,p.razon_social AS proveedor,DATE_FORMAT(s.fecha_emision,'%d/%m/%Y') AS fecha,JSON_UNQUOTE(JSON_EXTRACT(s.contenido_json,'$.total')) AS unidades FROM solicitudes_cotizacion s JOIN proveedores p ON p.id_proveedor=s.id_proveedor WHERE s.id_solicitud=?"+(bloquear?' FOR UPDATE':''),[id]);
@@ -21,13 +30,20 @@ async function economia(conn,o) {
   const [[v]]=await conn.query("SELECT s.*,s.documento_revision AS version,DATE_FORMAT(s.fecha_registro_documento,'%Y-%m-%d %H:%i:%s') AS fecha_registro_documento FROM solicitudes_cotizacion s WHERE id_solicitud=? AND archivo_clave IS NOT NULL",[o.id_solicitud]);
   const fechaRegistro=await capacidad(conn,true)?"DATE_FORMAT(a.fecha_registro,'%Y-%m-%d %H:%i:%s')":'NULL';
   const [pagos]=await conn.query("SELECT a.id_pago AS id_abono,a.monto,DATE_FORMAT(a.fecha_pago,'%Y-%m-%d') AS fecha_pago,a.metodo_pago,a.numero_operacion,"+fechaRegistro+" AS fecha_registro FROM pagos_proveedor a WHERE a.id_solicitud=? ORDER BY a.fecha_pago,a.id_pago",[o.id_solicitud]);
+  const correccionesDisponibles=await capacidadCorrecciones(conn);
+  const [correcciones]=correccionesDisponibles?await conn.query(`SELECT c.id_correccion,c.id_pago,c.monto_anterior,c.monto_nuevo,c.metodo_anterior,c.metodo_nuevo,
+    DATE_FORMAT(c.fecha_pago_anterior,'%Y-%m-%d') AS fecha_pago_anterior,DATE_FORMAT(c.fecha_pago_nueva,'%Y-%m-%d') AS fecha_pago_nueva,
+    c.motivo,DATE_FORMAT(c.fecha_correccion,'%Y-%m-%d %H:%i:%s') AS fecha_correccion,c.responsable_identificador
+    FROM correcciones_pago_proveedor c JOIN pagos_proveedor p ON p.id_pago=c.id_pago WHERE p.id_solicitud=? ORDER BY c.fecha_correccion,c.id_correccion`,[o.id_solicitud]):[[]];
   const total=v?importeCentimos(String(v.importe_acordado)):null;
   const pagado=pagos.reduce((s,a)=>s+importeCentimos(String(a.monto)),0);
   if(total!==null&&pagado>total)throw fallo('El historial tiene pagos superiores al importe. Requiere revisión.',409);
   return {...o,habilitado:true,documento:v?{version:v.version,fecha_registro:v.fecha_registro_documento,nombre:v.archivo_nombre,mime:v.archivo_mime,url:'/api/pagos/ordenes/'+o.id_solicitud+'/archivo?version='+v.version}:null,
     importe:total===null?null:decimal(total),abonado:total===null?null:decimal(pagado),saldo:total===null?null:decimal(total-pagado),
     estado_economico:total===null?'Sin documento':pagado===0?'Pendiente':pagado===total?'Pagado':'Parcial',
-    porcentaje:total===null?null:Math.round(pagado*10000/total)/100,historial:pagos};
+    porcentaje:total===null?null:Math.round(pagado*10000/total)/100,
+    correcciones_disponibles:correccionesDisponibles,corregir_abonos:permisosPagos().corregir_abonos&&correccionesDisponibles,correcciones,
+    historial:pagos.map(a=>({...a,version_correccion:Math.max(0,...correcciones.filter(c=>c.id_pago===a.id_abono).map(c=>c.id_correccion))}))};
 }
 function mismoRegistro(r,id,huella){if(r.id_solicitud!==id||r.huella!==huella)throw fallo('La clave de operación corresponde a otros datos.',409);}
 async function insertarAbono(conn,id,a,clave,huella) {
@@ -116,6 +132,33 @@ export const pagosService = {
       await insertarAbono(conn,id,a,clave,huella);
       const data=await economia(conn,o);await conn.commit();return data;
     }catch(e){await conn.rollback();throw e;}finally{conn.release();}
+  },
+  async corregirAbono(id,idPago,p){
+    if(!permisosPagos().corregir_abonos)throw fallo('La corrección de abonos no está permitida.',403);
+    idValido(id);idValido(idPago);const a=validarCorreccionAbono(p),clave=claveValida(p.clave_operacion);
+    await exigirEsquema();
+    if(!await capacidadCorrecciones())throw fallo('Falta preparar correcciones de abonos: aplica 007 y 008 en MySQL Workbench. No se modificó ningún pago.',503);
+    const huella=hash({id,idPago,...a}),conn=await pool.getConnection();
+    try{
+      await conn.beginTransaction();const o=await cabecera(conn,id,true);
+      if(o.estado==='Cancelada')throw fallo('La orden está cancelada.',409);
+      const [[pago]]=await conn.query("SELECT id_pago,id_solicitud,monto,DATE_FORMAT(fecha_pago,'%Y-%m-%d') AS fecha_pago,metodo_pago FROM pagos_proveedor WHERE id_pago=? AND id_solicitud=? FOR UPDATE",[idPago,id]);
+      if(!pago)throw fallo('El abono no existe o no pertenece a esta orden.',404);
+      const [[previo]]=await conn.query('SELECT id_pago,huella FROM correcciones_pago_proveedor WHERE clave_operacion=?',[clave]);
+      if(previo){if(previo.id_pago!==idPago||previo.huella!==huella)throw fallo('La clave de operación corresponde a otra corrección.',409);const data=await economia(conn,o);await conn.commit();return {...data,repetida:true};}
+      const actual=await economia(conn,o),vigente=actual.historial.find(v=>v.id_abono===idPago);
+      if(vigente.version_correccion!==a.version)throw fallo('El abono cambió. Cierra y vuelve a abrir el historial antes de corregirlo.',409);
+      if(!actual.documento||actual.importe===null)throw fallo('La orden no tiene un importe acordado.',409);
+      const abonado=importeCentimos(actual.abonado,true)-importeCentimos(String(pago.monto))+a.monto;
+      if(abonado>importeCentimos(actual.importe))throw fallo('La corrección supera el importe acordado de la orden.',409);
+      if(a.monto===importeCentimos(String(pago.monto))&&a.fecha===pago.fecha_pago&&a.metodo===pago.metodo_pago)throw fallo('No hay cambios para guardar.');
+      await conn.query('UPDATE pagos_proveedor SET monto=?,fecha_pago=?,metodo_pago=? WHERE id_pago=? AND id_solicitud=?',[decimal(a.monto),a.fecha,a.metodo,idPago,id]);
+      await conn.query(`INSERT INTO correcciones_pago_proveedor
+        (id_pago,monto_anterior,monto_nuevo,metodo_anterior,metodo_nuevo,fecha_pago_anterior,fecha_pago_nueva,motivo,fecha_correccion,responsable_identificador,clave_operacion,huella)
+        VALUES (?,?,?,?,?,?,?,?,CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-05:00'),NULL,?,?)`,
+        [idPago,pago.monto,decimal(a.monto),pago.metodo_pago,a.metodo,pago.fecha_pago,a.fecha,a.motivo,clave,huella]);
+      const data=await economia(conn,o);await conn.commit();return data;
+    }catch(e){await conn.rollback();if(e.code==='ER_DUP_ENTRY')throw fallo('La corrección ya fue procesada o su clave pertenece a otra operación. Consulta el historial.',409);throw e;}finally{conn.release();}
   },
   async archivo(id,version) {
     idValido(id);if(!Number.isInteger(version)||version<1)throw fallo('Versión inválida.');

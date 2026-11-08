@@ -34,6 +34,7 @@ export async function init() {
   let localizacionActiva=true;
   let abonoCargando=false;
   let permitirEdicion=false;
+  let abonoEditado=null,claveCorreccion=crypto.randomUUID();
   // Agrupacion conservada para evaluarla despues; la presentacion actual es plana.
   const agruparPorProveedor=false;
   const gruposAbiertos=new Map();
@@ -280,6 +281,8 @@ export async function init() {
     try {openImageLightbox(img.src,{trigger:boton,alt:img.alt});}catch(error){showToast(error.message,'error');}
   });
   function vistaPago(vista) {
+    el('pagosCorreccionForm').hidden=vista!=='correccion';
+    el('pagosCorreccionGuardar').hidden=vista!=='correccion';
     el('pagosCotizacionForm').hidden=vista!=='documento';
     el('pagosSeguimiento').hidden=vista!=='seguimiento';
     el('pagosAbonoForm').hidden=vista!=='abono';
@@ -287,9 +290,10 @@ export async function init() {
     el('pagosHistorialSolo').hidden=vista!=='historial';
     el('pagosGuardar').hidden=vista!=='documento';
     el('pagosAbonoGuardar').hidden=vista!=='abono';
-    el('pagosModalCerrar').textContent=vista==='abono'||vista==='documento'?'Cancelar':'Cerrar';
+    el('pagosModalCerrar').textContent=['abono','documento','correccion'].includes(vista)?'Cancelar':'Cerrar';
     el('pagosProductos').classList.toggle('pagos-modal-abono',vista==='abono');
     el('pagosProductos').classList.toggle('pagos-modal-cotizacion',vista==='documento');
+    el('pagosProductos').classList.toggle('pagos-modal-correccion',vista==='correccion');
   }
   function presentarEconomia(data) {
     economiaActual=data;
@@ -307,7 +311,8 @@ export async function init() {
   }
   function ocupacion(valor) {
     guardando=valor;
-    for(const id of ['pagosProductosCerrar','pagosModalCerrar','pagosAbonoGuardar'])el(id).disabled=valor;
+    for(const id of ['pagosProductosCerrar','pagosModalCerrar','pagosAbonoGuardar','pagosCorreccionGuardar'])el(id).disabled=valor;
+    el('pagosCorreccionForm').querySelectorAll('input,select,textarea').forEach(n=>{n.disabled=valor;});
     el('pagosGuardar').disabled=valor||!economiaActual?.habilitado;
 
   }
@@ -401,9 +406,44 @@ export async function init() {
   el('pagosVerHistorial').addEventListener('click',()=>{if(!guardando&&economiaActual)mostrarHistorial();});
   function renderHistorial(destino=el('pagosHistorial'),titulo=true) {
     if(!Array.isArray(economiaActual.historial)){destino.innerHTML='<p>Historial no disponible: falta preparar el esquema de Pagos.</p>';return;}
-    const filas=economiaActual.historial||[],referencia=filas.some(a=>a.numero_operacion);
-    destino.innerHTML=(titulo?'<h3 class="panel-title">Historial de pagos</h3>':'')+(filas.length?'<table class="table-custom pagos-historial-tabla"><thead><tr><th>Fecha</th><th>Importe</th><th>Método</th>'+(referencia?'<th>Referencia</th>':'')+'</tr></thead><tbody>'+filas.map(a=>'<tr><td>'+esc(formatDate(a.fecha_pago))+'</td><td>'+moneda(a.monto)+'</td><td>'+esc(a.metodo_pago)+'</td>'+(referencia?'<td>'+esc(a.numero_operacion||'—')+'</td>':'')+'</tr>').join('')+'</tbody></table>':'<p>A\u00fan no se registraron abonos</p>');
+    const filas=economiaActual.historial||[];
+    const auditoria=a=>{
+      const cambios=(economiaActual.correcciones||[]).filter(c=>c.id_pago===a.id_abono);
+      return !cambios.length?'':'<tr class="pagos-correcciones-fila"><td colspan="4"><details class="pagos-correcciones"><summary>Ver correcciones ('+cambios.length+')</summary><ol>'+cambios.map(c=>'<li><strong>'+esc(c.fecha_correccion)+'</strong><dl><div><dt>Importe</dt><dd>'+moneda(c.monto_anterior)+' &rarr; '+moneda(c.monto_nuevo)+'</dd></div><div><dt>Fecha de pago</dt><dd>'+esc(c.fecha_pago_anterior?formatDate(c.fecha_pago_anterior):'—')+' &rarr; '+esc(c.fecha_pago_nueva?formatDate(c.fecha_pago_nueva):'—')+'</dd></div><div><dt>Método</dt><dd>'+esc(c.metodo_anterior)+' &rarr; '+esc(c.metodo_nuevo)+'</dd></div><div><dt>Motivo de la corrección</dt><dd>'+esc(c.motivo)+'</dd></div></dl>'+(c.responsable_identificador?'<p>'+esc(c.responsable_identificador)+'</p>':'')+'</li>').join('')+'</ol></details></td></tr>';
+    };
+    destino.innerHTML=(titulo?'<h3 class="panel-title">Historial de pagos</h3>':'')+(filas.length?'<div class="table-scroll"><table class="table-custom pagos-historial-tabla"><colgroup><col><col><col><col></colgroup><thead><tr><th>Fecha</th><th>Importe</th><th>Método</th>'+'<th>Acciones</th></tr></thead><tbody>'+filas.map(a=>'<tr class="pagos-abono-fila"><td>'+esc(formatDate(a.fecha_pago))+(a.numero_operacion?'<span class="pagos-abono-referencia">Referencia: '+esc(a.numero_operacion)+'</span>':'')+'</td><td>'+moneda(a.monto)+'</td><td>'+esc(a.metodo_pago)+'</td>'+'<td><button class="btn-link" type="button" data-editar-abono="'+a.id_abono+'" aria-label="Editar abono '+a.id_abono+'" '+(!economiaActual.corregir_abonos||economiaActual.estado==='Cancelada'?'disabled':'')+'>Editar</button></td></tr>'+auditoria(a)).join('')+'</tbody></table></div>':'<p>Sin abonos registrados</p>')+(filas.length&&economiaActual.correcciones_disponibles===false?'<p class="text-sm text-muted">Para editar abonos, aplica las migraciones 007 y 008.</p>':'');
   }
+  el('pagosDetalle').addEventListener('click',event=>{
+    const boton=event.target.closest('[data-editar-abono]');
+    if(!boton||boton.disabled||guardando||!economiaActual?.corregir_abonos)return;
+    const abono=economiaActual.historial.find(a=>a.id_abono===Number(boton.dataset.editarAbono));if(!abono)return;
+    abonoEditado={...abono};claveCorreccion=crypto.randomUUID();el('pagosCorreccionForm').reset();
+    el('pagosCorreccionMonto').value=abono.monto;el('pagosCorreccionFecha').value=abono.fecha_pago;
+    el('pagosCorreccionMetodo').value=metodosPago.includes(abono.metodo_pago)?abono.metodo_pago:'';
+    el('pagosProductosTitulo').textContent='Editar abono #'+abono.id_abono;
+    el('pagosModalEstado').textContent='';vistaPago('correccion');calcularCorreccion();el('pagosCorreccionMonto').focus();
+  });
+  function calcularCorreccion(){
+    const monto=centimos(el('pagosCorreccionMonto').value),anterior=abonoEditado?centimos(String(abonoEditado.monto)):null;
+    const saldo=centimos(String(economiaActual?.saldo),true);
+    const nuevo=monto===null||anterior===null||saldo===null?null:saldo+anterior-monto;
+    el('pagosCorreccionSaldo').textContent=nuevo===null||nuevo<0?'—':moneda((nuevo/100).toFixed(2));return nuevo;
+  }
+  el('pagosCorreccionForm').addEventListener('input',()=>{claveCorreccion=crypto.randomUUID();calcularCorreccion();});
+  el('pagosCorreccionForm').addEventListener('submit',async event=>{
+    event.preventDefault();if(guardando||!abonoEditado||!economiaActual?.corregir_abonos)return;
+    const monto=centimos(el('pagosCorreccionMonto').value),saldo=calcularCorreccion(),motivo=el('pagosCorreccionMotivo').value.trim();
+    if(monto===null||saldo===null||saldo<0){el('pagosModalEstado').textContent='El importe debe ser positivo, tener hasta dos decimales y no superar el total acordado.';return;}
+    if(!metodosPago.includes(el('pagosCorreccionMetodo').value)||!el('pagosCorreccionFecha').value||!motivo){el('pagosModalEstado').textContent='Completa fecha, método y motivo de la corrección.';return;}
+    const id=orden.id_solicitud,payload={clave_operacion:claveCorreccion,version_esperada:abonoEditado.version_correccion??0,monto:(monto/100).toFixed(2),fecha_pago:el('pagosCorreccionFecha').value,metodo_pago:el('pagosCorreccionMetodo').value,motivo};
+    ocupacion(true);el('pagosModalEstado').textContent='Guardando cambios…';
+    try{
+      const {data}=await http('/api/pagos/ordenes/'+id+'/abonos/'+abonoEditado.id_abono,'PATCH',payload);
+      if(!activo||!root.isConnected)return;
+      economiaActual=data;abonoEditado=null;ocupacion(false);mostrarHistorial();el('pagosModalEstado').textContent='';
+      await cargarGeneral(paginaGeneral);showToast('Abono actualizado','success');
+    }catch(e){if(activo){el('pagosModalEstado').textContent=e.message;showToast(e.message,'error');}}finally{if(activo)ocupacion(false);}
+  });
   async function mostrarDetalle(datosIniciales = null) {
     if (!orden) return;
     const seleccionada = orden, turno = ++versionDetalle;

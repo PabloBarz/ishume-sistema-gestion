@@ -5,42 +5,37 @@ const routes = {
   'compras/colegios': {
     title: '',
     view: '/views/consultar_colegios.html',
-    loadModule: () => import('./modules/consultarColegios.js'),
+    loadModule: () => import('./module_compras/consultarColegios.js'),
   },
   'inventario/demo-seguimiento': {
     title: '',
     view: '/views/seguimiento_entrega_demo.html',
-    loadModule: () => import('./modules/seguimientoEntregaDemo.js'),
+    loadModule: () => import('./module_compras/seguimientoEntregaDemo.js'),
   },
   pagos: {
     title: '',
     view: '/views/pagos.html',
-    loadModule: () => import('./modules/pagos.js'),
+    loadModule: () => import('./module_compras/pagos.js'),
   },
   'ordenes/nueva': {
     title: '',
     view: '/views/contratos.html',
-    loadModule: () => import('./modules/contratos.js'),
+    loadModule: () => import('./module_compras/contratos.js'),
   },
   'ordenes/guardadas': {
     title: '',
     view: '/views/ordenes_guardadas.html',
-    loadModule: () => import('./modules/ordenes_guardadas.js'),
+    loadModule: () => import('./module_compras/ordenes_guardadas.js'),
   },
   dashboard: {
     title: 'Dashboard',
     view: '/views/dashboard.html',
-    loadModule: () => import('./modules/dashboard.js'),
+    loadModule: () => import('./module_compras/dashboard.js'),
   },
   ejemplo: {
     title: 'Vista de ejemplo',
     view: '/views/example.html',
-    loadModule: () => import('./modules/example.js'),
-  },
-  compras: {
-    title: 'Compras',
-    view: '/views/compras.html',
-    loadModule: () => import('./modules/compras.js')
+    loadModule: () => import('./module_compras/example.js'),
   }
 };
 
@@ -50,7 +45,7 @@ let loadSequence = 0;
 
 function getRouteName() {
   const name = window.location.hash.slice(1).split('?')[0].replace(/^\/+/, '') || 'dashboard';
-  if (name === 'contratos') {
+  if (name === 'contratos' || name === 'compras') {
     window.history.replaceState(null, '', '#/ordenes/nueva');
     return 'ordenes/nueva';
   }

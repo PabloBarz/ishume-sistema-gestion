@@ -9,10 +9,17 @@ export function importeCentimos(valor,cero=false) {
 export const decimal=n=>(n/100).toFixed(2);
 export function fechaValida(valor,opcional=false) {
   if(opcional&&(valor===null||valor===''))return null;
-  if(typeof valor!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(valor))throw fallo('Fecha inválida.');
+  if(typeof valor!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(valor)||valor<'1000-01-01')throw fallo('Fecha inválida.');
   const d=new Date(valor+'T12:00:00Z');
   if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==valor)throw fallo('Fecha inválida.');
   return valor;
+}
+export function validarCorreccionAbono(p){
+  if(!p||typeof p!=='object'||Array.isArray(p))throw fallo('Datos de corrección inválidos.');
+  const a=validarAbono(p,999999999999),fecha=fechaValida(p.fecha_pago);
+  if(typeof p.motivo!=='string'||!p.motivo.trim()||p.motivo.trim().length>500)throw fallo('Indica el motivo de la corrección (máximo 500 caracteres).');
+  if(!Number.isSafeInteger(p.version_esperada)||p.version_esperada<0)throw fallo('Versión del abono inválida.');
+  return {monto:a.monto,metodo:a.metodo,fecha,motivo:p.motivo.trim(),version:p.version_esperada};
 }
 export function validarAbono(p,saldo) {
   const monto=importeCentimos(p.monto);

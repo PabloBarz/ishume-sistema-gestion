@@ -36,11 +36,11 @@
   #compraRevision .revision-tabla th:last-child, #compraRevision .revision-tabla td:last-child { width: 72px; }
   #compraRevision .revision-final { padding: 14px; }
   #compraRevision .revision-acciones > button { height: auto; min-height: 40px; padding: 10px 12px; white-space: normal; }
-  #ordenEditor .colegio-header { padding: 16px; gap: 10px; }
-  #ordenEditor .colegio-header h2 { font-size: 15px; }
+  #ordenEditor .colegio-header { padding: 12px 16px; gap: 10px; }
+  #ordenEditor .colegio-header h2 { font-size: 18px; }
   #ordenEditor .colegio-card > h3 { margin: 14px 12px 0; }
-  #ordenEditor .colegio-card > .table-scroll { margin: 0 12px 14px; }
-  #ordenEditor .colegio-card > .table-footer { padding: 14px 16px; gap: 8px 16px; }
+  #ordenEditor .colegio-card > .table-scroll { margin: 0 12px 8px; }
+  #ordenEditor .colegio-card > .table-footer { padding: 8px 16px; gap: 8px 16px; }
   #ordenEditor .colegio-card > .table-footer strong { font-size: 16px; }
   .revision-pedido > .panel-body { padding: 12px; }
   .revision-indicadores { gap: 8px; }

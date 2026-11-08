@@ -112,6 +112,16 @@
 .colegio-resultados[hidden] { display: none; }
 #ordenEditor .colegio-buscador { max-width: none; padding: 18px 22px; }
 #ordenEditor .colegio-buscador .form-label-custom { font-size: 15px; font-weight: 700; }
+#ordenEditor .colegio-agregar-accion { margin-bottom: 14px; }
+#ordenEditor .colegio-agregar-accion:has(button[hidden]) { display: none; }
+#ordenEditor #colegioAgregar { width: auto; min-height: 36px; padding: 8px 13px; font-size: 13px; color: var(--primary-dark); }
+#ordenEditor #colegioBuscadorPanel { margin-bottom: 14px; }
+#ordenEditor #colegioBuscadorPanel[hidden], #ordenEditor #colegioAgregar[hidden], #ordenEditor #colegioCancelar[hidden] { display: none; }
+#ordenEditor .colegio-buscador-header { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 8px; }
+#ordenEditor .colegio-buscador-header label { margin-bottom: 0; }
+#ordenEditor .colegio-cancelar-busqueda { background: transparent; border: 0; padding: 5px; color: var(--text-muted); cursor: pointer; font: inherit; font-size: 12px; }
+#ordenEditor .colegio-cancelar-busqueda:hover { color: var(--primary-dark); }
+#ordenEditor .colegio-cancelar-busqueda:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 #ordenEditor .colegio-buscador-campo { max-width: 760px; }
 #ordenEditor .colegio-resultados { max-width: 760px; max-height: 265px; }
 #ordenEditor .colegios-agregados { margin: 0 0 20px; }
@@ -150,23 +160,31 @@
 .proveedor-total { margin: 0; padding: 18px 12px; text-align: right; font-size: 18px; font-weight: 600; color: var(--primary); border-top: 2px solid var(--border); }
 .proveedor-total strong { font-size: 24px; }
 .colegio-card { border: 2px solid var(--border); scroll-margin-top: calc(var(--topbar-h) + 16px); }
-.colegio-card:focus { outline: 2px solid var(--primary); outline-offset: 3px; }
 .colegio-header { background: var(--primary-light); border-bottom: 2px solid var(--border); }
 .colegio-numero { display: inline-block; padding: 4px 10px; margin-bottom: 10px; border-radius: var(--radius-sm); background: var(--primary); color: white; font-size: 12px; font-weight: 600; }
 .compra-totals { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 /* Jerarquía visual de colegios en edición; conserva controles y distribución. */
-#ordenEditor #contratoColegios { gap: 28px; }
-#ordenEditor .colegio-card { border: 1px solid #ded8ed; box-shadow: 0 3px 12px rgba(35, 24, 64, .04); }
-#ordenEditor .colegio-header { align-items: flex-start; gap: 16px; padding: 20px 24px; background: #faf8ff; border-bottom: 1px solid #e9e3f2; }
+#ordenEditor #contratoColegios { gap: 16px; margin-bottom: 14px; }
+#ordenEditor .colegios-agregados { margin-bottom: 14px; }
+#ordenEditor { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+#ordenEditor :is(input,select,button,h2,h3,th) { font-family: inherit; }
+#ordenEditor .pedido-indicadores { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0 0 20px; }
+#ordenEditor .pedido-indicador { position: relative; min-width: 0; padding: 15px 42px 15px 18px; border: 1px solid #e2e6ec; border-radius: 9px; background: white; }
+#ordenEditor .pedido-indicador dt { color: var(--text-muted); font-size: 12px; font-weight: 500; line-height: 1.5; }
+#ordenEditor .pedido-indicador dd { margin: 6px 0 0; color: var(--text); font-size: 24px; font-weight: 600; line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#ordenEditor .pedido-indicador > i { position: absolute; top: 17px; right: 16px; color: #8791a1; font-size: 17px; }
+@media(max-width:640px) { #ordenEditor .pedido-indicadores { grid-template-columns: 1fr; gap: 10px; } }
+#ordenEditor .colegio-card { border: 1px solid #e2e6ec; box-shadow: 0 1px 2px rgb(20 30 50 / 3%); }
+#ordenEditor .colegio-header { align-items: flex-start; gap: 16px; padding: 14px 24px; background: white; border-bottom: 1px solid #e9edf2; }
 #ordenEditor .colegio-header > div { flex: 1; min-width: 0; }
-#ordenEditor .colegio-header h2 { font-size: 17px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
-#ordenEditor .colegio-header p { margin: 6px 0 0; line-height: 1.6; color: var(--text-muted); }
+#ordenEditor .colegio-header h2 { font-size: 18px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+#ordenEditor .colegio-header p { margin: 4px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-muted); }
 #ordenEditor .colegio-numero { margin-bottom: 8px; padding: 4px 9px; background: #eee8fa; color: var(--primary-dark); font-size: 11px; }
-#ordenEditor .colegio-header [data-quitar] { flex-shrink: 0; margin-top: 2px; font-size: 13px; border: 1px solid transparent; }
-#ordenEditor .colegio-header [data-quitar]:hover { border-color: #f3d4d4; }
+#ordenEditor .colegio-header [data-quitar] { flex-shrink: 0; margin-top: 2px; font-size: 13px; border: 1px solid transparent; color: var(--text-muted); background: transparent; }
+#ordenEditor .colegio-header [data-quitar]:hover { color: #c43f42; background: #fff6f6; border-color: #f3d4d4; }
 #ordenEditor .colegio-card > h3 { margin: 18px 20px 0; padding: 11px 14px; background: #f4f0fc; border-left: 3px solid var(--primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--primary-dark); font-size: 15px; font-weight: 700; }
-#ordenEditor .colegio-card > .table-scroll { margin: 0 20px 18px; }
-#ordenEditor .colegio-card > .table-footer { align-items: center; justify-content: flex-end; padding: 12px 24px; background: #fafbfc; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+#ordenEditor .colegio-card > .table-scroll { margin: 0 20px 10px; }
+#ordenEditor .colegio-card > .table-footer { align-items: center; justify-content: flex-end; padding: 8px 24px; background: #fafbfc; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
 #ordenEditor .colegio-card > .table-footer span { font-size: 13px; color: var(--text-muted); }
 #ordenesGuardadas .pendientes-proveedor-total { display: flex; gap: 12px; align-items: center; font-size: 13px; flex-wrap: wrap; }
 #ordenesPaginacion[hidden], #compraValidacion[hidden] { display: none; }
@@ -443,6 +461,7 @@ body:has(.orden-confirmacion.open) { overflow: hidden; }
   justify-content: center;
 }
 
+#ordenesGuardadas .orden-seguimiento-link:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
 .btn-icon-outline:hover {
   background: var(--primary-light);
   color: var(--primary);
@@ -764,18 +783,79 @@ body.seguimiento-entrega-activo :is(.topbar-actions,.sidebar-footer) { visibilit
 }
 
 /* Consulta de compras por contrato/colegio: exclusivamente de lectura. */
+#consultarColegios { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #202936; }
+#consultarColegios :is(h1,h2,h3,h4,th,input,button) { font-family: inherit; }
+#consultarColegios .page-header { margin-bottom: 22px; }
+#consultarColegios .page-title { font-size: 32px; line-height: 1.2; font-weight: 750; letter-spacing: -.8px; }
+#consultarColegios .card-panel { background: #fff; border-color: #e2e6ec; border-radius: 10px; box-shadow: 0 1px 2px rgb(20 30 50 / 3%); }
+#consultarColegios .colegio-buscador { padding: 20px 24px; }
+#consultarColegios .form-label-custom { font-size: 13px; font-weight: 600; color: #374151; }
+#consultarColegios .input-custom { font-family: inherit; font-size: 14px; height: 42px; border-color: #dce1e8; border-radius: 7px; }
+#consultarColegios #colegiosConsultaEstado { margin: 8px 0 0; }
+#consultarColegios #colegiosConsultaEstado:empty { display: none; }
+#consultarColegios .colegio-resultados { border-color: #e2e6ec; border-radius: 7px; }
 #consultarColegios .colegio-buscador-campo, #consultarColegios .colegio-resultados { max-width: none; }
-#consultarColegios .colegios-consulta-detalle { margin-top: 18px; }
-#consultarColegios .colegios-consulta-detalle .panel-title { overflow-wrap: anywhere; font-size: 17px; }
+#consultarColegios .card-panel.colegios-consulta-detalle { margin-top: 20px; background: white; border: 1px solid #e2e6ec; border-radius: 10px; box-shadow: none; overflow: hidden; }
+#consultarColegios .colegios-consulta-detalle .panel-title { overflow-wrap: anywhere; font-size: 18px; line-height: 1.35; font-weight: 600; letter-spacing: normal; }
 #consultarColegios .colegios-consulta-detalle .panel-body p { margin: 7px 0 0; }
-#consultarColegios .colegios-consulta-tabla { width: 100%; min-width: 650px; }
-#consultarColegios .colegios-consulta-tabla :is(th,td) { padding: 10px 12px; font-size: 13px; }
-#consultarColegios .colegios-consulta-tabla th { white-space: nowrap; text-transform: none; letter-spacing: normal; }
-#consultarColegios .colegios-consulta-tabla td:first-child { overflow-wrap: anywhere; }
-#consultarColegios .colegios-consulta-tabla :is(th,td):nth-child(3) { text-align: right; font-variant-numeric: tabular-nums; }
-#consultarColegios .colegios-consulta-total { text-align: right; margin: 0; border-top: 1px solid var(--border); font-size: 13px; }
-#consultarColegios .colegio-orden-link { text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
-#consultarColegios .colegio-situacion { font-size: 12px; color: var(--text-muted); }
+#consultarColegios .colegio-consulta-cabecera { margin: 0; padding: 16px 20px; border-bottom: 1px solid #e9edf2; }
+#consultarColegios .colegio-consulta-identidad { flex: 1 1 260px; }
+#consultarColegios .colegio-consulta-identidad { min-width: 0; }
+#consultarColegios .colegio-consulta-identidad > p { margin: 5px 0 0; font-size: 12px; color: #6b7280; line-height: 1.6; }
+#consultarColegios .colegio-consulta-modelos { padding: 0; }
+#consultarColegios .colegio-categoria-tabla { width: 100%; table-layout: fixed; min-width: 560px; }
+#consultarColegios .colegio-categoria-tabla :is(th,td) { padding: 11px 16px; vertical-align: middle; border-bottom: 1px solid #e9edf2; font-size: 13px; line-height: 1.5; }
+#consultarColegios .colegio-categoria-tabla th { background: #f0f2f5; color: #525e6d; font-size: 11px; text-transform: uppercase; letter-spacing: .55px; font-weight: 700; white-space: nowrap; padding-block: 12px; }
+#consultarColegios .colegio-categoria-tabla :is(th,td):first-child { padding-left: 24px; }
+#consultarColegios .colegio-categoria-tabla :is(th,td):last-child { padding-right: 24px; }
+#consultarColegios .colegio-categoria-tabla td { background: #fff; }
+#consultarColegios .colegio-categoria-tabla :is(th,td):first-child { width: 50%; text-align: left; }
+#consultarColegios .colegio-categoria-tabla :is(th,td):nth-child(2),
+#consultarColegios .colegio-categoria-tabla :is(th,td):nth-child(3) { width: 13%; text-align: center; font-variant-numeric: tabular-nums; }
+#consultarColegios .colegio-categoria-tabla :is(th,td):last-child { width: 24%; text-align: right; }
+#consultarColegios .colegio-categoria-tabla tbody tr:last-child td { border-bottom: 0; }
+#consultarColegios .colegios-consulta-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+#consultarColegios .colegios-consulta-filtros button { padding: 7px 12px; border: 1px solid #dfe3ea; border-radius: 6px; background: white; color: #586171; font: inherit; font-size: 12px; cursor: pointer; }
+#consultarColegios .colegios-consulta-filtros button[aria-pressed="true"] { color: #5544a1; background: #f4f2fa; border-color: #c9c1e6; }
+#consultarColegios .colegios-consulta-listado { margin-top: 16px; }
+#consultarColegios .colegios-consulta-listado > .table-scroll > table { min-width: 560px; width: 100%; }
+#consultarColegios .colegios-consulta-listado > .table-scroll > table > :is(thead,tbody) > tr > :is(th,td) { padding: 10px 16px; border-bottom: 1px solid #e9edf2; font-size: 12px; text-align: left; }
+#consultarColegios .colegios-consulta-listado > .table-scroll > table > thead > tr > th { background: #f6f7f9; color: #626c79; font-size: 11px; }
+#consultarColegios .colegios-consulta-listado > .table-scroll > table > :is(thead,tbody) > tr:not(.colegio-detalle-expandido) > :first-child { width: 45%; }
+#consultarColegios .colegio-lista-contrato { display: block; margin-top: 3px; font-size: 11px; color: #727b88; }
+#consultarColegios .colegio-detalle-expandido > td { background: #fafbfc; }
+#consultarColegios .colegio-detalle-expandido .colegios-consulta-detalle { margin: 0; background: white; border: 0; border-radius: 0; box-shadow: none; }
+#consultarColegios .colegio-detalle-expandido .colegio-consulta-cabecera { padding: 10px 8px; }
+#consultarColegios .colegio-detalle-expandido .panel-title { font-size: 16px; }
+#consultarColegios .colegio-detalle-expandido .table-scroll { overflow: visible; }
+#consultarColegios .colegio-lista-seleccion { display: block; width: auto; padding: 0; border: 0; background: transparent; text-align: left; font: inherit; color: #6555b4; font-size: 12px; white-space: nowrap; cursor: pointer; }
+#consultarColegios .colegio-lista-seleccion:hover { text-decoration: underline; }
+#consultarColegios .colegio-lista-seleccion:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: 2px; }
+#consultarColegios #colegiosConsultaDetalleEstado:empty { display: none; }
+#consultarColegios .colegios-consulta-paginacion { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 12px 16px; font-size: 12px; }
+#consultarColegios .colegios-consulta-paginacion button { padding: 6px 10px; min-height: 32px; font-size: 12px; }
+#consultarColegios .colegio-modelo-info { min-width: 0; }
+#consultarColegios .colegio-modelo-info h4 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.5; color: #273343; overflow-wrap: anywhere; }
+#consultarColegios .colegio-modelo-referencias { display: flex; flex-wrap: wrap; gap: 3px 8px; margin-top: 5px; font-size: 12px; line-height: 1.5; }
+#consultarColegios .colegio-modelo-referencias > span { overflow-wrap: anywhere; }
+#consultarColegios .colegio-orden-link { color: #6555b4; text-decoration: underline; text-decoration-color: #c8c0e7; text-underline-offset: 3px; overflow-wrap: anywhere; }
+#consultarColegios .colegio-orden-link:hover { color: #4c3b95; text-decoration-color: currentColor; }
+#consultarColegios .colegio-orden-link:focus-visible { outline: 2px solid #8c7ed0; outline-offset: 3px; border-radius: 2px; }
+#consultarColegios .colegio-modelo-estados { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; padding-top: 2px; }
+#consultarColegios .colegio-modelo-estado { padding: 3px 8px; border: 1px solid rgb(86 100 119 / 8%); border-radius: 5px; background: #f1f3f5; color: #596171; font-size: 11px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
+#consultarColegios .colegio-modelo-estado.es-pendiente { background: #fff6e6; color: #8a5a13; }
+#consultarColegios .colegio-modelo-estado.es-generada { background: #eef8f2; color: #34734b; }
+#consultarColegios .colegio-modelo-extra { display: inline-block; margin-top: 7px; padding: 2px 6px; border-radius: 4px; background: #f0f4fa; color: #435d80; font-size: 11px; line-height: 1.5; }
+#consultarColegios .colegio-consulta-vacio { margin: 0; padding: 22px 24px; border: 1px solid #e2e6ec; border-radius: 10px; background: white; font-size: 14px; color: var(--text-muted); }
+@media(max-width:480px) {
+  #consultarColegios .page-title { font-size: 24px; }
+  #consultarColegios .colegio-buscador { padding: 18px 16px; }
+  #consultarColegios .colegio-consulta-cabecera { padding: 14px 16px; }
+  #consultarColegios .colegio-consulta-modelos { padding: 0; }
+  #consultarColegios .colegio-categoria-tabla th { padding-inline: 8px; font-size: 10px; letter-spacing: .2px; }
+  #consultarColegios .colegio-modelo-estado { padding-inline: 6px; font-size: 10px; }
+  #consultarColegios .colegio-consulta-vacio { padding-inline: 16px; }
+}
 #ordenesGuardadas .colegio-orden-localizada { outline: 2px solid #b7abed; outline-offset: -2px; background: #faf8ff; }
 
 #ordenEditor .colegio-resultados button.colegio-pedido-registrado:disabled { opacity: 1; background: #f3f4f7; color: var(--text-muted); cursor: default; }

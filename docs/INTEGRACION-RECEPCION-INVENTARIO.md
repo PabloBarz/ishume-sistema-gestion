@@ -7,7 +7,7 @@ un selector paginado de ordenes masivas. El retorno utiliza
 `#/ordenes/guardadas?vista=generadas`.
 
 La vista `public/views/seguimiento_entrega_demo.html` y el modulo
-`public/js/modules/seguimientoEntregaDemo.js` son temporales. Consultan los endpoints
+`public/js/module_compras/seguimientoEntregaDemo.js` son temporales. Consultan los endpoints
 existentes de solicitudes y su detalle. Codigo, proveedor, colegios, modelos y
 cantidades solicitadas son reales; recepcion, pendientes derivados y estado son
 simulados en memoria y se reinician al navegar. No hay escrituras, tablas,

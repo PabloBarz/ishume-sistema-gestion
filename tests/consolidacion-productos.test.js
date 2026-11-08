@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {consolidarOrden} from '../public/js/shared/consolidacionProductos.js';
-import {simularEntrega} from '../public/js/modules/seguimientoEntregaDemo.js';
+import {simularEntrega} from '../public/js/module_compras/seguimientoEntregaDemo.js';
 
 test('consolidacion compartida: varios colegios y pedidos, identidad real y trazabilidad intacta',()=>{
   const distribuciones=[5,11,3].map((cantidad,i)=>({id_producto:7,id_contrato:i+1,modelo:'Modelo igual',cantidad}));

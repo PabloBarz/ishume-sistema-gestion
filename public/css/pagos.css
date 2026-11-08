@@ -66,9 +66,14 @@ body:has(#pagosProductos.open) { overflow: hidden; }
 #pagos .pagos-fila-acciones .btn-icon-outline:hover:not(:disabled) { background: #f4f5f8; color: var(--text); border-color: #cbd0da; }
 #pagosProductos.pagos-modal-abono { --compras-modal-ancho: 420px; }
 #pagos #pagosModalEstado:empty { display: none; }
-#pagos .pagos-historial-tabla { width: 100%; min-width: 340px; }
+#pagos .pagos-historial-tabla { width: 100%; min-width: 340px; table-layout: fixed; }
+#pagos .pagos-historial-tabla col:nth-child(1) { width: 27%; }
+#pagos .pagos-historial-tabla col:nth-child(2) { width: 23%; }
+#pagos .pagos-historial-tabla col:nth-child(3) { width: 27%; }
+#pagos .pagos-historial-tabla col:nth-child(4) { width: 23%; }
 #pagos .pagos-historial-tabla :is(th,td) { padding: 9px 8px; font-size: 12px; border-bottom: 1px solid var(--border); }
 #pagos .pagos-historial-tabla :is(th,td):nth-child(2) { text-align: right; white-space: nowrap; }
+#pagos .pagos-historial-tabla .pagos-abono-fila > td:last-child { text-align: center; }
 #pagos #pagosHistorial h3 { margin: 18px 0 8px; font-size: 14px; }
 
 #pagos .pagos-lista tr.pago-localizado td { background: #f3efff; }
@@ -144,3 +149,18 @@ body:has(#pagosProductos.open) { overflow: hidden; }
 #pagosProductos.pagos-modal-abono > .modal-panel > .compra-totals { justify-content: flex-end; gap: 8px; }
 #pagosProductos.pagos-modal-abono #pagosModalCerrar { order: 0; }
 #pagosProductos.pagos-modal-abono #pagosAbonoGuardar { order: 1; }
+#pagosProductos.pagos-modal-correccion > .modal-panel > .compra-totals { justify-content: flex-end; gap: 8px; }
+#pagosProductos.pagos-modal-correccion #pagosModalCerrar { order: 0; }
+#pagosProductos.pagos-modal-correccion #pagosCorreccionGuardar { order: 1; }
+#pagos .pagos-historial-tabla .pagos-correcciones-fila > td { padding: 5px 8px 9px; text-align: left; white-space: normal; }
+#pagos .pagos-abono-referencia { display: block; margin-top: 4px; font-size: 11px; color: var(--text-muted); overflow-wrap: anywhere; }
+#pagos .pagos-correcciones { margin: 0; width: 100%; font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+#pagos .pagos-correcciones summary { cursor: pointer; color: var(--text-muted); }
+#pagos .pagos-correcciones summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+#pagos .pagos-correcciones ol { padding-left: 16px; margin: 8px 0; }
+#pagos .pagos-correcciones li + li { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+#pagos .pagos-correcciones dl { margin: 6px 0; }
+#pagos .pagos-correcciones dt { color: var(--text-muted); }
+#pagos .pagos-correcciones dd { margin: 0 0 5px; overflow-wrap: anywhere; }
+#pagos .pagos-correcciones p { margin: 4px 0; overflow-wrap: anywhere; }
+#pagos [data-editar-abono]:disabled { opacity: .5; cursor: not-allowed; }

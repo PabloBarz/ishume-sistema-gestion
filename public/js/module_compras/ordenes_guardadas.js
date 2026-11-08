@@ -47,7 +47,7 @@ export async function init() {
     ocupado = value;
     el('ordenesBuscador').querySelectorAll('input, button').forEach(n=>{n.disabled=value&&!permitirBusqueda;});
     tabs.forEach(n=>{n.disabled=value||!!revision||vistaAbierta;});
-    results.querySelectorAll('input, button').forEach(n=>{n.disabled=value;});
+    results.querySelectorAll('input, button:not(.orden-seguimiento-link)').forEach(n=>{n.disabled=value;});
     el('ordenesAnterior').disabled=value||pagina<=1;
     el('ordenesSiguiente').disabled=value||!hayMas;
     if(!value&&tab==='pendientes')actualizarSeleccion();
@@ -71,7 +71,7 @@ export async function init() {
       <ul class="ordenes-generadas-lista">${g.ordenes.map(o=>`<li class="orden-generada-fila" data-orden-generada="${o.id_solicitud}">
         <div class="orden-generada-identidad"><strong class="cell-code">${esc(o.codigo)}</strong><span>${esc(o.fecha)}</span></div>
         <strong class="orden-generada-unidades">${formatNumber(o.total)} unidades</strong>
-        <div class="orden-generada-acciones"><button class="btn-icon-outline" type="button" data-ver-orden="${o.id_solicitud}" title="Ver detalle" aria-label="Ver detalle de ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button><a class="btn-cancel" href="#/pagos?localizar=${o.id_solicitud}" aria-label="Pagos de ${esc(o.codigo)}">Pagos</a><a class="btn-primary-action" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf" download aria-label="Descargar PDF de ${esc(o.codigo)}"><i class="bi bi-download" aria-hidden="true"></i> Descargar PDF</a><a class="btn-icon-outline orden-seguimiento-link" href="#/inventario/demo-seguimiento?orden=${o.id_solicitud}" data-seguimiento-orden="${o.id_solicitud}" title="Seguimiento de entrega" aria-label="Seguimiento de entrega"><i class="bi bi-truck" aria-hidden="true"></i></a></div>
+        <div class="orden-generada-acciones"><button class="btn-icon-outline" type="button" data-ver-orden="${o.id_solicitud}" title="Ver detalle" aria-label="Ver detalle de ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button><a class="btn-cancel" href="#/pagos?localizar=${o.id_solicitud}" aria-label="Pagos de ${esc(o.codigo)}">Pagos</a><a class="btn-primary-action" href="/api/compras-masivas/solicitudes/${o.id_solicitud}/pdf" download aria-label="Descargar PDF de ${esc(o.codigo)}"><i class="bi bi-download" aria-hidden="true"></i> Descargar PDF</a><button class="btn-icon-outline orden-seguimiento-link" type="button" disabled data-seguimiento-orden="${o.id_solicitud}" title="Seguimiento de entrega" aria-label="Seguimiento de entrega"><i class="bi bi-truck" aria-hidden="true"></i></button></div>
       </li>`).join('')}</ul>
     </section>`).join('')}</div>`;
   }

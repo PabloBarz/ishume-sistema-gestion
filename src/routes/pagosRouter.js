@@ -16,4 +16,5 @@ router.get('/ordenes/:id/archivo',pagosController.archivo);
 router.get('/ordenes/:id',pagosController.obtener);
 router.post('/ordenes/:id/documento',express.raw({type:'application/octet-stream',limit:'10mb'}),pagosController.guardar);
 router.post('/ordenes/:id/abonos',pagosController.abonar);
+router.patch('/ordenes/:id/abonos/:pagoId',pagosController.corregirAbono);
 export default router;

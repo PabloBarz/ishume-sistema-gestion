@@ -40,7 +40,7 @@ Pruebas: `tests/compra-masiva-ui.test.js`, `tests/compra-masiva.test.js`, `tests
 
 El campo `cliente` se muestra completo, incluyendo el colegio, comas y guiones que tenga el nombre original. Los modelos y cantidades provienen de `productos`. Una fecha nula y un contrato sin modelos tienen mensajes propios.
 
-Flujo: `public/views/contratos.html` → `public/js/modules/contratos.js` → `GET /api/contratos?id=...` → `src/routes/contratoRouter.js` → `src/controllers/contratoController.js` → `src/services/contratoService.js` → API externa.
+Flujo: `public/views/contratos.html` → `public/js/module_compras/contratos.js` → `GET /api/contratos?id=...` → `src/routes/contratoRouter.js` → `src/controllers/contratoController.js` → `src/services/contratoService.js` → API externa.
 
 Consultar contratos no escribe en MySQL. Confirmar una compra masiva sí registra las órdenes y sus distribuciones. La URL externa se configura en el servidor, no en el navegador. Tras cambiar `.env`, reinicia Node.js. El endpoint debe ser accesible desde la máquina donde corre Node.js.
 
@@ -68,9 +68,9 @@ Cada revisión tiene un token válido durante 30 minutos en el proceso Node. Un 
 ### Archivos
 
 - `public/views/contratos.html`: pantalla, revisión y confirmación.
-- `public/js/modules/contratos.js`: estado de colegios, edición, resumen y peticiones.
-- `public/views/ordenes_guardadas.html` y `public/js/modules/ordenes_guardadas.js`: pantalla independiente con buscador, paginación y detalles de órdenes guardadas.
-- `public/js/modules/ordenesCompraUi.js`: tarjetas y controles PDF compartidos por ambas pantallas.
+- `public/js/module_compras/contratos.js`: estado de colegios, edición, resumen y peticiones.
+- `public/views/ordenes_guardadas.html` y `public/js/module_compras/ordenes_guardadas.js`: pantalla independiente con buscador, paginación y detalles de órdenes guardadas.
+- `public/js/module_compras/ordenesCompraUi.js`: tarjetas y controles PDF compartidos por ambas pantallas.
 - `public/js/utils.js`: peticiones HTTP compartidas con límite de 20 segundos, incluida la lectura del cuerpo; errores y validaciones reutilizados por el formulario.
 - `public/css/components.css`, `forms.css` y `tables.css`: tarjetas, formularios y tablas usando el estilo existente.
 - `public/index.html`, `public/js/router.js`, `public/js/sidebar.js` y `public/css/layout.css`: submenú desplegable y navegación entre `#/ordenes/nueva` y `#/ordenes/guardadas`, conservando compatibilidad con `#/contratos`.

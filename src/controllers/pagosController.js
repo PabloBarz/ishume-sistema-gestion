@@ -5,6 +5,7 @@ async function responder(res,accion){try{res.set('Cache-Control','no-store').jso
 export const pagosController = {
   obtener:(req,res)=>responder(res,()=>pagosService.obtener(Number(req.params.id))),
   abonar:(req,res)=>responder(res,()=>pagosService.abonar(Number(req.params.id),req.body)),
+  corregirAbono:(req,res)=>responder(res,()=>pagosService.corregirAbono(Number(req.params.id),Number(req.params.pagoId),req.body)),
   guardar:(req,res)=>responder(res,()=>{
     let datos;
     try{const header=req.get('X-Pagos-Datos');if(!header||header.length>8000)throw Error();datos=JSON.parse(decodeURIComponent(header));if(!datos||Array.isArray(datos)||typeof datos!=='object')throw Error();}catch{throw Object.assign(new Error('Los datos del documento son inválidos.'),{status:400});}

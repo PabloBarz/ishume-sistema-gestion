@@ -50,6 +50,22 @@ async function consultarApi(params) {
 }
 
 export const contratoService = {
+  async listarEscolares() {
+    // La API existente admite estos tres estados. No usar el filtro de compras nuevas.
+    const listas=await Promise.all(['pendiente','en_proceso','entregado'].map(estado_trabajo=>consultarApi({estado_trabajo})));
+    const contratos=new Map();
+    for(const lista of listas){
+      if(!Array.isArray(lista))throw apiError('El sistema de contratos devolvió un listado inválido.',502);
+      for(const c of lista){
+        const servicio=String(c?.promocion??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+        if(servicio!=='promocion')continue;
+        if(!Number.isSafeInteger(c.id_contrato)||c.id_contrato<1||typeof c.colegio!=='string'||!c.colegio.trim())continue;
+        contratos.set(c.id_contrato,{id_contrato:c.id_contrato,colegio:c.colegio,estado_trabajo:c.estado_trabajo,
+          modelos:disponibilidad(c.productos).modelos_disponibles?c.productos.length:0,productos:c.productos});
+      }
+    }
+    return [...contratos.values()];
+  },
   async listarEscolaresEnProceso() {
     const data = await consultarApi({ listado: 'escolares_en_proceso' });
     if (!Array.isArray(data)) throw apiError('El sistema de contratos devolvió un listado inválido.', 502);

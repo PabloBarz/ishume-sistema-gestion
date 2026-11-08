@@ -48,6 +48,12 @@
 
           </section>
           <section id="pagosHistorialSolo" hidden></section>
+          <form id="pagosCorreccionForm" class="pagos-form" hidden>
+            <div><label class="form-label-custom" for="pagosCorreccionMonto">Importe (S/)</label><input class="input-custom" id="pagosCorreccionMonto" inputmode="decimal" type="text" placeholder="0.00" required></div>
+            <div class="pagos-form-fila"><div><label class="form-label-custom" for="pagosCorreccionFecha">Fecha de pago</label><input class="input-custom" id="pagosCorreccionFecha" type="date" min="1000-01-01" max="9999-12-31" required></div><div><label class="form-label-custom" for="pagosCorreccionMetodo">Método</label><select class="input-custom" id="pagosCorreccionMetodo" required><option value="">Seleccionar</option><option>Yape</option><option>Transferencia</option></select></div></div>
+            <div><label class="form-label-custom" for="pagosCorreccionMotivo">Motivo de la corrección</label><textarea class="input-custom" id="pagosCorreccionMotivo" maxlength="500" rows="2" required></textarea></div>
+            <p class="pagos-saldo-estimado">Saldo estimado: <strong id="pagosCorreccionSaldo">—</strong></p>
+          </form>
           <form id="pagosAbonoForm" class="pagos-form" hidden>
             <dl class="pagos-importes pagos-resumen-formulario" id="pagosAbonoResumen"></dl>
             <div><label class="form-label-custom" for="pagosAbonoMonto">Importe (S/)</label><input class="input-custom" id="pagosAbonoMonto" inputmode="decimal" type="text" placeholder="0.00" required aria-describedby="err-pagosAbonoMonto"><p class="field-error" id="err-pagosAbonoMonto" aria-live="polite"></p></div>
@@ -58,7 +64,7 @@
 
         </section>
       </div>
-      <div class="panel-body compra-totals"><button class="btn-primary-action" id="pagosGuardar" type="submit" form="pagosCotizacionForm" disabled>Guardar documento</button><button class="btn-primary-action" id="pagosAbonoGuardar" type="submit" form="pagosAbonoForm" hidden>Guardar abono</button><button class="btn-cancel" id="pagosModalCerrar" type="button">Cerrar</button></div>
+      <div class="panel-body compra-totals"><button class="btn-primary-action" id="pagosGuardar" type="submit" form="pagosCotizacionForm" disabled>Guardar documento</button><button class="btn-primary-action" id="pagosAbonoGuardar" type="submit" form="pagosAbonoForm" hidden>Guardar abono</button><button class="btn-primary-action" id="pagosCorreccionGuardar" type="submit" form="pagosCorreccionForm" hidden>Guardar cambios</button><button class="btn-cancel" id="pagosModalCerrar" type="button">Cerrar</button></div>
     </section>
   </div>
 </section>

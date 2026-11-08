@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { once } from 'node:events';
@@ -72,9 +72,15 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
   app.get('/api/contratos', (req, res) => {
     if(req.query.id==='404')return res.status(404).json({message:'Contrato no encontrado'});
     return res.json({ data: {
+    pedido_registrado:confirmaciones>0&&[8,25].includes(Number(req.query.id)),
     id_contrato: Number(req.query.id), colegio:'Santo Domingo Tecnol\u00f3gico Ni\u00f1o', estado_trabajo:'en_proceso', promocion:'Promoci\u00f3n', cliente: `Cliente - Colegio ${req.query.id}${req.query.id==='8'?' - BENEFICIO INICIAL AVENIDA MELCHORITA 486 GROCIO':''}`, fecha_entrega: '2026-12-20',
-    productos: req.query.id==='95'?[]:[{ id_modelo: 1, modelo: 'Modelo compartido', categoria: 'Cuadro', cantidad: 30 }, { id_modelo: 2, modelo: 'Anuario A', categoria: 'Anuario', cantidad: 2 }],
+    productos: req.query.id==='95'?[]:[{ id_modelo: 1, modelo: 'Modelo compartido', categoria: 'Cuadro', cantidad: 30 }, { id_modelo: 2, modelo: 'Anuario A', categoria: 'Anuario', cantidad: 2 }].filter(p=>req.query.id==='40'?p.categoria==='Cuadro':req.query.id==='41'?p.categoria==='Anuario':true),
   } });});
+  app.get('/api/colegios-compras',(req,res)=>res.json({data:{colegios:[8,38,39].map(id=>({id_contrato:id,id_contrato_api:id,colegio:'Colegio '+id,modelos:2,situaciones:['Sin pedido']})),total:3,pagina:1,paginas:1}}));
+  app.get('/api/colegios-compras/:id',(req,res)=>{
+    const id=Number(req.params.id.replace('api-',''));
+    res.json({data:{id_contrato_api:id,colegio:'Colegio '+id,modelos:2,total:confirmaciones>0&&[8,25].includes(id)?32:0,productos:[{id_modelo:1,modelo:'Modelo compartido',categoria:'Cuadro',cantidad_contratada:30,cantidad:0,cantidad_por_solicitar:30,referencias:[],proveedores:[],situacion:'Por solicitar'},{id_modelo:2,modelo:'Anuario A',categoria:'Book',cantidad_contratada:2,cantidad:0,cantidad_por_solicitar:2,referencias:[],proveedores:[],situacion:'Por solicitar'}]}});
+  });
   app.post('/api/compras-masivas/revisar', (req, res) => {
     const grupos = new Map();
     for(const c of req.body.contratos)for(const p of c.productos){
@@ -142,39 +148,56 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
         check(getComputedStyle(modal.querySelector('.orden-consulta-total')).textAlign==='right','Total a la derecha');
       };
       await wait(()=>el('colegioReintentar')&&!el('colegioReintentar').hidden&&!el('colegioBusqueda').disabled); el('colegioReintentar').click(); await wait(()=>!el('colegioBusqueda').disabled&&el('colegioReintentar').hidden);
-      check(!el('contratoForm').hidden&&el('colegioResultados').hidden&&!document.querySelector('[data-colegio]'),'Buscador visible sin listado inicial');check(el('contratoColegios').parentElement.hidden,'Sin espacio de colegios antes de seleccionar');check(!el('colegioAgregar'),'Sin boton redundante');
+      check(!el('contratoForm').hidden&&el('colegioResultados').hidden&&!document.querySelector('[data-colegio]'),'Buscador visible sin listado inicial');check(el('contratoColegios').parentElement.hidden,'Sin espacio de colegios antes de seleccionar');check(el('colegioAgregar').hidden&&!el('colegioBuscadorPanel').hidden,'Cero colegios muestra buscador directamente');
       check(!el('compraResumen').querySelector('.resumen-indicador'),'Accion inferior sin tarjetas repetidas');
       check(el('contratos-title').textContent==='Órdenes de compra'&&!el('colegioBusquedaEstado').textContent,'Nombre unificado sin instrucción redundante');
       check(window.location.hash==='#/ordenes/nueva'&&!el('ordenesBuscador'),'Ruta compatible sin órdenes guardadas debajo');
       check(el('ordenesMenu').open,'Submenú abierto en ruta activa');
       const menu=el('ordenesMenu');menu.querySelector('summary').click();check(!menu.open,'Cerrar desplegable');menu.querySelector('summary').click();check(menu.open,'Abrir desplegable');
-      const agregar=async(id,n)=>{check(!el('contratoForm').hidden,'Mostrar buscador');el('colegioBusqueda').value=id==='404'?'error':'santo';el('colegioBusqueda').dispatchEvent(new Event('input'));await wait(()=>document.querySelector('[data-colegio="'+id+'"]'));document.querySelector('[data-colegio="'+id+'"]').click();await wait(()=>document.querySelectorAll('[data-contrato]').length===n&&!el('colegioBusqueda').disabled);check(!el('contratoForm').hidden&&el('colegioResultados').hidden&&el('colegioBusqueda').value==='','Buscador limpio y cerrado tras agregar');};
-      for(const texto of ['SANTO','tecnologico','nino']){el('colegioBusqueda').value=texto;el('colegioBusqueda').dispatchEvent(new Event('input'));check(document.querySelectorAll('[data-colegio]').length===3,'Busqueda sin mayusculas ni tildes');}
+      const abrirBuscador=()=>{if(el('colegioBuscadorPanel').hidden)el('colegioAgregar').click();};
+      const agregar=async(id,n)=>{abrirBuscador();check(!el('colegioBuscadorPanel').hidden,'Mostrar buscador');abrirBuscador();el('colegioBusqueda').value=id==='404'?'error':'santo';el('colegioBusqueda').dispatchEvent(new Event('input'));await wait(()=>document.querySelector('[data-colegio="'+id+'"]'));document.querySelector('[data-colegio="'+id+'"]').click();await wait(()=>document.querySelectorAll('[data-contrato]').length===n&&!el('colegioBusqueda').disabled);check(el('colegioBuscadorPanel').hidden&&!el('colegioAgregar').hidden&&el('colegioResultados').hidden&&el('colegioBusqueda').value==='','Buscador limpio y cerrado tras agregar');};
+      for(const texto of ['SANTO','tecnologico','nino']){abrirBuscador();el('colegioBusqueda').value=texto;el('colegioBusqueda').dispatchEvent(new Event('input'));check(document.querySelectorAll('[data-colegio]').length===3,'Busqueda sin mayusculas ni tildes');}
       el('contratoColegios').dispatchEvent(new Event('pointerdown',{bubbles:true}));check(el('colegioResultados').hidden,'Cerrar lista al pulsar fuera del buscador');
-      el('colegioBusqueda').value='inexistente';el('colegioBusqueda').dispatchEvent(new Event('input'));check(el('colegioBusquedaEstado').textContent==='No se encontraron colegios','Sin coincidencias');
-      el('colegioBusqueda').value='22230';el('colegioBusqueda').dispatchEvent(new Event('input'));
+      abrirBuscador();el('colegioBusqueda').value='inexistente';el('colegioBusqueda').dispatchEvent(new Event('input'));check(el('colegioBusquedaEstado').textContent==='No se encontraron colegios','Sin coincidencias');
+      abrirBuscador();el('colegioBusqueda').value='22230';el('colegioBusqueda').dispatchEvent(new Event('input'));
       check(document.querySelector('[data-colegio="94"]').disabled&&el('colegioResultados').textContent.includes('Sin modelos disponibles'),'Contrato real sin modelos se muestra deshabilitado');
       document.querySelector('[data-colegio="94"]').click();check(!document.querySelector('[data-contrato="94"]'),'No agrega contratos sin modelos');
       await agregar('8',1);
       const primeraTarjeta=document.querySelector('[data-contrato="8"]');
-      check(el('contratoColegios').compareDocumentPosition(el('contratoForm'))&Node.DOCUMENT_POSITION_FOLLOWING,'Unico buscador debajo de colegios');
+      const valoresAntes=[...primeraTarjeta.querySelectorAll('input,select')].map(n=>n.value).join('/');
+      abrirBuscador();el('colegioBusqueda').value='santo';el('colegioBusqueda').dispatchEvent(new Event('input'));
+      el('colegioCancelar').click();
+      check(el('colegioBuscadorPanel').hidden&&!el('colegioAgregar').hidden&&el('colegioBusqueda').value===''&&[...primeraTarjeta.querySelectorAll('input,select')].map(n=>n.value).join('/')===valoresAntes,'Cancelar limpia búsqueda sin alterar colegio ni controles');
+      abrirBuscador();el('colegioBusqueda').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+      check(el('colegioBuscadorPanel').hidden,'Escape cierra búsqueda con colegios agregados');
+      check(el('contratoColegios').compareDocumentPosition(el('colegioAgregar'))&Node.DOCUMENT_POSITION_FOLLOWING,'Agregar debajo de colegios');
+      check(el('contratoColegios').compareDocumentPosition(el('contratoForm'))&Node.DOCUMENT_POSITION_FOLLOWING,'Buscador debajo de colegios');
+      check(el('colegioBuscadorPanel').querySelector('label').textContent==='Agregar otro colegio','Etiqueta con colegios');
+      check([...document.querySelectorAll('.colegio-card')].every(card=>!card.hasAttribute('tabindex')&&getComputedStyle(card).outlineStyle==='none'),'Tarjetas sin foco ni contorno de seleccion');
       check(el('contratoForm').compareDocumentPosition(el('compraResumen'))&Node.DOCUMENT_POSITION_FOLLOWING,'Resumen despues del buscador');
       check(el('colegioBusqueda').placeholder==='Buscar otro colegio...'&&document.querySelectorAll('#colegioBusqueda').length===1,'Un unico buscador contextual');
       await agregar('25',2);
       check(document.querySelector('[data-contrato="8"]')===primeraTarjeta,'Agregar conserva el DOM del primer colegio');
       check(!el('colegios-agregados-title')&&document.querySelectorAll('[data-contrato]').length===2,'Tarjetas sin encabezado ni contador');
-      check([...document.querySelectorAll('[data-contrato="8"] > h3')].map(n=>n.textContent).join(',')==='Cuadros,Anuarios','Categorias separadas sin combinar productos');
+      check(!document.querySelector('[data-contrato="8"] .compra-categoria'),'Sin encabezados visuales de categorías');
+      check(document.querySelector('[data-contrato="8"]').querySelectorAll('table').length===1&&document.querySelector('[data-contrato="8"]').querySelectorAll('thead').length===1,'Una tabla continua por colegio');
+      check([...document.querySelectorAll('[data-contrato="8"] tbody tr')].map(n=>n.cells[0].textContent).join(',')==='Modelo compartido,Anuario A','Todos los modelos conservan el orden de origen');
+      check(el('pedidoIndicadorProveedores').textContent==='1','Proveedor automatico repetido entre colegios cuenta una vez');
+      const controlPaso=document.querySelector('[data-contrato="8"] [data-cantidad="0"]');
+      document.querySelector('[data-contrato="8"] [data-cantidad-step="-1"]').click();check(controlPaso.value==='30','Menos respeta minimo contratado');
+      document.querySelector('[data-contrato="8"] [data-cantidad-step="1"]').click();check(controlPaso.value==='31'&&document.querySelector('[data-contrato="8"] [data-extra="0"]').textContent==='+1 extra','Mas reutiliza calculo de extras');
+      document.querySelector('[data-contrato="8"] [data-cantidad-step="-1"]').click();check(controlPaso.value==='30'&&document.querySelector('[data-contrato="8"] [data-extra="0"]').textContent==='','Menos restaura cantidad sin extra');
       check(document.querySelector('[data-contrato="8"] h2').textContent==='Santo Domingo Tecnol\u00f3gico Ni\u00f1o','Nombre real de colegio sin sustituir por cliente');
-      el('colegioBusqueda').value='santo';el('colegioBusqueda').dispatchEvent(new Event('input'));check(document.querySelector('[data-colegio="8"]').disabled,'Evitar duplicado por contrato');
+      abrirBuscador();el('colegioBusqueda').value='santo';el('colegioBusqueda').dispatchEvent(new Event('input'));check(document.querySelector('[data-colegio="8"]').disabled,'Evitar duplicado por contrato');
       check(!document.querySelector('[data-numero]')&&[...document.querySelectorAll('.colegio-header')].every(n=>!n.textContent.includes('Contrato #')&&!n.textContent.includes('Entrega:')),'Cabeceras sin numeracion, contrato ni fecha');
       check([...document.querySelectorAll('[data-proveedor="1"]')].every(n=>n.value==='97')&&[...document.querySelectorAll('[data-proveedor="0"]')].every(n=>n.value===''),'Anuarios preseleccionan ID del catálogo, cuadros sin proveedor');
       check([...document.querySelectorAll('[data-proveedor="1"]')].every(n=>n.disabled&&n.options.length===1)&&[...document.querySelectorAll('[data-proveedor="0"]')].every(n=>![...n.options].some(o=>o.value==='97')),'Opciones filtradas y anuarios fijos');
-      el('colegioBusqueda').value='actualizado';el('colegioBusqueda').dispatchEvent(new Event('input'));
+      abrirBuscador();el('colegioBusqueda').value='actualizado';el('colegioBusqueda').dispatchEvent(new Event('input'));
       document.querySelector('[data-colegio="95"]').click();
       await wait(()=>el('contratoEstado').textContent.includes('Sin modelos disponibles'));
       el('colegioBusqueda').focus();el('colegioBusqueda').dispatchEvent(new Event('input'));
       check(document.querySelectorAll('[data-contrato]').length===2&&document.querySelector('[data-colegio="95"]').disabled,'Consulta individual sin modelos conserva colegios y actualiza disponibilidad');
-      el('colegioBusqueda').value='error';el('colegioBusqueda').dispatchEvent(new Event('input'));document.querySelector('[data-colegio="404"]').click();await wait(()=>el('contratoEstado').textContent.includes('Contrato no encontrado'));
+      abrirBuscador();el('colegioBusqueda').value='error';el('colegioBusqueda').dispatchEvent(new Event('input'));document.querySelector('[data-colegio="404"]').click();await wait(()=>el('contratoEstado').textContent.includes('Contrato no encontrado'));
       check(document.querySelectorAll('[data-contrato]').length===2&&!el('colegioBusqueda').disabled&&!el('colegioBusqueda').disabled,'Recuperar controles sin perder colegios');
       const quantity=document.querySelector('[data-cantidad]');quantity.value='35';quantity.dispatchEvent(new Event('input',{bubbles:true}));
       el('compraPreparar').click();check(el('compraRevision').hidden,'Bloquear proveedor faltante');
@@ -186,13 +209,15 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
       const proveedorControl=document.querySelector('[data-proveedor]');
       proveedorControl.value='2';proveedorControl.dispatchEvent(new Event('change',{bubbles:true}));
       const unidadesResumen=()=>Number(el('compraAccionResumen').textContent.match(/([0-9]+) unidades/)[1]);
+      check(el('pedidoIndicadorProveedores').textContent==='3','Tres proveedores distintos entre colegios');
       check(unidadesResumen()===69,'Reasignar proveedor conserva total de unidades');
       check(unidadesResumen()===69&&!el('compraPreparar').disabled,'Total correcto con proveedores completos');
       check(!el('compraResumen').hidden,'Mostrar resumen completo automáticamente');
       quantity.value='0';quantity.dispatchEvent(new Event('input',{bubbles:true}));
+      check(el('pedidoIndicadorProveedores').textContent==='2','Cantidad cero excluye proveedor sin otros modelos');
       check(el('compraResumen').hidden&&el('compraPreparar').disabled,'Cantidad inválida oculta resumen');
       quantity.value='35';quantity.dispatchEvent(new Event('input',{bubbles:true}));
-      check(quantity.closest('[data-contrato]').querySelector('[data-total]').textContent==='Total: 37 unidades'&&!quantity.closest('[data-contrato]').textContent.includes('Original:'),'Pie compacto con total solicitado actualizado');
+      check(quantity.closest('[data-contrato]').querySelector('[data-total]').textContent==='Total a solicitar: 37 unidades'&&!quantity.closest('[data-contrato]').textContent.includes('Original:'),'Pie compacto con total solicitado actualizado');
       check(!el('compraResumen').hidden&&unidadesResumen()===69,'Corregir cantidad recupera resumen actualizado');
       check(el('compraValidacion').hidden&&!el('compraPreparar').disabled,'Resumen completo sin mensaje repetido y botón habilitado');
       quantity.value='36';quantity.dispatchEvent(new Event('input',{bubbles:true}));
@@ -206,6 +231,7 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
       check(!el('compraAccionResumen').textContent.includes('4 de 4')&&el('compraPedidosProveedor').textContent.includes('LíderBook'),'Totales por proveedor incluyen anuarios automáticos');
       document.querySelector('[data-contrato="25"] [data-quitar]').click();check(document.querySelectorAll('[data-contrato]').length===1,'Quitar colegio');
       check([...document.querySelectorAll('.toast-info')].some(t=>t.textContent.includes('Colegio quitado del pedido')),'Quitar del formulario no anuncia un guardado en MySQL');
+      check(el('pedidoIndicadorProveedores').textContent==='2','Quitar colegio actualiza proveedores distintos');
       check(el('compraAccionResumen').textContent.includes('37'),'Actualizar unidades al quitar');
       check(document.querySelectorAll('[data-contrato]').length===1,'Quitar colegio conserva las otras tarjetas');
       check(unidadesResumen()===37,'Actualizar resumen al quitar colegio');
@@ -237,7 +263,7 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
       check(quantity.disabled,'Bloquear cambios en revisión');
       el('compraEditar').click();check(!quantity.disabled&&el('compraRevision').hidden&&!el('ordenEditor').hidden,'Volver a editar');
       check(quantity.value==='35'&&document.querySelector('[data-proveedor]').value==='2'&&document.querySelectorAll('[data-contrato]').length===2,'Conservar colegios y selecciones');
-      el('colegioBusqueda').value='SANTO';el('colegioBusqueda').dispatchEvent(new Event('input'));
+      abrirBuscador();el('colegioBusqueda').value='SANTO';el('colegioBusqueda').dispatchEvent(new Event('input'));
       check(quantity.value==='35'&&document.querySelector('[data-proveedor]').value==='2'&&document.querySelector('[data-colegio="8"]').disabled,'Seguir buscando conserva cantidades, proveedores y bloqueo de duplicados');
       check(el('contratoForm').getClientRects().length>0,'Mostrar agregar al editar');
       proveedorControl.value='1';proveedorControl.dispatchEvent(new Event('change',{bubbles:true}));
@@ -349,14 +375,35 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
       await wait(()=>el('ordenesEstado').textContent.includes('No hay órdenes'));
       document.querySelector('[data-page="ordenes/nueva"]').click();
       await wait(()=>el('colegioBusqueda')&&!el('colegioBusqueda').disabled&&el('colegioReintentar').hidden);
-      el('colegioBusqueda').value='santo';el('colegioBusqueda').dispatchEvent(new Event('input'));
+      abrirBuscador();el('colegioBusqueda').value='santo';el('colegioBusqueda').dispatchEvent(new Event('input'));
       check(document.querySelector('[data-colegio="8"]').disabled&&document.querySelector('[data-colegio="8"]').textContent.includes('Pedido registrado')&&!document.querySelector('[data-colegio="38"]').disabled,'Pedido registrado persiste y otro contrato del mismo colegio disponible');
       await agregar('38',1);
       check([...document.querySelectorAll('[data-proveedor]')].every(n=>n.value==='')&&el('compraResumen').hidden,'Sin LíderBook disponible no inventar proveedor ni habilitar resumen');
       check(document.querySelector('[data-proveedor="1"]').disabled&&document.querySelector('[data-contrato]').textContent.includes('LíderBook no está disponible'),'Error claro si falta proveedor de anuarios');
       document.querySelector('[data-page="dashboard"]').click();await wait(()=>el('dashboard-title'));
       document.querySelector('[data-page="ordenes/nueva"]').click();await wait(()=>el('colegioBusqueda')&&!el('colegioBusqueda').disabled&&el('colegioReintentar').hidden);
-      await agregar('38',1);
+      check(document.querySelectorAll('[data-contrato]').length===1&&document.querySelector('[data-contrato="38"]'),'Navegar restaura el borrador');
+      const cantidadBorrador=document.querySelector('[data-contrato="38"] [data-cantidad="0"]');cantidadBorrador.value='33';cantidadBorrador.dispatchEvent(new Event('input',{bubbles:true}));
+      const proveedorBorrador=document.querySelector('[data-contrato="38"] [data-proveedor="0"]');proveedorBorrador.value='2';proveedorBorrador.dispatchEvent(new Event('change',{bubbles:true}));
+      check(!document.querySelector('[data-contrato="38"] .colegio-consulta-link'),'Sin enlace Ver colegio en el encabezado');
+      location.hash='#/compras/colegios?contrato=38';
+      await wait(()=>el('colegiosConsultaDetalle')&&!el('colegiosConsultaDetalle').hidden);
+      check(location.hash.includes('contrato=38')&&el('colegiosConsultaDetalle').textContent.includes('Colegio 38'),'Ver colegio consulta el ID real');
+      check(!document.querySelector('.colegio-preparar-link'),'Consulta sin enlaces para preparar');location.hash='#/ordenes/nueva?contrato='+el('colegiosConsultaDetalle').dataset.contrato;
+      await wait(()=>el('colegioBusqueda')&&!el('colegioBusqueda').disabled&&document.querySelector('[data-contrato="38"]'));
+      check(document.querySelector('[data-cantidad="0"]').value==='33'&&document.querySelector('[data-proveedor="0"]').value==='2','Conserva cantidades y proveedores al consultar y volver');
+      location.hash='#/ordenes/nueva?contrato=8';
+      await wait(()=>el('contratoEstado')?.textContent.includes('ya tiene un pedido registrado'));
+      check(!document.querySelector('[data-contrato="8"]')&&document.querySelector('[data-contrato="38"]'),'Carga directa rechaza contrato registrado sin perder borrador');
+      location.hash='#/compras/colegios?contrato=8';
+      await wait(()=>el('colegiosConsultaDetalle')&&!el('colegiosConsultaDetalle').hidden);
+      check(!document.querySelector('.colegio-preparar-link'),'Consulta bloqueada no ofrece pedidos complementarios');
+      location.hash='#/compras/colegios?contrato=39';
+      await wait(()=>el('colegiosConsultaDetalle')&&!el('colegiosConsultaDetalle').hidden&&el('colegiosConsultaDetalle').textContent.includes('Colegio 39'));
+      check(!document.querySelector('.colegio-preparar-link'),'Consulta sin enlaces para preparar');location.hash='#/ordenes/nueva?contrato='+el('colegiosConsultaDetalle').dataset.contrato;
+      await wait(()=>document.querySelector('[data-contrato="39"]')&&el('contratoForm')?.getAttribute('aria-busy')==='false');
+      check(document.querySelectorAll('[data-contrato]').length===2&&document.querySelector('[data-contrato="38"] [data-cantidad="0"]').value==='33','Carga contrato nuevo exacto sin sustituir el borrador');
+      document.querySelector('[data-contrato="39"] [data-quitar]').click();
       check(!el('ordenesBuscador'),'Navegar de vuelta mantiene pantallas separadas');
       return 'Flujo de interfaz correcto';
     })()` });
@@ -364,7 +411,7 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
     assert.equal(outcome.result?.result?.value, 'Flujo de interfaz correcto');
     assert.equal(confirmaciones, 1);
     assert.equal(intentosConfirmar, 2, 'Un fallo y un reintento sin doble envío');
-    assert.equal(cargasListado,4,'Carga con reintento y dos regresos a la pantalla, sin peticiones por letra');
+    assert.equal(cargasListado,7,'Carga con reintento, regresos y navegación directa, sin peticiones por letra');
     assert.equal(solicitudesGeneradas,1,'Doble clic genera una sola solicitud');
     assert.ok(!consultasPendientes.includes('OC')&&!consultasPendientes.includes('OC-PRU'),'Debounce evita consultar por cada letra');
     assert.equal(descargas, 1);
@@ -377,8 +424,20 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
         return panel.width<=1200&&Math.abs(panel.left+panel.width/2-parent.left-parent.width/2)<2&&document.documentElement.scrollWidth<=innerWidth;
       })()`});
       assert.equal(centered.result?.result?.value,true,'Preparar pedidos centrado sin desbordamiento: '+width);
+      const alineacion=await call('Runtime.evaluate',{returnByValue:true,expression:`(() => {
+        const centro=n=>{const r=n.getBoundingClientRect();return r.left+r.width/2;};
+        return [...document.querySelectorAll('#ordenEditor .compra-table')].every(t=>[...t.querySelectorAll('tbody tr')].every(f=>
+          Math.abs(centro(t.tHead.rows[0].cells[2])-centro(f.querySelector('.compra-cantidad-control')))<1&&
+          Math.abs(centro(t.tHead.rows[0].cells[3])-centro(f.querySelector('select')))<1&&
+          getComputedStyle(t.tHead.rows[0].cells[2]).textAlign==='center'&&getComputedStyle(t.tHead.rows[0].cells[3]).textAlign==='center'));
+      })()`});
+      assert.equal(alineacion.result?.result?.value,true,'Encabezados centrados sobre controles, tolerancia 1 px: '+width);
     }
+    await call('Runtime.evaluate',{awaitPromise:true,expression:"document.querySelectorAll('.toast-item').forEach(n=>n.remove());window.scrollTo(0,0);new Promise(r=>setTimeout(r,250))"});
+    const capturaOrden=await call('Page.captureScreenshot',{format:'png'});await writeFile(join(tmpdir(),'ishume-pedido-desktop.png'),Buffer.from(capturaOrden.result.data,'base64'));
     await call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await call('Runtime.evaluate',{awaitPromise:true,expression:'new Promise(r=>setTimeout(r,350))'});
+    const capturaOrdenMovil=await call('Page.captureScreenshot',{format:'png'});await writeFile(join(tmpdir(),'ishume-pedido-mobile.png'),Buffer.from(capturaOrdenMovil.result.data,'base64'));
     const dimensions = await call('Runtime.evaluate', { returnByValue: true, expression: 'document.documentElement.scrollWidth <= window.innerWidth' });
     assert.equal(dimensions.result?.result?.value, true, 'Sin desbordamiento horizontal en móvil');
     const toastMovil=await call('Runtime.evaluate',{awaitPromise:true,returnByValue:true,expression:`(async()=>{
@@ -387,8 +446,8 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
       toast.querySelector('button').click();return valido;
     })()`});
     assert.equal(toastMovil.result?.result?.value,true,'Toast compacto y alineado en movil');
-    const summaryLayout = await call('Runtime.evaluate', { returnByValue: true, expression: `(() => { return document.getElementById('compraResumen').hidden && !document.querySelector('#ordenEditor .stat-card'); })()` });
-    assert.equal(summaryLayout.result?.result?.value,true,'Resumen incompleto oculto también en móvil');
+    const summaryLayout = await call('Runtime.evaluate', { returnByValue: true, expression: `(() => { return !document.getElementById('compraResumen').hidden && !document.querySelector('#ordenEditor .stat-card'); })()` });
+    assert.equal(summaryLayout.result?.result?.value,true,'Resumen válido del borrador conservado también en móvil');
     const mobileReview = await call('Runtime.evaluate', {awaitPromise:true,returnByValue:true,expression:`(async()=>{
       document.querySelectorAll('[data-proveedor]').forEach(n=>{n.value='1';n.dispatchEvent(new Event('change',{bubbles:true}));});
       document.getElementById('compraPreparar').click();
@@ -401,6 +460,23 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
       return !review.hidden&&filas.length>0&&filas.every(c=>c.scrollWidth<=c.clientWidth+1)&&table.scrollWidth<=table.clientWidth+1&&name.scrollWidth<=name.clientWidth+1&&document.documentElement.scrollWidth<=window.innerWidth;
     })()`});
     assert.equal(mobileReview.result?.result?.value,true,'Revisión móvil: indicadores, nombres largos y tablas sin desbordamiento');
+    const categoriasUnicas=await call('Runtime.evaluate',{awaitPromise:true,returnByValue:true,expression:`(async()=>{
+      document.getElementById('compraEditar').click();
+      for(const id of [40,41]){
+        location.hash='#/ordenes/nueva?contrato='+id;
+        for(let i=0;i<150&&!document.querySelector('[data-contrato="'+id+'"]');i++)await new Promise(r=>setTimeout(r,30));
+        const card=document.querySelector('[data-contrato="'+id+'"]');
+        if(!card||card.querySelectorAll('table').length!==1||card.querySelector('.compra-categoria'))throw Error('Tabla unica sin categorias visibles');
+        const proveedor=card.querySelector('[data-proveedor]');
+        if(id===41?!proveedor.disabled||proveedor.value!=='97':proveedor.disabled||[...proveedor.options].some(o=>o.value==='97'))throw Error('Reglas de proveedores por categoria intactas');
+        card.querySelector('[data-quitar]').click();
+      }
+      document.querySelectorAll('[data-quitar]').forEach(n=>n.click());
+      if(document.getElementById('colegioBuscadorPanel').hidden||!document.getElementById('colegioAgregar').hidden||!document.getElementById('colegioCancelar').hidden)throw Error('Sin colegios debe mostrar buscador directamente');
+      if(document.getElementById('pedidoIndicadorColegios').textContent!=='0'||document.getElementById('pedidoIndicadorProveedores').textContent!=='0'||document.getElementById('pedidoIndicadorUnidades').textContent!=='0')throw Error('Indicadores deben quedar en cero');
+      return true;
+    })()`});
+    assert.equal(categoriasUnicas.result?.exceptionDetails,undefined,JSON.stringify(categoriasUnicas.result?.exceptionDetails));
     const mobileQuick=await call('Runtime.evaluate',{awaitPromise:true,returnByValue:true,expression:`(async()=>{
       const wait=async fn=>{for(let i=0;i<150;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw Error('Timeout vista movil');};
       document.getElementById('compraEditar').click();document.querySelector('[data-page="ordenes/guardadas"]').click();

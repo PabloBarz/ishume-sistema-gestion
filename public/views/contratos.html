@@ -5,12 +5,18 @@
   </div></div>
   <p id="contratoEstado" role="status" aria-live="polite">Cargando proveedores…</p>
   <div id="ordenEditor">
+  <dl class="pedido-indicadores" aria-label="Resumen del pedido en preparación" aria-live="polite" aria-atomic="true">
+    <div class="pedido-indicador"><dt>Colegios agregados</dt><dd id="pedidoIndicadorColegios">0</dd><i class="bi bi-building" aria-hidden="true"></i></div>
+    <div class="pedido-indicador"><dt>Proveedores asignados</dt><dd id="pedidoIndicadorProveedores">0</dd><i class="bi bi-truck" aria-hidden="true"></i></div>
+    <div class="pedido-indicador"><dt>Unidades a solicitar</dt><dd id="pedidoIndicadorUnidades">0</dd><i class="bi bi-box-seam" aria-hidden="true"></i></div>
+  </dl>
   <section class="colegios-agregados" aria-label="Colegios seleccionados" hidden>
     <div class="panel-stack" id="contratoColegios"></div>
   </section>
-  <section class="card-panel" aria-label="Buscar colegio">
+  <div class="colegio-agregar-accion"><button class="btn-cancel" id="colegioAgregar" type="button" aria-expanded="false" aria-controls="colegioBuscadorPanel" hidden>+ Agregar colegio</button></div>
+  <section class="card-panel" id="colegioBuscadorPanel" aria-label="Buscar colegio">
     <form class="panel-body colegio-buscador" id="contratoForm" role="search">
-      <label class="form-label-custom" for="colegioBusqueda">Agregar pedido</label>
+      <div class="colegio-buscador-header"><label class="form-label-custom" for="colegioBusqueda">Agregar pedido</label><button class="colegio-cancelar-busqueda" id="colegioCancelar" type="button" hidden>Cancelar</button></div>
       <div class="colegio-buscador-campo"><i class="bi bi-search" aria-hidden="true"></i><input class="input-custom" id="colegioBusqueda" type="search" placeholder="Buscar colegio por nombre..." autocomplete="off" aria-controls="colegioResultados" aria-describedby="colegioBusquedaEstado" disabled></div>
       <p class="text-sm text-muted" id="colegioBusquedaEstado" role="status" aria-live="polite">Cargando colegios…</p>
       <button class="btn-cancel" id="colegioReintentar" type="button" hidden>Reintentar carga</button>

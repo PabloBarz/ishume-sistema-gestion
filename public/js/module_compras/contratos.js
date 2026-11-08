@@ -8,6 +8,8 @@ const categoria = (p) => {
   if (['anuario', 'anuarios', 'book', 'books'].includes(name)) return 'Book';
   return p.categoria || 'Sin categoría';
 };
+// Borrador de esta pestaña: sobrevive a la navegación SPA, sin persistir compras.
+const contratosBorrador = new Map();
 
 export async function init() {
   const el = (id) => document.getElementById(id);
@@ -16,6 +18,8 @@ export async function init() {
   const resultados = el('colegioResultados');
   const estadoBusqueda = el('colegioBusquedaEstado');
   const reintentar = el('colegioReintentar');
+  const agregarColegio=el('colegioAgregar'),cancelarColegio=el('colegioCancelar'),buscadorPanel=el('colegioBuscadorPanel');
+  let buscadorDesplegado=false;
   let listado = [];
   let cargandoListado = false;
   let busquedaAbierta = false;
@@ -27,7 +31,7 @@ export async function init() {
   const preparar = el('compraPreparar');
   const editor = el('ordenEditor');
   let proveedores = [];
-  const contratos = new Map();
+  const contratos = contratosBorrador;
   let pending = false;
   let token = null;
   let bloqueado = false;
@@ -49,7 +53,7 @@ export async function init() {
 
   function setBloqueado(value) {
     bloqueado = value;
-    form.closest('section').hidden = value;
+    actualizarBuscador();
     form.querySelectorAll('input, button').forEach((n) => { n.disabled = value || !proveedores.length || cargandoListado; });
     colegios.querySelectorAll('input, select, button').forEach((n) => { n.disabled = value; });
     ajustarProveedores();
@@ -85,6 +89,11 @@ export async function init() {
     token = null;
     revision.hidden = true;
     const productos = [...contratos.values()].flatMap(c => c.productos);
+    el('pedidoIndicadorColegios').textContent=formatNumber(contratos.size);
+    el('pedidoIndicadorProveedores').textContent=formatNumber(new Set(productos
+      .filter(p=>p.cantidad_pedir>0&&proveedores.some(v=>v.id_proveedor===p.id_proveedor))
+      .map(p=>p.id_proveedor)).size);
+    el('pedidoIndicadorUnidades').textContent=formatNumber(productos.reduce((s,p)=>s+(Number.isInteger(p.cantidad_pedir)&&p.cantidad_pedir>=0&&p.cantidad_pedir<=2147483647?p.cantidad_pedir:0),0));
     const pedidos = new Map();
     let unidades = 0;
     for (const p of productos) {
@@ -113,32 +122,38 @@ export async function init() {
   }
 
   function actualizarTotal(c, card) {
-    card.querySelector('[data-total]').textContent = c.productos.every((p) => cantidadValida(p.cantidad_pedir, p.cantidad)) ? `Total: ${formatNumber(c.productos.reduce((s, p) => s + p.cantidad_pedir, 0))} unidades` : 'Revisa las cantidades';
+    card.querySelector('[data-total]').textContent = c.productos.every((p) => cantidadValida(p.cantidad_pedir, p.cantidad)) ? `Total a solicitar: ${formatNumber(c.productos.reduce((s, p) => s + p.cantidad_pedir, 0))} unidades` : 'Revisa las cantidades';
   }
 
   function actualizarBuscador() {
     colegios.parentElement.hidden = contratos.size === 0;
     input.placeholder = contratos.size ? 'Buscar otro colegio...' : 'Buscar colegio por nombre...';
+    buscadorPanel.querySelector('label').textContent = contratos.size ? 'Agregar otro colegio' : 'Agregar pedido';
+    const abierto=!contratos.size||buscadorDesplegado;
+    buscadorPanel.hidden=bloqueado||!abierto;
+    agregarColegio.hidden=bloqueado||abierto;
+    agregarColegio.disabled=pending||!proveedores.length;
+    agregarColegio.setAttribute('aria-expanded',String(!buscadorPanel.hidden));
+    cancelarColegio.hidden=!contratos.size;
+    cancelarColegio.disabled=pending;
   }
+  agregarColegio.addEventListener('click',()=>{buscadorDesplegado=true;actualizarBuscador();input.focus();});
+  function cancelarBusqueda(){
+    if(pending||!contratos.size)return;
+    buscadorDesplegado=false;input.value='';cerrarBusqueda();actualizarBuscador();agregarColegio.focus();
+  }
+  cancelarColegio.addEventListener('click',cancelarBusqueda);
   function renderColegio(c) {
-    const grupos = new Map();
-    c.productos.forEach((p, index) => {
-      const key = categoria(p);
-      if (!grupos.has(key)) grupos.set(key, []);
-      grupos.get(key).push({ ...p, index });
-    });
     const card = document.createElement('section');
     card.className = 'card-panel colegio-card';
-    card.tabIndex = -1;
     card.id = `colegio-${c.id_contrato}`;
     card.dataset.contrato = c.id_contrato;
-    card.innerHTML = `<div class="panel-header colegio-header"><div><h2 class="panel-title">${esc(c.colegio)}</h2></div>
+    card.innerHTML = `<div class="panel-header colegio-header"><div><h2 class="panel-title">${esc(c.colegio)}</h2><p>${c.productos.length} ${c.productos.length===1?'modelo':'modelos'} · ${formatNumber(c.productos.reduce((s,p)=>s+p.cantidad,0))} unidades contratadas</p></div>
       <button type="button" class="btn-action btn-action-delete" data-quitar aria-label="Quitar ${esc(c.colegio)}"><i class="bi bi-trash" aria-hidden="true"></i> Quitar</button></div>
-      ${[...grupos].map(([name, productos]) => `<h3 class="panel-title panel-body ${name === 'Book' ? 'categoria-book' : 'categoria-cuadros'}">${name === 'Book' ? 'Anuarios' : esc(name)}</h3><div class="table-scroll"><table class="table-custom compra-table">
-      <thead><tr><th scope="col">Modelo</th><th scope="col">Cantidad del contrato</th><th scope="col">Cantidad a pedir</th><th scope="col">Proveedor</th></tr></thead><tbody>
-      ${productos.map((p) => `<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td><td><input type="number" class="input-custom" data-cantidad="${p.index}" value="${p.cantidad_pedir}" min="${Math.max(1, p.cantidad)}" max="2147483647" step="1" aria-label="Cantidad a pedir: ${esc(p.modelo)}" aria-describedby="extra-${c.id_contrato}-${p.index}"><span class="cell-secondary" id="extra-${c.id_contrato}-${p.index}" data-extra="${p.index}"></span></td>
-      <td><select class="input-custom" data-proveedor="${p.index}" aria-label="Proveedor: ${esc(p.modelo)}"${categoria(p) === 'Book' ? ' disabled' : ''}>${categoria(p) !== 'Book' || !p.id_proveedor ? '<option value="">Seleccionar proveedor</option>' : ''}${proveedoresPara(p).map((v) => `<option value="${v.id_proveedor}"${v.id_proveedor === p.id_proveedor ? ' selected' : ''}>${esc(v.razon_social)}</option>`).join('')}</select>${categoria(p) === 'Book' && !p.id_proveedor ? '<span class="cell-secondary" role="alert">LíderBook no está disponible. No se puede guardar este anuario sin proveedor.</span>' : ''}</td></tr>`).join('')}
-      </tbody></table></div>`).join('')}
+      <div class="table-scroll"><table class="table-custom compra-table"><thead><tr><th scope="col">Modelo</th><th scope="col">Contrato</th><th scope="col">A pedir</th><th scope="col">Proveedor</th></tr></thead><tbody>
+      ${c.productos.map((producto,index) => {const p={...producto,index};return `<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td><td><div class="compra-cantidad-control"><button type="button" data-cantidad-step="-1" data-index="${p.index}" aria-label="Reducir cantidad: ${esc(p.modelo)}">−</button><input type="number" class="input-custom" data-cantidad="${p.index}" value="${p.cantidad_pedir}" min="${Math.max(1, p.cantidad)}" max="2147483647" step="1" aria-label="Cantidad a pedir: ${esc(p.modelo)}" aria-describedby="extra-${c.id_contrato}-${p.index}"><button type="button" data-cantidad-step="1" data-index="${p.index}" aria-label="Aumentar cantidad: ${esc(p.modelo)}">+</button></div><span class="cell-secondary" id="extra-${c.id_contrato}-${p.index}" data-extra="${p.index}"></span></td>
+      <td><select class="input-custom" data-proveedor="${p.index}" aria-label="Proveedor: ${esc(p.modelo)}"${categoria(p) === 'Book' ? ' disabled' : ''}>${categoria(p) !== 'Book' || !p.id_proveedor ? '<option value="">Seleccionar proveedor</option>' : ''}${proveedoresPara(p).map((v) => `<option value="${v.id_proveedor}"${v.id_proveedor === p.id_proveedor ? ' selected' : ''}>${esc(v.razon_social)}</option>`).join('')}</select>${categoria(p) === 'Book' && !p.id_proveedor ? '<span class="cell-secondary" role="alert">LíderBook no está disponible. No se puede guardar este anuario sin proveedor.</span>' : ''}</td></tr>`;}).join('')}
+      </tbody></table></div>
       <div class="table-footer compra-totals"><span data-total></span></div>`;
     colegios.append(card);
     actualizarTotal(c, card);
@@ -173,21 +188,19 @@ export async function init() {
       cargandoListado = false; filtrarColegios();
     } catch (error) {
       if (form.isConnected) { estadoBusqueda.textContent = error.message; reintentar.hidden = false; showToast(error.message,'error'); }
-    } finally { cargandoListado = false; input.disabled = bloqueado || pending; }
+    } finally { cargandoListado = false; input.disabled = bloqueado || pending || !proveedores.length; }
   }
   input.addEventListener('input', () => { busquedaAbierta = true; filtrarColegios(); });
   input.addEventListener('focus', () => { busquedaAbierta = true; filtrarColegios(); });
   function cerrarBusqueda() { busquedaAbierta = false; resultados.hidden = true; }
   form.addEventListener('focusout', event => { if (!form.contains(event.relatedTarget)) cerrarBusqueda(); });
   editor.addEventListener('pointerdown', event => { if (!form.contains(event.target)) cerrarBusqueda(); });
-  form.addEventListener('keydown', event => { if (event.key === 'Escape') cerrarBusqueda(); });
+  form.addEventListener('keydown', event => { if (event.key === 'Escape') {cerrarBusqueda();cancelarBusqueda();} });
   form.addEventListener('submit', event => event.preventDefault());
   reintentar.addEventListener('click', cargarColegios);
-  resultados.addEventListener('click', async event => {
-    const seleccion = event.target.closest('[data-colegio]');
-    if (!seleccion || pending || bloqueado || !proveedores.length) return;
-    const id = Number(seleccion.dataset.colegio);
-    if (listado.find(c=>c.id_contrato===id)?.pedido_registrado || listado.find(c=>c.id_contrato===id)?.modelos_disponibles === false) return;
+  async function agregarContrato(id) {
+    if (pending || bloqueado || !proveedores.length) return;
+    if(!Number.isSafeInteger(id)||id<1) {estado.textContent='Contrato no válido.';return;}
     if (contratos.has(id)) { estado.textContent = `El contrato ${id} ya está agregado.`; return; }
     pending = true; preparar.disabled = true; input.disabled = true;
     filtrarColegios(); form.setAttribute('aria-busy', 'true');
@@ -206,19 +219,33 @@ export async function init() {
       const c = { ...data, productos: data.productos.map(p => ({ ...p, cantidad_pedir: p.cantidad,
         id_proveedor: categoria(p) === 'Book' ? liderBook?.id_proveedor ?? null : null })) };
       const card = renderColegio(c);
-      contratos.set(c.id_contrato, c); actualizarResumen(); actualizarBuscador(); input.value = ''; cerrarBusqueda();
-      card.focus({ preventScroll: true });
-      card.scrollIntoView({ block: 'start', behavior: 'instant' });
+      contratos.set(c.id_contrato, c); buscadorDesplegado=false;actualizarResumen(); actualizarBuscador(); input.value = ''; cerrarBusqueda();
+      agregarColegio.focus({ preventScroll: true });
+      card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       estado.textContent = '';
     } catch (error) { if (form.isConnected) { if(error.status===404)listado=listado.filter(c=>c.id_contrato!==id); estado.textContent = error.message; showToast(error.message,'error'); } }
     finally {
       pending = false; preparar.disabled = bloqueado || !resumenValido; input.disabled = false;
       form.setAttribute('aria-busy', 'false'); filtrarColegios();
+      actualizarBuscador();
 
     }
+  }
+  resultados.addEventListener('click', event => {
+    const seleccion = event.target.closest('[data-colegio]');
+    if (!seleccion || seleccion.disabled) return;
+    void agregarContrato(Number(seleccion.dataset.colegio));
   });
 
   colegios.addEventListener('click', (event) => {
+    const paso=event.target.closest('[data-cantidad-step]');
+    if(paso){
+      if(bloqueado||paso.disabled)return;
+      const control=paso.closest('[data-contrato]').querySelector(`[data-cantidad="${paso.dataset.index}"]`);
+      if(paso.dataset.cantidadStep==='1')control.stepUp();else control.stepDown();
+      control.dispatchEvent(new Event('input',{bubbles:true}));
+      return;
+    }
     const quitar = event.target.closest('[data-quitar]');
     if (!quitar || bloqueado) return;
     const card = quitar.closest('[data-contrato]');
@@ -294,10 +321,10 @@ export async function init() {
       nuevoPedido();
       showToast(cantidad+' '+(cantidad===1?'pedido guardado':'pedidos guardados'),'success');
     } catch (error) { if (form.isConnected) { estado.textContent = error.status===409&&error.message.includes('ya tiene un pedido registrado')?error.message:`${error.message} Puedes reintentar con esta misma revisión.`; el('compraRevisionEstado').textContent = estado.textContent; showToast(error.message,'error'); if(error.status===409)void cargarColegios(); } }
-    finally { pending = false; confirmar.disabled = guardado; if (form.isConnected) el('compraEditar').disabled = guardado; }
+    finally { pending = false; confirmar.disabled = guardado; if (form.isConnected) {el('compraEditar').disabled = guardado;actualizarBuscador();} }
   });
   function nuevoPedido() {
-    contratos.clear(); colegios.replaceChildren(); actualizarBuscador(); guardado = false; token = null;
+    contratos.clear(); buscadorDesplegado=false;colegios.replaceChildren(); actualizarBuscador(); guardado = false; token = null;
     confirmar.disabled = false; el('compraEditar').disabled = false;
     actualizarResumen(); setBloqueado(false); editor.hidden = false; input.value = ''; filtrarColegios();
     el('contratos-title').textContent = 'Órdenes de compra';
@@ -305,12 +332,22 @@ export async function init() {
     cerrarBusqueda();
     estado.textContent = ''; input.focus();
   }
-  actualizarResumen();
+  if(!contratos.size)actualizarResumen();
   void cargarColegios();
   try {
     const { data } = await http('/api/proveedores');
     if (!form.isConnected) return;
-    proveedores = data; filtrarColegios();
+    proveedores = data;
+    for(const c of contratos.values())renderColegio(c);
+    ajustarProveedores();
+    colegios.querySelectorAll('[data-cantidad]').forEach(control=>cambiar({target:control}));
+    actualizarResumen();actualizarBuscador();filtrarColegios();
+    input.disabled=bloqueado||pending||cargandoListado;
     estado.textContent = proveedores.length ? '' : 'No hay proveedores activos en MySQL. Activa un proveedor antes de comenzar.';
+    const destino=new URLSearchParams(location.hash.split('?')[1]||'').get('contrato');
+    if(destino!==null){
+      if(!/^[1-9]\d*$/.test(destino))estado.textContent='Contrato no válido.';
+      else await agregarContrato(Number(destino));
+    }
   } catch (error) { if (form.isConnected) { estado.textContent = error.message; showToast(error.message,'error'); } }
 }

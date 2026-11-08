@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {simularEntrega,renderSeguimientoDemo} from '../public/js/modules/seguimientoEntregaDemo.js';
+import {simularEntrega,renderSeguimientoDemo} from '../public/js/module_compras/seguimientoEntregaDemo.js';
 test('recibidos manuales por linea sin modificar datos reales',()=>{
   const data={codigo:'ORDEN-MAS-LAL-123',proveedor:'Proveedor real',total:11,distribuciones:[
     {id_producto:1,id_contrato:7,colegio:'Colegio uno',modelo:'Modelo igual',cantidad:3},
