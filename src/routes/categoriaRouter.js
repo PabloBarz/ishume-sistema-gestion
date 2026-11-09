@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { categoriaController } from '../controllers/categoriaController.js';
-//Datos de ejemplo para sintaxis
+
 const router = Router();
 
-// Define las operaciones disponibles para categorías.
 router.get('/', categoriaController.listar);
-router.post('/', categoriaController.registrar);
+router.post('/', categoriaController.crear);
+router.get('/:id', categoriaController.obtener);
+router.put('/:id', categoriaController.actualizar);
+router.patch('/:id/estado', categoriaController.cambiarEstado);
 
 export default router;

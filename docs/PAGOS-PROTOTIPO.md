@@ -10,7 +10,7 @@
 
 Saldo = importe acordado - SUM(abonos). No se guarda otro saldo duplicado.
 
-El esquema base de Pagos ya esta instalado en la base local revisada. No repetir 003 ni 004. Para instalaciones vacias, database/ishume.sql contiene directamente las 19 tablas y relaciones, sin ejecutar ALTER adicionales.
+El esquema base de Pagos ya esta instalado en la base local revisada. No repetir 003 ni 004. Para instalaciones vacias, database/ishume_bd_unificada.sql contiene directamente las 25 tablas y relaciones, sin ejecutar ALTER adicionales.
 
 ## Fecha automatica
 

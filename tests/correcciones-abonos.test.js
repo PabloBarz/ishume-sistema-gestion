@@ -31,9 +31,9 @@ test('MariaDB/MySQL aislado: edición, auditoría, concurrencia, idempotencia, r
   try{
     await admin.query('CREATE DATABASE `'+base+'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
     await admin.query('USE `'+base+'`');
-    let esquema=await readFile(new URL('../database/ishume.sql',import.meta.url),'utf8');
-    esquema=esquema.replaceAll('bd_ishume',base);
-    assert.ok(!esquema.includes('bd_ishume'));
+    let esquema=await readFile(new URL('../database/ishume_bd_unificada.sql',import.meta.url),'utf8');
+    esquema=esquema.replaceAll('ishume_unificada',base);
+    assert.ok(!esquema.includes('ishume_unificada'));
     await admin.query(esquema);
     // Prueba la actualización real 007 -> 008, sin modificar archivos ni la base del usuario.
     await admin.query('DROP TABLE correcciones_pago_proveedor');

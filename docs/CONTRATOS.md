@@ -150,4 +150,4 @@ Las órdenes nuevas usan ORDEN-MAS-JOS-001 / ORDEN-MAS-LAL-001 / ORDEN-MAS-LIB-0
 con series persistentes por id_proveedor en proveedores (prefijo_orden_masiva y ultimo_orden_masiva). Los códigos OC-MAS
 existentes se conservan y siguen siendo consultables. La preparación y numeración de
 pedidos internos no cambian. Antes de consolidar nuevas órdenes debe aplicarse manualmente
-migrations/004_series_ordenes_masivas.sql; database/ishume.sql ya lo incorpora para instalaciones vacías.
+migrations/004_series_ordenes_masivas.sql; database/ishume_bd_unificada.sql ya lo incorpora para instalaciones vacías.

@@ -34,6 +34,14 @@ test('navegador: pagos rediseñados, órdenes reales y guardado pendiente sin es
   const economias=new Map();
   const economia=id=>({corregir_abonos:true,correcciones_disponibles:true,correcciones:[],...ordenes.find(o=>o.id_solicitud===id),...(economias.get(id)||{id_solicitud:id,habilitado,documento:null,historial:[],importe:null,abonado:null,saldo:null})});
   const app=express();
+  // La integración conserva los catálogos de main y las rutas de Compras.
+  const categoria={id_categoria:1,nombre_categoria:'Categoria prueba',estado:1,total_disenios:1,total_modelos:1};
+  const diseno={id_diseno:1,id_categoria:1,nombre_diseno:'Diseno prueba',nombre_categoria:categoria.nombre_categoria,estado:1,estado_categoria:1,total_modelos:1};
+  const modelo={id_modelo:1,id_diseno:1,id_categoria:1,nombre_modelo:'Modelo inventario',nivel_educativo:'Inicial',estado:1,estado_diseno:1,estado_categoria:1};
+  const producto={...modelo,id_producto:1,sku:'SKU-PRUEBA',precio:'25.00',stock_actual:8,estado_modelo:1};
+  for(const [endpoint,data] of Object.entries({categorias:[categoria],disenios:[diseno],modelos:[modelo],'inventario-productos':[producto]})){
+    app.get('/api/'+endpoint,(req,res)=>res.json({success:true,data}));
+  }
   app.use('/api',(req,res,next)=>{peticiones.push({metodo:req.method,url:req.url});if(req.method!=='GET'&&!habilitado)return res.status(405).json({message:'No se permiten escrituras'});next();});
   app.get('/api/colegios-compras',(req,res)=>{
     const q=String(req.query.q||'').normalize('NFD').split('').filter(c=>c.charCodeAt(0)<768||c.charCodeAt(0)>879).join('').toLowerCase();
@@ -144,7 +152,8 @@ test('navegador: pagos rediseñados, órdenes reales y guardado pendiente sin es
       const menu=el('ordenesMenu');
       check(menu.querySelector('summary .bi-cart')&&[...document.querySelectorAll('.sidebar-nav .nav-item')].filter(n=>n.textContent.trim()==='Compras').length===1,'Un solo menu Compras con carrito');
       const inventario=document.querySelector('[data-page="inventario/demo-seguimiento"]');
-      check(inventario.getAttribute('href')==='#/inventario/demo-seguimiento','Inventario enlaza solo a demostracion temporal');
+      check(inventario.getAttribute('href')==='#/inventario/demo-seguimiento','Seguimiento conserva su ruta');
+      check(document.querySelector('[data-page="inventario"]').getAttribute('href')==='#/inventario','Inventario real conserva su acceso independiente');
       check(!el('pagosResultados').querySelector('.bi-truck')&&el('pagosResultados').querySelectorAll('tbody tr button').length===3,'Pagos conserva solo tres acciones sin camion');
       check(document.querySelector('[data-page="pagos"]').classList.contains('active')&&el('ordenesMenu').open,'Sidebar activo');
       el('pagosSiguiente').click();await wait(()=>el('pagosResultados').textContent.includes('OC-MAS-000074'));
@@ -499,6 +508,26 @@ test('navegador: pagos rediseñados, órdenes reales y guardado pendiente sin es
     assert.equal(peticiones.filter(p=>p.url==='/colegios-compras/api-88').length,1,'Reabrir colegio reutiliza consulta sin solicitudes duplicadas');
     assert.equal(peticiones.filter(p=>p.metodo!=='GET').length,escriturasAntesColegio,'Consultar colegios no realiza escrituras');
     assert.equal(documentosEnviados,2,'Registro y una edicion, sin duplicar por doble clic');assert.equal(abonosEnviados,3,'Un envio por abono');assert.equal(correccionesEnviadas,2,'Fallo y reintento de correccion, sin doble envio');
+    const inventarioUi=await call('Runtime.evaluate',{awaitPromise:true,returnByValue:true,expression:`(async()=>{
+      const wait=async f=>{for(let i=0;i<200;i++){if(f())return;await new Promise(r=>setTimeout(r,25));}throw Error('Espera inventario');};
+      const check=(ok,msg)=>{if(!ok)throw Error(msg);};
+      document.querySelector('[data-page="inventario"]').click();
+      await wait(()=>document.querySelector('.inventory-product-table'));
+      check(document.querySelector('[data-page="inventario"]').getAttribute('aria-current')==='page','Sidebar Inventario activo');
+      check(document.querySelector('[data-stat="products"]').textContent==='1'&&document.querySelector('[data-stat="units"]').textContent==='8','Indicadores reales de los fixtures');
+      document.querySelector('[data-product-action="view"]').click();
+      await wait(()=>document.getElementById('inventoryModal').classList.contains('open'));
+      document.getElementById('inventoryModalClose').click();
+      for(const [tab,selector] of [['categorias','.inventory-category-table'],['disenios','.inventory-design-table'],['modelos','.inventory-model-table']]){
+        document.querySelector('[data-catalog="'+tab+'"]').click();await wait(()=>document.querySelector(selector));
+        check(document.querySelector(selector+' tbody tr'),'Catalogo '+tab+' renderizado');
+      }
+      document.querySelector('[data-page="pagos"]').click();await wait(()=>document.getElementById('pagosResultados'));
+      check(document.querySelector('[data-page="pagos"]').getAttribute('aria-current')==='page','Regreso a Compras');
+      return true;
+    })()`});
+    assert.equal(inventarioUi.result?.exceptionDetails,undefined,JSON.stringify(inventarioUi.result?.exceptionDetails));
+    assert.equal(inventarioUi.result?.result?.value,true,'Inventario y Compras conviven sin errores de importacion');
   }finally{
     socket?.close();browser.kill();server.closeAllConnections();await new Promise(r=>server.close(r));
     await new Promise(r=>setTimeout(r,500));

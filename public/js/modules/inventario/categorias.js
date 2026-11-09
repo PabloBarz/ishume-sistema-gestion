@@ -1,0 +1,245 @@
+import { appState } from '../../appState.js';
+import { http, showToast } from '../../utils.js';
+import { createActionButton, createCell, createNumericCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
+
+let categorySearch = '';
+let categoryStateFilter = '';
+let countFieldsWarningShown = false;
+
+function relationshipCount(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const count = Number(value);
+  return Number.isSafeInteger(count) && count >= 0 ? count : null;
+}
+
+export function filterCategories(categories, search = '', state = '') {
+  const normalizedSearch = search.trim().toLocaleLowerCase('es-PE');
+  return categories.filter((category) => {
+    const matchesName = String(category.nombre_categoria ?? '').toLocaleLowerCase('es-PE').includes(normalizedSearch);
+    const matchesState = state === '' || String(category.estado) === state;
+    return matchesName && matchesState;
+  });
+}
+
+function renderCategoryTable(categories) {
+  const rows = categories.map((category) => {
+    const active = Number(category.estado) === 1;
+    const totalDisenios = relationshipCount(category.total_disenios);
+    const totalModelos = relationshipCount(category.total_modelos);
+    const actions = document.createElement('td');
+    actions.className = 'inventory-category-actions';
+    actions.append(
+      createActionButton({ action: 'edit', id: category.id_categoria, label: 'Editar categoría', icon: 'bi bi-pencil-square', className: 'btn-action-edit' }),
+      createActionButton({
+        action: 'toggle', id: category.id_categoria,
+        label: active ? 'Desactivar categoría' : 'Activar categoría',
+        icon: active ? 'bi bi-toggle-on' : 'bi bi-toggle-off',
+        className: active ? 'inventory-state-off' : 'inventory-state-on',
+      }),
+    );
+    return [
+      createCell(category.nombre_categoria, `ID: ${category.id_categoria}`),
+      createNumericCell(totalDisenios, 'inventory-category-count'),
+      createNumericCell(totalModelos, 'inventory-category-count'),
+      createStatusCell(category.estado),
+      actions,
+    ];
+  });
+  return createTable(['Categoría', 'Diseños asociados', 'Modelos relacionados', 'Estado', 'Acciones'], rows, { className: 'inventory-category-table' });
+}
+
+export function createCategoriesModule(root, { isActive, onChanged, modal }) {
+  const closeCategoryModal = () => modal.close();
+
+  async function refreshCategories({ nameChanged = false, stateChanged = false } = {}) {
+    if (nameChanged) {
+      ['disenios', 'modelos', 'productos'].forEach((catalog) => appState.catalogos.invalidate(catalog));
+    } else if (stateChanged) {
+      appState.catalogos.invalidate('disenios');
+    }
+    try {
+      await appState.catalogos.reload('categorias');
+      await onChanged({ nameChanged, stateChanged });
+      return true;
+    } catch {
+      await onChanged({ nameChanged, stateChanged });
+      return false;
+    }
+  }
+
+  function openCategoryForm(category = null) {
+    const isEdit = Boolean(category);
+    const form = document.createElement('form');
+    form.id = 'categoryForm';
+    form.className = 'form-stack';
+    form.noValidate = true;
+
+    const field = document.createElement('div');
+    const label = document.createElement('label');
+    label.className = 'form-label-custom';
+    label.htmlFor = 'categoryNameInput';
+    label.textContent = 'Nombre de la categoría';
+    const input = document.createElement('input');
+    input.className = 'input-custom';
+    input.id = 'categoryNameInput';
+    input.name = 'nombre_categoria';
+    input.type = 'text';
+    input.autocomplete = 'off';
+    input.required = true;
+    input.setAttribute('aria-describedby', 'categoryNameError categoryNameCounter');
+    input.value = category?.nombre_categoria ?? '';
+    const error = document.createElement('span');
+    error.className = 'field-error';
+    error.id = 'categoryNameError';
+    error.setAttribute('role', 'alert');
+    const counter = document.createElement('div');
+    counter.className = 'char-counter';
+    counter.id = 'categoryNameCounter';
+
+    const updateCounter = () => {
+      counter.textContent = `${Array.from(input.value.trim()).length}/30 caracteres`;
+    };
+    input.addEventListener('input', () => {
+      input.classList.remove('is-invalid');
+      input.removeAttribute('aria-invalid');
+      error.textContent = '';
+      updateCounter();
+    });
+    updateCounter();
+    field.append(label, input, error, counter);
+    form.append(field);
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const name = input.value.trim();
+      error.textContent = '';
+      input.classList.remove('is-invalid');
+      input.removeAttribute('aria-invalid');
+      if (!name) {
+        input.classList.add('is-invalid');
+        input.setAttribute('aria-invalid', 'true');
+        error.textContent = 'El nombre de la categoría es obligatorio.';
+        input.focus();
+        return;
+      }
+      if (Array.from(name).length > 30) {
+        input.classList.add('is-invalid');
+        input.setAttribute('aria-invalid', 'true');
+        error.textContent = 'El nombre no debe superar los 30 caracteres.';
+        input.focus();
+        return;
+      }
+
+      const submit = root.querySelector('#inventoryModalFooter [type="submit"]');
+      submit.disabled = true;
+      form.setAttribute('aria-busy', 'true');
+      try {
+        const url = isEdit ? `/api/categorias/${encodeURIComponent(category.id_categoria)}` : '/api/categorias';
+        const response = await http(url, isEdit ? 'PUT' : 'POST', { nombre_categoria: name });
+        closeCategoryModal();
+        showToast(response.message || (isEdit ? 'Categoría actualizada correctamente.' : 'Categoría creada correctamente.'), 'success');
+        if (!await refreshCategories({ nameChanged: isEdit })) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
+      } catch (requestError) {
+        if (requestError.status === 409) {
+          input.classList.add('is-invalid');
+          input.setAttribute('aria-invalid', 'true');
+          error.textContent = requestError.message;
+          input.focus();
+        }
+        showToast(requestError.message || 'No se pudo guardar la categoría.', 'error');
+      } finally {
+        form.removeAttribute('aria-busy');
+        if (submit.isConnected) submit.disabled = false;
+      }
+    });
+
+    const cancel = modal.createButton('Cancelar', 'btn-cancel', closeCategoryModal);
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.className = 'btn-primary-action';
+    submit.setAttribute('form', form.id);
+    submit.textContent = isEdit ? 'Guardar cambios' : 'Guardar categoría';
+    modal.open(isEdit ? 'Editar categoría' : 'Nueva categoría', 'El nombre debe ser único y tener hasta 30 caracteres.', form, [cancel, submit]);
+    input.focus();
+  }
+
+  async function changeCategoryState(category, state, actionButton = null) {
+    if (actionButton?.disabled) return;
+    if (actionButton) actionButton.disabled = true;
+    try {
+      const response = await http(`/api/categorias/${encodeURIComponent(category.id_categoria)}/estado`, 'PATCH', { estado: state });
+      closeCategoryModal();
+      showToast(response.message || (state === 1 ? 'Categoría activada correctamente.' : 'Categoría desactivada correctamente.'), 'success');
+      if (!await refreshCategories({ stateChanged: true })) showToast('El cambio se guardó, pero no se pudo actualizar el listado. Intenta recargarlo.', 'warning');
+    } catch (error) {
+      const modalError = root.querySelector('#categoryModalError');
+      if (modalError) {
+        modalError.hidden = false;
+        modalError.textContent = error.message;
+      }
+      showToast(error.message || 'No se pudo cambiar el estado de la categoría.', 'error');
+    } finally {
+      if (actionButton?.isConnected) actionButton.disabled = false;
+    }
+  }
+
+  function confirmCategoryDeactivation(category) {
+    const content = document.createElement('div');
+    const message = document.createElement('p');
+    message.className = 'category-confirm-message';
+    message.append(document.createTextNode('¿Deseas desactivar la categoría '));
+    const name = document.createElement('strong');
+    name.textContent = category.nombre_categoria;
+    message.append(name, document.createTextNode('? No se eliminará el registro ni su historial.'));
+    const error = document.createElement('p');
+    error.className = 'field-error';
+    error.id = 'categoryModalError';
+    error.setAttribute('role', 'alert');
+    error.hidden = true;
+    content.append(message, error);
+    const cancel = modal.createButton('Cancelar', 'btn-cancel', closeCategoryModal);
+    const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => changeCategoryState(category, 0, deactivate));
+    modal.open('Confirmar desactivación', 'La categoría no estará disponible para nuevas asignaciones.', content, [cancel, deactivate]);
+  }
+
+  function handleCategoryAction(action, id, actionButton) {
+    const categories = appState.catalogos.getStatus('categorias').data ?? [];
+    const category = categories.find((item) => String(item.id_categoria) === String(id));
+    if (!category) {
+      showToast('La categoría ya no está disponible. Actualiza el listado.', 'warning');
+      return;
+    }
+    if (action === 'edit') openCategoryForm(category);
+    else if (action === 'toggle' && Number(category.estado) === 1) confirmCategoryDeactivation(category);
+    else if (action === 'toggle') void changeCategoryState(category, 1, actionButton);
+  }
+
+  const stateFilter = root.querySelector('#categoryStateFilter');
+  root.querySelector('#categoryCreateButton').addEventListener('click', () => openCategoryForm());
+  stateFilter.addEventListener('change', (event) => {
+    categoryStateFilter = event.target.value;
+    if (isActive()) onChanged({ renderOnly: true });
+  });
+
+  return {
+    setVisible(visible) {
+      stateFilter.hidden = !visible;
+      stateFilter.disabled = !visible;
+      stateFilter.value = categoryStateFilter;
+      root.querySelector('#categoryCreateButton').hidden = !visible;
+    },
+    getSearch() { return categorySearch; },
+    setSearch(value) { categorySearch = value; },
+    handleAction: handleCategoryAction,
+    render() {
+      const { data = [] } = appState.catalogos.getStatus('categorias');
+      const hasInvalidCounts = data.some((category) =>
+        relationshipCount(category.total_disenios) === null || relationshipCount(category.total_modelos) === null);
+      if (hasInvalidCounts && !countFieldsWarningShown) {
+        showToast('La API de categorías no devolvió conteos válidos; revisa el servicio antes de confiar en esos valores.', 'error');
+      }
+      countFieldsWarningShown = hasInvalidCounts;
+      return renderCategoryTable(filterCategories(data, categorySearch, categoryStateFilter));
+    },
+  };
+}
