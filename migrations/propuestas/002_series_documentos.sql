@@ -1,0 +1,3 @@
+﻿-- PROPUESTA OBSOLETA. No ejecutar.
+-- No se necesita una tabla series_documentos.
+-- Ver 004_series_ordenes_masivas.sql: correlativo en proveedores.

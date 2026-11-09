@@ -134,6 +134,13 @@ a { text-decoration: none; color: inherit; }
 .nav-item span:first-of-type { flex: 1; }
 
 .nav-item[href] { cursor: pointer; }
+.nav-group > summary { cursor: pointer; list-style: none; }
+.nav-group > summary::-webkit-details-marker { display: none; }
+.nav-submenu { padding-left: 18px; }
+.nav-submenu .nav-item { font-size: 13px; }
+.nav-group[open] .nav-chevron { transform: rotate(180deg); }
+.nav-group > summary:hover { background: rgba(255,255,255,.06); color: white; }
+.nav-group > summary:focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: -2px; }
 
 .nav-item[href]:hover {
   background: rgba(255,255,255,.06);
@@ -235,7 +242,16 @@ a { text-decoration: none; color: inherit; }
 /* ══════════════════════════════════════════
    PÁGINAS
 ══════════════════════════════════════════ */
-.page-wrapper { flex: 1; padding: 28px 24px; }
+/* Contenedor compartido por todas las vistas cargadas por el router SPA. */
+.page-wrapper {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 28px 24px;
+}
 
 .page { display: none; animation: fadeIn .25s ease; }
 .page.active { display: block; }
@@ -267,3 +283,7 @@ a { text-decoration: none; color: inherit; }
   margin: 4px 0 0;
 }
 
+
+.nav-inventario-pendiente { cursor: default; }
+.nav-inventario-pendiente small { display: block; margin-top: 3px; font-size: 10px; font-weight: 400; line-height: 1.4; }
+.nav-inventario-pendiente:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }

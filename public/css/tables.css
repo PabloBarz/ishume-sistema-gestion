@@ -1,6 +1,41 @@
 /* Las tablas compartidas conservan el estilo original de encabezados, filas y acciones. */
 .table-scroll { overflow-x: auto; }
 
+.compra-table { min-width: 760px; }
+.compra-table td:nth-child(3) { width: 180px; }
+.compra-table td:nth-child(4) { min-width: 200px; }
+
+/* Alineación exclusiva de las tablas de Nueva orden. */
+#ordenEditor .compra-table th { padding: 13px 14px; text-align: left; text-transform: none; letter-spacing: normal; font-size: 12px; color: var(--text); white-space: normal; line-height: 1.5; }
+#ordenEditor .compra-table thead tr { background: white; }
+#ordenEditor .compra-table td { padding: 15px 14px; line-height: 1.5; }
+#ordenEditor .compra-table td:first-child { font-weight: 500; min-width: 180px; overflow-wrap: anywhere; }
+#ordenEditor .compra-table th:nth-child(2), #ordenEditor .compra-table td:nth-child(2) { text-align: center; width: 140px; font-variant-numeric: tabular-nums; }
+#ordenEditor .compra-table th:nth-child(3), #ordenEditor .compra-table td:nth-child(3) { width: 165px; }
+#ordenEditor .compra-table input { max-width: 125px; font-variant-numeric: tabular-nums; }
+#ordenEditor .compra-table select { width: 100%; }
+#ordenEditor .compra-table tbody tr:hover { background: #fcfaff; }
+#ordenEditor .compra-table .cell-secondary { display: block; margin-top: 5px; line-height: 1.4; overflow: visible; }
+#ordenEditor .compra-table td { padding-top: 12px; padding-bottom: 12px; }
+#ordenEditor .compra-table th { padding-top: 10px; padding-bottom: 10px; }
+#ordenEditor .compra-table input, #ordenEditor .compra-table select { min-height: 36px; padding-top: 7px; padding-bottom: 7px; }
+#ordenEditor .compra-table { width: 100%; table-layout: fixed; min-width: 760px; }
+#ordenEditor .compra-table thead th { background: #f7f8fa; color: #697586; font-size: 12px; text-transform: uppercase; }
+#ordenEditor .compra-table th:first-child, #ordenEditor .compra-table td:first-child { width: 40%; }
+#ordenEditor .compra-table th:nth-child(2), #ordenEditor .compra-table td:nth-child(2) { width: 8%; }
+#ordenEditor .compra-table th:nth-child(3), #ordenEditor .compra-table td:nth-child(3) { width: 22%; text-align: center; }
+#ordenEditor .compra-table th:nth-child(4), #ordenEditor .compra-table td:nth-child(4) { width: 30%; text-align: center; }
+#ordenEditor .compra-table td { vertical-align: middle; background: white; border-bottom-color: #e9edf2; font-size: 14px; }
+#ordenEditor .compra-cantidad-control { display: flex; align-items: stretch; width: 100%; max-width: 150px; min-width: 112px; margin-inline: auto; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: white; }
+#ordenEditor .compra-cantidad-control:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+#ordenEditor .compra-cantidad-control button { flex: 0 0 30px; border: 0; background: #f8f9fb; color: var(--text); font-size: 17px; cursor: pointer; }
+#ordenEditor .compra-cantidad-control button:hover { background: #efedf8; }
+#ordenEditor .compra-cantidad-control button:disabled { cursor: default; opacity: .5; }
+#ordenEditor .compra-cantidad-control input { width: 100%; min-width: 0; max-width: none; min-height: 36px; border: 0; border-radius: 0; box-shadow: none; padding-inline: 2px; text-align: center; appearance: textfield; -moz-appearance: textfield; }
+#ordenEditor .compra-cantidad-control input::-webkit-inner-spin-button,
+#ordenEditor .compra-cantidad-control input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#ordenEditor .compra-table .cell-secondary:empty { display: none; }
+
 .table-custom {
   width: 100%;
   min-width: 540px;

@@ -1,0 +1,22 @@
+<section class="ordenes-contenido" id="consultarColegios" aria-labelledby="consultarColegiosTitulo">
+  <div class="page-header"><div><h1 class="page-title" id="consultarColegiosTitulo">Consultar colegios</h1><p class="page-subtitle">Consulta modelos y pedidos por contrato.</p></div></div>
+  <div id="colegiosConsultaVistaListado">
+  <div id="colegiosConsultaFiltros" class="colegios-consulta-filtros" role="group" aria-label="Filtrar contratos">
+    <button type="button" data-filtro="todos" aria-pressed="true">Todos</button>
+    <button type="button" data-filtro="sin_pedido" aria-pressed="false">Sin pedido</button>
+    <button type="button" data-filtro="pendiente" aria-pressed="false">Pedido pendiente</button>
+    <button type="button" data-filtro="generada" aria-pressed="false">Orden generada</button>
+  </div>
+  <section class="card-panel">
+    <form class="panel-body colegio-buscador" id="colegiosConsultaForm" role="search">
+      <label class="form-label-custom" for="colegiosConsultaBusqueda">Colegio</label>
+      <div class="colegio-buscador-campo"><i class="bi bi-search" aria-hidden="true"></i><input class="input-custom" id="colegiosConsultaBusqueda" type="search" maxlength="200" placeholder="Buscar colegio por nombre..." autocomplete="off" aria-controls="colegiosConsultaResultados" aria-describedby="colegiosConsultaEstado"></div>
+      <p class="text-sm text-muted" id="colegiosConsultaEstado" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+  <section class="card-panel colegios-consulta-listado" aria-label="Contratos encontrados">
+    <div class="table-scroll"><table class="table-custom"><thead><tr><th scope="col">Colegio</th><th scope="col">Modelos</th><th scope="col">Situación</th><th scope="col">Acciones</th></tr></thead><tbody id="colegiosConsultaResultados"></tbody></table></div>
+    <nav class="colegios-consulta-paginacion" aria-label="Páginas de contratos"><button class="btn-cancel" id="colegiosConsultaAnterior" type="button" disabled>Anterior</button><span id="colegiosConsultaPagina"></span><button class="btn-cancel" id="colegiosConsultaSiguiente" type="button" disabled>Siguiente</button></nav>
+  </section>
+  </div>
+</section>

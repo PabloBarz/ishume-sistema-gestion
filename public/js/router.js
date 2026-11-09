@@ -2,30 +2,45 @@
 import { closeOverlay } from './utils.js';
 
 const routes = {
-  contratos: {
-    title: 'Consulta de contratos',
+  'compras/colegios': {
+    title: '',
+    view: '/views/consultar_colegios.html',
+    loadModule: () => import('./module_compras/consultarColegios.js'),
+  },
+  'inventario/demo-seguimiento': {
+    title: '',
+    view: '/views/seguimiento_entrega_demo.html',
+    loadModule: () => import('./module_compras/seguimientoEntregaDemo.js'),
+  },
+  pagos: {
+    title: '',
+    view: '/views/pagos.html',
+    loadModule: () => import('./module_compras/pagos.js'),
+  },
+  'ordenes/nueva': {
+    title: '',
     view: '/views/contratos.html',
-    loadModule: () => import('./modules/contratos.js'),
+    loadModule: () => import('./module_compras/contratos.js'),
+  },
+  'ordenes/guardadas': {
+    title: '',
+    view: '/views/ordenes_guardadas.html',
+    loadModule: () => import('./module_compras/ordenes_guardadas.js'),
   },
   dashboard: {
     title: 'Dashboard',
     view: '/views/dashboard.html',
-    loadModule: () => import('./modules/dashboard.js'),
+    loadModule: () => import('./module_compras/dashboard.js'),
   },
   ejemplo: {
     title: 'Vista de ejemplo',
     view: '/views/example.html',
-    loadModule: () => import('./modules/example.js'),
+    loadModule: () => import('./module_compras/example.js'),
   },
   inventario: {
     title: 'Inventario',
     view: '/views/inventario.html',
     loadModule: () => import('./modules/inventario.js'),
-  },
-  compras: {
-    title: 'Compras',
-    view: '/views/compras.html',
-    loadModule: () => import('./modules/compras.js')
   }
 };
 
@@ -34,10 +49,16 @@ let started = false;
 let loadSequence = 0;
 
 function getRouteName() {
-  return window.location.hash.slice(1).replace(/^\/+/, '') || 'dashboard';
+  const name = window.location.hash.slice(1).split('?')[0].replace(/^\/+/, '') || 'dashboard';
+  if (name === 'contratos' || name === 'compras') {
+    window.history.replaceState(null, '', '#/ordenes/nueva');
+    return 'ordenes/nueva';
+  }
+  return name;
 }
 
 function updateShell(routeName, title) {
+  document.body.classList.toggle('seguimiento-entrega-activo',routeName==='inventario/demo-seguimiento');
   document.querySelectorAll('.nav-item[data-page]').forEach((link) => {
     const isActive = link.dataset.page === routeName;
     link.classList.toggle('active', isActive);
@@ -46,6 +67,10 @@ function updateShell(routeName, title) {
   });
 
   document.getElementById('topbarTitle').textContent = title;
+  const ordenesMenu = document.getElementById('ordenesMenu');
+  const active = routeName.startsWith('ordenes/') || routeName === 'pagos' || routeName === 'compras/colegios';
+  ordenesMenu.querySelector('summary').classList.toggle('active', active);
+  if (active) ordenesMenu.open = true;
 }
 
 function showError(message) {

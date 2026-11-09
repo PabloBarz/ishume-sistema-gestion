@@ -1,6 +1,18 @@
 import { contratoService } from '../services/contratoService.js';
+import { contratoPedidoService } from '../services/contratoPedidoService.js';
 
 export const contratoController = {
+  async listarColegios(req, res) {
+    res.set('Cache-Control', 'no-store');
+    try {
+      const colegios=await contratoService.listarEscolaresEnProceso();
+      const registrados=await contratoPedidoService.registrados(colegios.map(c=>c.id_contrato));
+      return res.json({ success: true, data: colegios.map(c=>({...c,pedido_registrado:registrados.has(c.id_contrato)})) });
+    } catch (error) {
+      return res.status(error.status || 500).json({ success: false,
+        message: error.status ? error.message : 'No se pudo cargar el listado de colegios.' });
+    }
+  },
   async consultar(req, res) {
     const { id } = req.query;
     if (typeof id !== 'string' || !/^\d+$/.test(id) ||
@@ -11,7 +23,8 @@ export const contratoController = {
     res.set('Cache-Control', 'no-store');
     try {
       const contrato = await contratoService.obtenerPorId(id);
-      return res.json({ success: true, data: contrato });
+      const registrados=await contratoPedidoService.registrados([Number(id)]);
+      return res.json({ success: true, data: {...contrato,pedido_registrado:registrados.has(Number(id))} });
     } catch (error) {
       return res.status(error.status || 500).json({
         success: false,

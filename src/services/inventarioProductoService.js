@@ -4,13 +4,22 @@ function apiError(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
-const referenciaOperativaProducto = `
-  CASE WHEN EXISTS (SELECT 1 FROM contrato_detalles AS cd WHERE cd.id_producto = p.id_producto)
-         OR EXISTS (SELECT 1 FROM orden_compra_detalles AS od WHERE od.id_producto = p.id_producto)
-         OR EXISTS (SELECT 1 FROM recepcion_detalles AS rd WHERE rd.id_producto = p.id_producto)
-         OR EXISTS (SELECT 1 FROM despacho_detalles AS dd WHERE dd.id_producto = p.id_producto)
-         OR EXISTS (SELECT 1 FROM kardex_movimientos AS km WHERE km.id_producto = p.id_producto)
-       THEN 1 ELSE 0 END AS tiene_referencias_operativas`;
+async function referenciasOperativas(connection = pool) {
+  // Los IDs de productos de Compras y del catálogo de Inventario son independientes.
+  // Consultar solo relaciones FK reales también conserva la protección en el esquema anterior.
+  const [relaciones] = await connection.query(`
+    SELECT DISTINCT TABLE_NAME, COLUMN_NAME
+    FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_SCHEMA = DATABASE()
+      AND REFERENCED_TABLE_NAME = 'inventario_productos'
+      AND REFERENCED_COLUMN_NAME = 'id_producto'`);
+  const identificador = value => '`' + value.replaceAll('`', '``') + '`';
+  const referencias = relaciones.map(({ TABLE_NAME, COLUMN_NAME }) =>
+    `EXISTS (SELECT 1 FROM ${identificador(TABLE_NAME)} AS r WHERE r.${identificador(COLUMN_NAME)} = p.id_producto)`);
+  return referencias.length
+    ? `CASE WHEN ${referencias.join(' OR ')} THEN 1 ELSE 0 END AS tiene_referencias_operativas`
+    : '0 AS tiene_referencias_operativas';
+}
 
 async function enTransaccion(callback) {
   const connection = await pool.getConnection();
@@ -33,6 +42,7 @@ async function enTransaccion(callback) {
 }
 
 async function buscarPorId(id, connection = pool) {
+  const referenciaOperativaProducto = await referenciasOperativas(connection);
   const [rows] = await connection.query(
     `SELECT p.id_producto, p.sku, p.precio, p.stock_actual, p.estado,
             p.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado AS estado_modelo,
@@ -114,6 +124,7 @@ async function validarModeloActivo(connection, idModelo, validarActivo = true) {
 
 export const inventarioProductoService = {
   async obtenerTodos({ idCategoria = null, idDiseno = null, idModelo = null, estado = null } = {}) {
+    const referenciaOperativaProducto = await referenciasOperativas();
     const filtros = [];
     const parametros = [];
     if (idCategoria !== null) {
@@ -168,6 +179,7 @@ export const inventarioProductoService = {
 
   async actualizar(id, { idModelo, sku, precio }) {
     return enTransaccion(async (connection) => {
+      const referenciaOperativaProducto = await referenciasOperativas(connection);
       const [productos] = await connection.query(
         `SELECT p.id_producto, p.id_modelo, ${referenciaOperativaProducto}
          FROM inventario_productos AS p

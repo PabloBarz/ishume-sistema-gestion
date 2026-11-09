@@ -1,0 +1,17 @@
+import { Router } from 'express';
+import { compraMasivaController } from '../controllers/compraMasivaController.js';
+const router = Router();
+router.get('/pendientes', compraMasivaController.pendientes);
+router.get('/pendientes/proveedor/:id/detalle', compraMasivaController.vistaProveedor);
+router.get('/pendientes/:id/detalle', compraMasivaController.vistaPedido);
+router.get('/solicitudes', compraMasivaController.realizadas);
+router.post('/solicitudes/revisar', compraMasivaController.revisarSolicitud);
+router.post('/solicitudes/confirmar', compraMasivaController.confirmarSolicitud);
+router.get('/solicitudes/:solicitudId/pdf', compraMasivaController.descargarPdf);
+router.get('/solicitudes/:solicitudId', compraMasivaController.obtenerSolicitud);
+router.get('/ordenes', compraMasivaController.buscarOrdenes);
+router.get('/ordenes/:id/pdf', compraMasivaController.descargarPdf);
+router.get('/ordenes/:id', compraMasivaController.obtenerOrden);
+router.post('/revisar', compraMasivaController.revisar);
+router.post('/confirmar', compraMasivaController.confirmar);
+export default router;
