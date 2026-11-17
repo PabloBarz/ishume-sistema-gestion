@@ -12,7 +12,7 @@ Los nuevos documentos se titulan **ORDEN DE COMPRA**, muestran su código OC y n
 
 La versión 3 usa ISHUME en naranja `#FF7A00`, encabezado y tablas neutrales, nota de precios pendientes y archivo `CODIGO_Proveedor.pdf`, con caracteres seguros. Los documentos de versión 2 conservan el diseño previo de orden de compra; los anteriores siguen con su diseño de solicitud. Cambiar el formato no reescribe las instantáneas históricas ni sus cantidades.
 
-La versión 4 añade el RUC proporcionado y los contactos provisionales identificados en `emisorPdf`, omite notas y muestra tipo, categoría y nivel solo si existen en la instantánea. Conserva el nombre seguro del archivo. Las características se incluyen en nuevas instantáneas desde `productos`; no se completan documentos históricos con el catálogo actual. Consulta el diagnóstico del contrato 94 y la propuesta de series, no ejecutada, en [DIAGNOSTICO-22230-Y-SERIES.md](DIAGNOSTICO-22230-Y-SERIES.md).
+La versión 4 añade el RUC proporcionado y los contactos provisionales identificados en `emisorPdf`, omite notas y muestra tipo, categoría y nivel solo si existen en la instantánea. Conserva el nombre seguro del archivo. Las características se incluyen en nuevas instantáneas desde `modelos`, `disenios` y `categorias`; no se completan documentos históricos con el catálogo actual. Consulta el diagnóstico del contrato 94 y la propuesta de series, no ejecutada, en [DIAGNOSTICO-22230-Y-SERIES.md](DIAGNOSTICO-22230-Y-SERIES.md).
 
 El buscador de Órdenes guardadas funciona al escribir, con debounce de 300 ms, botón para limpiar, comparación sin mayúsculas ni tildes y paginación desde el servidor. Se descartan respuestas desactualizadas y se conservan las casillas por ID de pedido.
 
@@ -38,7 +38,7 @@ Pruebas: `tests/compra-masiva-ui.test.js`, `tests/compra-masiva.test.js`, `tests
 3. Abre `http://localhost:3000/#/ordenes/nueva` o despliega **Órdenes de compra → Nueva orden** en el menú. Los enlaces anteriores `#/contratos` se redirigen a esta pantalla.
 4. Pulsa **+ Agregar colegio** e ingresa un ID existente. Puedes realizar otra búsqueda sin recargar la página.
 
-El campo `cliente` se muestra completo, incluyendo el colegio, comas y guiones que tenga el nombre original. Los modelos y cantidades provienen de `productos`. Una fecha nula y un contrato sin modelos tienen mensajes propios.
+El campo `cliente` se muestra completo, incluyendo el colegio, comas y guiones que tenga el nombre original. Las lineas llegan en `productos` del JSON externo con `id_modelo` local y cantidad; los nombres y clasificacion se consultan en nuestro catalogo. Una fecha nula y un contrato sin modelos tienen mensajes propios.
 
 Flujo: `public/views/contratos.html` → `public/js/module_compras/contratos.js` → `GET /api/contratos?id=...` → `src/routes/contratoRouter.js` → `src/controllers/contratoController.js` → `src/services/contratoService.js` → API externa.
 
@@ -59,9 +59,9 @@ Verificación automatizada con un servidor externo simulado: `node --test tests/
 
 Los códigos nuevos tienen la forma `OC-JOS-0013`, `OC-LAL-0014` y `OC-LIB-0015`. El sufijo parte del ID autoincremental de la orden, con un mínimo de cuatro dígitos (no se reinicia por proveedor). Un código temporal se reemplaza por el definitivo dentro de la misma transacción; se comprueban colisiones y se respeta el índice único existente. Los códigos ya guardados, incluidos los anteriores de formato largo, no se renumeran. Los saltos por autoincremento o transacciones revertidas son normales.
 
-La transacción escribe únicamente en `contratos_referencia`, `productos`, `contrato_detalles`, `ordenes_compra`, `orden_detalles` y `orden_distribuciones`, y valida los IDs en `proveedores`. Las otras diez tablas existentes corresponden a etapas posteriores y no se modifican. No se ejecutan cambios de estructura ni se modifica el PHP.
+La transacción escribe únicamente en `contratos_referencia`, `contrato_detalles`, `ordenes_compra`, `orden_detalles` y `orden_distribuciones`, y valida los IDs locales en `modelos` y la relacion del proveedor con su diseno en `disenio_proveedores`. Las otras diez tablas existentes corresponden a etapas posteriores y no se modifican. No se ejecutan cambios de estructura ni se modifica el PHP.
 
-Las referencias se vinculan por `id_contrato_api` e `id_modelo_api`. La cantidad original queda en `contrato_detalles.cantidad_requerida`; la cantidad pedida queda en `orden_detalles` y su reparto en `orden_distribuciones`. Si cambia la cantidad original de la API, se conserva la versión anterior usada por órdenes históricas. Las cantidades adicionales pertenecen al colegio de la fila.
+Las referencias se vinculan por `id_contrato_api` y por `modelos.id_modelo` del catalogo local. La cantidad original queda en `contrato_detalles.cantidad_requerida`; la cantidad pedida queda en `orden_detalles` y su reparto en `orden_distribuciones`. Si cambia la cantidad original de la API, se conserva la versión anterior usada por órdenes históricas. Las cantidades adicionales pertenecen al colegio de la fila.
 
 Cada revisión tiene un token válido durante 30 minutos en el proceso Node. Un reinicio requiere preparar nuevamente las revisiones aún no guardadas. La confirmación usa un bloqueo MySQL y un identificador persistente en `ordenes_compra.observaciones`; reintentar el mismo token devuelve las órdenes existentes incluso tras reiniciar, sin duplicarlas. Si cambia la API o un proveedor entre revisión y confirmación, se exige revisar de nuevo. Una nueva revisión confirmada se considera una compra distinta.
 
@@ -118,7 +118,7 @@ Pruebas del tiempo límite de consulta y recuperación: `node --test tests/http.
 
 ## Consolidación de solicitudes
 
-La migración `migrations/001_solicitudes_cotizacion.sql` agrega únicamente `solicitudes_cotizacion` y `solicitud_ordenes`. Se aplicó después de verificar las 17 tablas originales y comprobar que sus definiciones no cambiaron. En otra instalación debe ejecutarse una sola vez sobre el esquema original. No volver a ejecutarla en una base ya migrada.
+El esquema database/ishume_bd_unificada.sql incluye solicitudes_cotizacion y solicitud_ordenes. En desarrollo se recrea la base desde ese archivo.
 
 Las claves foráneas vinculan solicitudes con proveedores y órdenes. El índice único sobre `solicitud_ordenes.id_orden` impide incluir una orden en dos solicitudes. La consolidación no fusiona, elimina ni cambia el estado de las órdenes originales. Una orden pendiente no está vinculada a una solicitud; las canceladas no se ofrecen para consolidar. Las solicitudes nacen en estado **Generada**. Descargar o visualizar el PDF no las marca como enviadas.
 
@@ -149,5 +149,4 @@ Incluye secuencias independientes, concurrencia simulada, doble envío y rollbac
 Las órdenes nuevas usan ORDEN-MAS-JOS-001 / ORDEN-MAS-LAL-001 / ORDEN-MAS-LIB-001,
 con series persistentes por id_proveedor en proveedores (prefijo_orden_masiva y ultimo_orden_masiva). Los códigos OC-MAS
 existentes se conservan y siguen siendo consultables. La preparación y numeración de
-pedidos internos no cambian. Antes de consolidar nuevas órdenes debe aplicarse manualmente
-migrations/004_series_ordenes_masivas.sql; database/ishume_bd_unificada.sql ya lo incorpora para instalaciones vacías.
+pedidos internos no cambian. La estructura de series se incluye directamente en database/ishume_bd_unificada.sql.

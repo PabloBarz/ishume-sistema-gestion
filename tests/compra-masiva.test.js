@@ -10,7 +10,7 @@ test('revisión: agrupa por modelo y proveedor, valida cantidades y conserva col
   const getProveedores = proveedorService.listarActivos;
   contratoService.obtenerPorId = async (id) => ({
     id_contrato: Number(id), colegio: `Colegio ${id}`, cliente: `Responsable ${id}`, fecha_entrega: null,
-    productos: [{ id_modelo: 100, modelo: 'Cuadro A', categoria: 'Cuadro', cantidad: 30 }],
+    productos: [{ id_modelo: 100, modelo: 'Cuadro A', categoria: 'Cuadro', estado:1, estado_diseno:1, estado_categoria:1, proveedores:[{id_proveedor:1}], cantidad: 30 }],
   });
   proveedorService.listarActivos = async () => [{ id_proveedor: 1, razon_social: 'Proveedor activo' }];
   const entrada = [8, 25].map((id) => ({ id_contrato: id, productos: [{ id_modelo: 100, cantidad: 35, id_proveedor: 1 }] }));
@@ -26,7 +26,7 @@ test('revisión: agrupa por modelo y proveedor, valida cantidades y conserva col
       await assert.rejects(compraMasivaService.revisar(bad), /cantidades/);
     }
     const bad = structuredClone(entrada); bad[0].productos[0].id_proveedor = 99;
-    await assert.rejects(compraMasivaService.revisar(bad), /proveedores/);
+    await assert.rejects(compraMasivaService.revisar(bad), /proveedor/);
     await assert.rejects(compraMasivaService.revisar([entrada[0], entrada[0]]), /duplicados/);
     await assert.rejects(compraMasivaService.revisar([]), /contratos/);
     const distinto = structuredClone(entrada); distinto[0].productos[0].id_modelo = 101;
@@ -42,7 +42,7 @@ test('MySQL: inserciones, distribuciones, idempotencia y rollback sin compras pe
   const getContrato = contratoService.obtenerPorId;
   const getConnection = pool.getConnection.bind(pool);
   const conn = await getConnection();
-  const tablas = ['contratos_referencia', 'productos', 'contrato_detalles', 'ordenes_compra', 'orden_detalles', 'orden_distribuciones'];
+  const tablas = ['contratos_referencia', 'modelos', 'contrato_detalles', 'ordenes_compra', 'orden_detalles', 'orden_distribuciones'];
   async function conteos() {
     const resultado = [];
     for (const tabla of tablas) resultado.push((await conn.query('SELECT COUNT(*) AS n FROM ??', [tabla]))[0][0].n);
@@ -64,12 +64,20 @@ test('MySQL: inserciones, distribuciones, idempotencia y rollback sin compras pe
   });
   const proveedores = await proveedorService.listarActivos();
   assert.ok(proveedores.length >= 2, 'Se necesitan dos proveedores activos para esta prueba');
-  contratoService.obtenerPorId = async (id) => ({ id_contrato: Number(id), colegio: `Colegio real ${id}`, cliente: `Prueba transaccional ${id}`, fecha_entrega: null,
-    productos: [{ id_modelo: 2000000101, modelo: 'Prueba cuadro', categoria: 'Cuadro', cantidad: 30 }, { id_modelo: 2000000102, modelo: 'Prueba anuario', categoria: 'Anuario', cantidad: 2 }] });
-  const entrada = [2000000101, 2000000102].map((id) => ({ id_contrato: id, productos: [
-    { id_modelo: 2000000101, cantidad: 35, id_proveedor: proveedores[0].id_proveedor },
-    { id_modelo: 2000000102, cantidad: 2, id_proveedor: proveedores[1].id_proveedor },
-  ] }));
+  const modelosPrueba = [];
+  for (const proveedor of proveedores.slice(0,2)) {
+    const [[modelo]] = await conn.query(`SELECT m.id_modelo FROM modelos m
+      JOIN disenios d ON d.id_diseno=m.id_diseno JOIN categorias c ON c.id_categoria=d.id_categoria
+      JOIN disenio_proveedores dp ON dp.id_diseno=d.id_diseno
+      WHERE dp.id_proveedor=? AND m.estado=1 AND d.estado=1 AND c.estado=1 LIMIT 1`, [proveedor.id_proveedor]);
+    assert.ok(modelo, 'Asociar un diseno con modelos activos al proveedor antes de esta prueba');
+    modelosPrueba.push({...modelo,id_proveedor:proveedor.id_proveedor});
+  }
+  assert.notEqual(modelosPrueba[0].id_modelo,modelosPrueba[1].id_modelo,'Esta prueba requiere dos modelos distintos');
+  contratoService.obtenerPorId = async (id) => ({id_contrato:Number(id),colegio:`Colegio real ${id}`,cliente:'Responsable',fecha_entrega:null,
+    productos:modelosPrueba.map((m,i)=>({...m,modelo:'Modelo local '+m.id_modelo,categoria:'Cuadro',cantidad:i?2:30,
+      estado:1,estado_diseno:1,estado_categoria:1,proveedores:[{id_proveedor:m.id_proveedor}]}))});
+  const entrada = [2000000101,2000000102].map(id=>({id_contrato:id,productos:modelosPrueba.map((m,i)=>({id_modelo:m.id_modelo,cantidad:i?2:35,id_proveedor:m.id_proveedor}))}));
   try {
     const revision = await compraMasivaService.revisar(entrada);
     const result = await compraMasivaService.confirmar(revision.token);
@@ -138,7 +146,7 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
   let siguienteId=9000, cola=Promise.resolve(), fallar=false;
   proveedorService.listarActivos=async()=>catalogo;
   contratoService.obtenerPorId=async id=>({id_contrato:Number(id),colegio:'Colegio de prueba',cliente:'Cliente',fecha_entrega:null,
-    productos:[{id_modelo:100,modelo:'Modelo',categoria:'Cuadro',cantidad:1}]});
+    productos:[{id_modelo:100,modelo:'Modelo',categoria:'Cuadro',estado:1,estado_diseno:1,estado_categoria:1,proveedores:catalogo,cantidad:1}]});
   // Simula transacciones y el bloqueo compartido de MySQL, incluso entre conexiones.
   pool.getConnection=async()=>{
     let liberar, transaccion=null, bloqueado=false, contratoActual=null;
@@ -153,6 +161,7 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
         if(sql.includes('WHERE observaciones = ?')) return [filas().filter(o=>o.observaciones===args[0])];
         if(sql.includes('AS modelos')) return [filas().filter(o=>args[0].includes(o.id_orden)).map(o=>({...o,proveedor:catalogo.find(p=>p.id_proveedor===o.id_proveedor).razon_social,total:1,modelos:1}))];
         if(sql.startsWith('SELECT DISTINCT cr.id_contrato_api')){assert.ok(bloqueado&&transaccion,'Comprobar contrato dentro del bloqueo y transaccion');contratoActual=args[0][0];return [filas().filter(o=>args[0].includes(o.id_contrato_api)).map(o=>({id_contrato_api:o.id_contrato_api}))];}
+        if(sql.startsWith('SELECT m.id_modelo FROM modelos')) {assert.ok(bloqueado&&transaccion);return [[{id_modelo:args[0]}]];}
         if(sql.includes('FOR UPDATE')) {assert.ok(bloqueado&&transaccion);return [catalogo.filter(p=>args[0].includes(p.id_proveedor))];}
         if(sql.includes('SUBSTRING_INDEX')) {
           assert.ok(bloqueado&&transaccion,'El máximo se lee dentro de la transacción y el bloqueo');
@@ -166,7 +175,7 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
           return [{insertId:id_orden}];
         }
         if(sql.startsWith('SELECT id_contrato FROM'))return [[{id_contrato:1}]];
-        if(sql.startsWith('SELECT id_producto FROM'))return [[{id_producto:1}]];
+        if(sql.startsWith('SELECT id_modelo FROM'))return [[{id_modelo:1}]];
         if(sql.startsWith('SELECT id_detalle_contrato FROM'))return [[{id_detalle_contrato:1}]];
         if(sql.startsWith('INSERT INTO orden_distribuciones')&&fallar){fallar=false;throw Error('Fallo simulado antes del commit');}
         if(sql.startsWith('INSERT INTO'))return [{insertId:1}];

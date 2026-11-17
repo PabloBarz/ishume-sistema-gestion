@@ -45,16 +45,18 @@ test('MySQL: consolidación, selección parcial, PDF, historial y restricciones 
     const [fixtureProveedor]=await conn.query('INSERT INTO proveedores (razon_social) VALUES (?)',[`Proveedor LíderBook prueba ${marca}`]);
     const elegido={id_proveedor:fixtureProveedor.insertId,razon_social:`Proveedor LíderBook prueba ${marca}`};
     const proveedor=elegido.id_proveedor,otro=proveedores[0].id_proveedor;
-    const [p]=await conn.query('INSERT INTO productos (nombre,categoria,tipo,nivel_educativo) VALUES (?,?,?,?)',[`Modelo prueba ${marca}`,'Cuadro','Reflex','Inicial']);
+    const [categoria]=await conn.query('INSERT INTO categorias (nombre_categoria) VALUES (?)', ['Prueba '+marca]);
+    const [diseno]=await conn.query('INSERT INTO disenios (id_categoria,nombre_diseno) VALUES (?,?)', [categoria.insertId,'Reflex prueba']);
+    const [p]=await conn.query('INSERT INTO modelos (id_diseno,nombre_modelo,nivel_educativo) VALUES (?,?,?)',[diseno.insertId,`Modelo prueba ${marca}`,'INICIAL']);
     const apiBase=1000000000+Math.floor(Math.random()*100000000);
     nombres.set(apiBase,`Colegio A ${marca}`);nombres.set(apiBase+1,`Colegio B ${marca}`);
     const [c1]=await conn.query("INSERT INTO contratos_referencia (origen,id_contrato_api,cliente_colegio) VALUES ('API',?,?)",[apiBase,'Cliente antiguo A']);
     const [c2]=await conn.query("INSERT INTO contratos_referencia (origen,id_contrato_api,cliente_colegio) VALUES ('API',?,?)",[apiBase+1,'Cliente antiguo B']);
-    const [d1]=await conn.query('INSERT INTO contrato_detalles (id_contrato,id_producto,cantidad_requerida) VALUES (?,?,?)',[c1.insertId,p.insertId,10]);
-    const [d2]=await conn.query('INSERT INTO contrato_detalles (id_contrato,id_producto,cantidad_requerida) VALUES (?,?,?)',[c2.insertId,p.insertId,20]);
+    const [d1]=await conn.query('INSERT INTO contrato_detalles (id_contrato,id_modelo,cantidad_requerida) VALUES (?,?,?)',[c1.insertId,p.insertId,10]);
+    const [d2]=await conn.query('INSERT INTO contrato_detalles (id_contrato,id_modelo,cantidad_requerida) VALUES (?,?,?)',[c2.insertId,p.insertId,20]);
     async function orden(suf,prov,cantidad,detalle){
       const [o]=await conn.query("INSERT INTO ordenes_compra (codigo,id_proveedor,fecha_emision) VALUES (?,?,CURRENT_DATE)",[`TEST-${marca}-${suf}`,prov]);
-      const [l]=await conn.query('INSERT INTO orden_detalles (id_orden,id_producto,cantidad_pedida) VALUES (?,?,?)',[o.insertId,p.insertId,cantidad]);
+      const [l]=await conn.query('INSERT INTO orden_detalles (id_orden,id_modelo,cantidad_pedida) VALUES (?,?,?)',[o.insertId,p.insertId,cantidad]);
       await conn.query('INSERT INTO orden_distribuciones (id_orden_detalle,id_detalle_contrato,cantidad_asignada) VALUES (?,?,?)',[l.insertId,detalle,cantidad]);
       return o.insertId;
     }
@@ -107,7 +109,7 @@ test('MySQL: consolidación, selección parcial, PDF, historial y restricciones 
     assert.equal(guardada.version_documento,4);
     await assert.rejects(service.vistaPendientes({id_orden:a}),e=>e.status===404);
     assert.equal((await service.vistaPendientes({id_proveedor:proveedor})).total,4,'La vista general incluye solamente pendientes');
-    await conn.query('UPDATE productos SET nombre=? WHERE id_producto=?',[`Nombre posterior ${marca}`,p.insertId]);
+    await conn.query('UPDATE productos SET nombre=? WHERE id_modelo=?',[`Nombre posterior ${marca}`,p.insertId]);
     assert.equal((await service.obtener(creada.id_solicitud)).productos[0].modelo,guardada.productos[0].modelo,'Instantánea documental estable');
     const [[original]]=await conn.query('SELECT COUNT(*) n FROM ordenes_compra WHERE id_orden IN (?) AND estado=\'Borrador\'',[[a,b,c,otroId]]);
     assert.equal(original.n,4,'No cambia estados ni elimina órdenes originales');

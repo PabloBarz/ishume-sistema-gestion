@@ -1,3 +1,4 @@
+import { pool } from '../src/config/db.js';
 ﻿import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {contratoService} from '../src/services/contratoService.js';
@@ -12,3 +13,5 @@ test('catalogo escolar: tres estados, IDs independientes, sin depender de produc
  global.fetch=async()=>({ok:true,json:async()=>({error:'fallo'})});await assert.rejects(contratoService.listarEscolares(),e=>e.status===502);
  }finally{global.fetch=original;if(url===undefined)delete process.env.CONTRATOS_API_URL;else process.env.CONTRATOS_API_URL=url;}
 });
+
+test.after(async()=>{await pool.end();});

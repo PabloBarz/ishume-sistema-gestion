@@ -53,7 +53,7 @@ export function createCategoriesModule(root, { isActive, onChanged, modal }) {
 
   async function refreshCategories({ nameChanged = false, stateChanged = false } = {}) {
     if (nameChanged) {
-      ['disenios', 'modelos', 'productos'].forEach((catalog) => appState.catalogos.invalidate(catalog));
+      ['disenios', 'modelos'].forEach((catalog) => appState.catalogos.invalidate(catalog));
     } else if (stateChanged) {
       appState.catalogos.invalidate('disenios');
     }

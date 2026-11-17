@@ -79,12 +79,7 @@ No es suficiente cambiar el relleno a cuatro dígitos: `OC-MAS-0016` y `OC-MAS-0
 son textos diferentes, pero representan el mismo número lógico. La propuesta toma el
 máximo numérico histórico, ignorando el relleno, para evitar esa ambigüedad.
 
-Se preparó `migrations/propuestas/002_series_documentos.sql`, **sin ejecutarlo**. Propone
-una tabla de contadores con fila por proveedor y otra para órdenes masivas, prefijos únicos
-y estables y bloqueo `FOR UPDATE` dentro de la transacción actual. No usa COUNT de pedidos,
-no reinicia IDs ni modifica tablas o documentos existentes. Antes de aplicarla se requiere
-respaldo, aprobación y revisión de prefijos históricos ambiguos. Después habría que adaptar
-los dos generadores para consumir esas series sin perder sus protecciones de idempotencia.
+La propuesta anterior de migracion fue retirada. El esquema vigente y sus series se definen directamente en database/ishume_bd_unificada.sql para reiniciar la base en desarrollo.
 
 ## PDF y datos históricos
 

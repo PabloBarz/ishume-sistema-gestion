@@ -5,7 +5,7 @@ function apiError(message, status) {
 }
 
 const columnasDisenio = `d.id_diseno, d.id_categoria, c.nombre_categoria,
-  c.estado AS estado_categoria, d.nombre_diseno, d.descripcion, d.estado,
+  c.estado AS estado_categoria, d.nombre_diseno, d.estado,
   COALESCE(mc.total_modelos, 0) AS total_modelos`;
 
 const joinConteoModelos = `
@@ -57,7 +57,8 @@ async function buscarPorId(id, connection = pool, bloquear = false) {
     [id],
   );
   if (!rows.length) throw apiError('Diseño no encontrado.', 404);
-  return referenciaBloqueada ? { ...rows[0], ...referenciaBloqueada } : rows[0];
+  const [disenio] = await agregarProveedores(rows, connection);
+  return referenciaBloqueada ? { ...disenio, ...referenciaBloqueada } : disenio;
 }
 
 async function buscarCategoriaActiva(connection, idCategoria) {
@@ -77,6 +78,27 @@ async function buscarCategoria(connection, idCategoria) {
   );
   if (!rows.length) throw apiError('La categoría seleccionada no existe.', 404);
   return rows[0];
+}
+
+async function agregarProveedores(rows, connection = pool) {
+  if (!rows.length) return rows;
+  const [proveedores] = await connection.query(
+    `SELECT dp.id_diseno, p.id_proveedor, p.razon_social, p.estado
+     FROM disenio_proveedores dp JOIN proveedores p ON p.id_proveedor = dp.id_proveedor
+     WHERE dp.id_diseno IN (?) ORDER BY p.razon_social`, [rows.map(r => r.id_diseno)]);
+  return rows.map(row => ({ ...row, proveedores: proveedores.filter(p => p.id_diseno === row.id_diseno) }));
+}
+
+async function guardarProveedores(connection, idDiseno, ids) {
+  if (ids.length) {
+    const [rows] = await connection.query('SELECT id_proveedor, estado FROM proveedores WHERE id_proveedor IN (?) FOR UPDATE', [ids]);
+    const [anteriores] = await connection.query('SELECT id_proveedor FROM disenio_proveedores WHERE id_diseno = ?', [idDiseno]);
+    if (rows.length !== ids.length || rows.some(p => p.estado !== 'Activo' && !anteriores.some(a => a.id_proveedor === p.id_proveedor))) {
+      throw apiError('Selecciona proveedores existentes y activos.', 409);
+    }
+  }
+  await connection.query('DELETE FROM disenio_proveedores WHERE id_diseno = ?', [idDiseno]);
+  for (const id of ids) await connection.query('INSERT INTO disenio_proveedores (id_diseno, id_proveedor) VALUES (?, ?)', [idDiseno, id]);
 }
 
 export const disenioService = {
@@ -100,32 +122,27 @@ export const disenioService = {
        ORDER BY d.id_diseno DESC`,
       parametros,
     );
-    return rows;
+    return agregarProveedores(rows);
   },
 
   async obtenerPorId(id) {
     return buscarPorId(id);
   },
 
-  async crear({ idCategoria, nombre, descripcion }) {
+  async crear({ idCategoria, nombre, proveedores = [] }) {
     return enTransaccion(async (connection) => {
       await buscarCategoriaActiva(connection, idCategoria);
       const [result] = await connection.query(
-        `INSERT INTO disenios (id_categoria, nombre_diseno, descripcion)
-         VALUES (?, ?, ?)`,
-        [idCategoria, nombre, descripcion],
+        `INSERT INTO disenios (id_categoria, nombre_diseno)
+         VALUES (?, ?)`,
+        [idCategoria, nombre],
       );
-      return {
-        id_diseno: result.insertId,
-        id_categoria: idCategoria,
-        nombre_diseno: nombre,
-        descripcion,
-        estado: 1,
-      };
+      await guardarProveedores(connection, result.insertId, proveedores);
+      return buscarPorId(result.insertId, connection);
     });
   },
 
-  async actualizar(id, { idCategoria, nombre, descripcion }) {
+  async actualizar(id, { idCategoria, nombre, proveedores = [] }) {
     return enTransaccion(async (connection) => {
       const categoriaAnterior = await buscarPorId(id, connection);
       const categoriaDestino = await buscarCategoria(connection, idCategoria);
@@ -138,11 +155,12 @@ export const disenioService = {
       }
       const [result] = await connection.query(
         `UPDATE disenios
-         SET id_categoria = ?, nombre_diseno = ?, descripcion = ?
+         SET id_categoria = ?, nombre_diseno = ?
          WHERE id_diseno = ?`,
-        [idCategoria, nombre, descripcion, id],
+        [idCategoria, nombre, id],
       );
       if (result.affectedRows === 0) await buscarPorId(id, connection);
+      await guardarProveedores(connection, id, proveedores);
       return buscarPorId(id, connection);
     });
   },

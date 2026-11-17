@@ -2,9 +2,9 @@
 export function consolidarOrden(orden) {
   const fallo = mensaje => { throw Object.assign(new Error(mensaje), {status:409}); };
   const identidad = p => {
-    const id = p.id_producto ?? p.id_modelo ?? p.id_modelo_api;
+    const id = p.id_modelo;
     if (!Number.isSafeInteger(Number(id)) || Number(id)<=0) fallo('Falta el identificador real de un producto. No se puede consolidar por nombre.');
-    return `${p.id_producto != null ? 'producto' : 'modelo'}:${Number(id)}`;
+    return `modelo:${Number(id)}`;
   };
   function agrupar(lineas) {
     const mapa=new Map();

@@ -14,11 +14,11 @@ test('consulta colegios: cantidades distribuidas, varios proveedores y sin dupli
   contratoService.obtenerPorId=async()=>({colegio:'Melchórita nueva',cliente:'Cliente',productos:[{id_modelo:10,modelo:'Modelo A',cantidad:20},{id_modelo:11,modelo:'Modelo A variante',cantidad:5},{id_modelo:12,modelo:'Anuario',cantidad:6},{id_modelo:13,modelo:'Modelo A',cantidad:2},{id_modelo:14,modelo:'No solicitado',cantidad:9}]});
   const consultas=[];let vinculada=false;
   const origen=[
-    {id_distribucion:1,id_contrato:1,id_detalle_contrato:11,id_producto:10,modelo:'Modelo A',id_proveedor:1,proveedor:'LALO',id_orden:1,codigo_pedido:'OC-LAL-0001',cantidad:5},
-    {id_distribucion:2,id_contrato:1,id_detalle_contrato:11,id_producto:10,modelo:'Modelo A',id_proveedor:1,proveedor:'LALO',id_orden:2,codigo_pedido:'OC-LAL-0002',cantidad:11},
-    {id_distribucion:3,id_contrato:1,id_detalle_contrato:12,id_producto:11,modelo:'Modelo A variante',id_proveedor:2,proveedor:'Joselito',id_orden:3,codigo_pedido:'OC-JOS-0001',cantidad:3},
-    {id_distribucion:4,id_contrato:1,id_detalle_contrato:13,id_producto:12,modelo:'Anuario',id_proveedor:3,proveedor:'LíderBook',id_orden:4,codigo_pedido:'OC-LIB-0001',cantidad:6},
-    {id_distribucion:5,id_contrato:1,id_detalle_contrato:14,id_producto:13,modelo:'Modelo A',id_proveedor:1,proveedor:'LALO',id_orden:5,codigo_pedido:'OC-LAL-0003',cantidad:2},
+    {id_distribucion:1,id_contrato:1,id_detalle_contrato:11,id_modelo:10,modelo:'Modelo A',id_proveedor:1,proveedor:'LALO',id_orden:1,codigo_pedido:'OC-LAL-0001',cantidad:5},
+    {id_distribucion:2,id_contrato:1,id_detalle_contrato:11,id_modelo:10,modelo:'Modelo A',id_proveedor:1,proveedor:'LALO',id_orden:2,codigo_pedido:'OC-LAL-0002',cantidad:11},
+    {id_distribucion:3,id_contrato:1,id_detalle_contrato:12,id_modelo:11,modelo:'Modelo A variante',id_proveedor:2,proveedor:'Joselito',id_orden:3,codigo_pedido:'OC-JOS-0001',cantidad:3},
+    {id_distribucion:4,id_contrato:1,id_detalle_contrato:13,id_modelo:12,modelo:'Anuario',id_proveedor:3,proveedor:'LíderBook',id_orden:4,codigo_pedido:'OC-LIB-0001',cantidad:6},
+    {id_distribucion:5,id_contrato:1,id_detalle_contrato:14,id_modelo:13,modelo:'Modelo A',id_proveedor:1,proveedor:'LALO',id_orden:5,codigo_pedido:'OC-LAL-0003',cantidad:2},
   ];
   const antes=JSON.stringify(origen);
   pool.query=async(sql,args)=>{consultas.push({sql,args});return [[{id_contrato:1,id_contrato_api:8,colegio:'Melchórita'}]];};
@@ -28,7 +28,7 @@ test('consulta colegios: cantidades distribuidas, varios proveedores y sin dupli
       if(sql.startsWith('START'))return [];
       if(sql.includes('FROM contratos_referencia'))return [args[0]===999?[]:[{id_contrato:args[0],id_contrato_api:8,colegio:'Melchórita'}]];
       assert.match(sql,/LEFT JOIN solicitud_ordenes/);assert.match(sql,/cd.id_contrato=?/);assert.doesNotMatch(sql,/UNION|cantidad_requerida/);
-      return [args[0]===2?[]:origen.map(r=>({...r,producto_contrato:r.id_producto,id_modelo_api:r.id_producto,id_solicitud:vinculada&&r.id_orden<=2?100:null,codigo_masiva:vinculada&&r.id_orden<=2?'ORDEN-MAS-LAL-001':null,proveedor_masiva:vinculada&&r.id_orden<=2?1:null}))];
+      return [args[0]===2?[]:origen.map(r=>({...r,producto_contrato:r.id_modelo,id_modelo:r.id_modelo,id_solicitud:vinculada&&r.id_orden<=2?100:null,codigo_masiva:vinculada&&r.id_orden<=2?'ORDEN-MAS-LAL-001':null,proveedor_masiva:vinculada&&r.id_orden<=2?1:null}))];
     },async commit(){},async rollback(){},release(){},
   });
   let server;
@@ -90,7 +90,7 @@ test('todos los modelos: cero compras, una compra, completas, parciales y varios
     if(sql.includes('FROM contratos_referencia'))return [[{id_contrato:1,id_contrato_api:94,colegio:'Colegio de prueba'}]];
     return [rows];
   },async commit(){},async rollback(){},release(){}});
-  const compra=(id,modelo,cantidad,masiva=false,proveedor=1)=>({id_distribucion:id,id_detalle_contrato:modelo,producto_contrato:modelo,id_producto:modelo,id_modelo_api:modelo,modelo:'Modelo '+modelo,cantidad,id_orden:id,codigo_pedido:'OC-PRU-'+id,id_proveedor:proveedor,proveedor:'Proveedor '+proveedor,id_solicitud:masiva?100:null,codigo_masiva:masiva?'ORDEN-MAS-PRU-001':null,proveedor_masiva:masiva?proveedor:null});
+  const compra=(id,modelo,cantidad,masiva=false,proveedor=1)=>({id_distribucion:id,id_detalle_contrato:modelo,producto_contrato:modelo,id_modelo:modelo,modelo:'Modelo '+modelo,cantidad,id_orden:id,codigo_pedido:'OC-PRU-'+id,id_proveedor:proveedor,proveedor:'Proveedor '+proveedor,id_solicitud:masiva?100:null,codigo_masiva:masiva?'ORDEN-MAS-PRU-001':null,proveedor_masiva:masiva?proveedor:null});
   try{
     let d=await colegioComprasService.obtener(1);
     assert.equal(d.productos.length,3);assert.ok(d.productos.every(p=>p.situacion==='Por solicitar'&&p.cantidad===0&&p.cantidad_por_solicitar===10&&p.proveedor==='Sin asignar'));

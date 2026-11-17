@@ -23,6 +23,11 @@ function nivelValido(value) {
   return typeof value === 'string' && EDUCATION_LEVELS.includes(value);
 }
 
+function precioValido(value) {
+  return (typeof value === 'string' || typeof value === 'number') &&
+    /^\d{1,8}(\.\d{1,2})?$/.test(String(value)) && Number.isFinite(Number(value));
+}
+
 function datosModeloValidos(body) {
   return body && typeof body === 'object' && !Array.isArray(body);
 }
@@ -82,7 +87,7 @@ export const modeloController = {
     if (!datosModeloValidos(req.body)) {
       return res.status(400).json({ success: false, message: 'El cuerpo de la solicitud debe ser un objeto JSON.' });
     }
-    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo } = req.body;
+    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio, descripcion } = req.body;
     if (!enteroPositivo(idDiseno)) {
       return res.status(400).json({ success: false, message: 'El identificador de diseño debe ser un entero mayor que cero.' });
     }
@@ -91,6 +96,12 @@ export const modeloController = {
     }
     if (!nombreValido(nombre)) {
       return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 30 caracteres.' });
+    }
+    if (descripcion != null && (typeof descripcion !== 'string' || Array.from(descripcion).length > 255)) {
+      return res.status(400).json({ success: false, message: 'La descripcion debe ser texto de hasta 255 caracteres.' });
+    }
+    if (!precioValido(precio)) {
+      return res.status(400).json({ success: false, message: 'El precio es obligatorio: ingresa un valor entre 0 y 99999999.99 con hasta dos decimales.' });
     }
     if (!nivelValido(nivelEducativo)) {
       return res.status(400).json({ success: false, message: 'El nivel educativo es obligatorio y debe ser INICIAL o SUPERIOR.' });
@@ -101,6 +112,8 @@ export const modeloController = {
         idDiseno: Number(idDiseno),
         nombre: nombre.trim(),
         nivelEducativo,
+        precio: Number(precio).toFixed(2),
+        descripcion: descripcion?.trim() || null,
       });
       return res.status(201).json({ success: true, message: 'Modelo creado correctamente.', data: modelo });
     } catch (error) {
@@ -116,7 +129,7 @@ export const modeloController = {
     if (!datosModeloValidos(req.body)) {
       return res.status(400).json({ success: false, message: 'El cuerpo de la solicitud debe ser un objeto JSON.' });
     }
-    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo } = req.body;
+    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio, descripcion } = req.body;
     if (!enteroPositivo(idDiseno)) {
       return res.status(400).json({ success: false, message: 'El identificador de diseño debe ser un entero mayor que cero.' });
     }
@@ -125,6 +138,12 @@ export const modeloController = {
     }
     if (!nombreValido(nombre)) {
       return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 30 caracteres.' });
+    }
+    if (descripcion != null && (typeof descripcion !== 'string' || Array.from(descripcion).length > 255)) {
+      return res.status(400).json({ success: false, message: 'La descripcion debe ser texto de hasta 255 caracteres.' });
+    }
+    if (!precioValido(precio)) {
+      return res.status(400).json({ success: false, message: 'El precio es obligatorio: ingresa un valor entre 0 y 99999999.99 con hasta dos decimales.' });
     }
     if (!nivelValido(nivelEducativo)) {
       return res.status(400).json({ success: false, message: 'El nivel educativo es obligatorio y debe ser INICIAL o SUPERIOR.' });
@@ -135,6 +154,8 @@ export const modeloController = {
         idDiseno: Number(idDiseno),
         nombre: nombre.trim(),
         nivelEducativo,
+        precio: Number(precio).toFixed(2),
+        descripcion: descripcion?.trim() || null,
       });
       return res.status(200).json({ success: true, message: 'Modelo actualizado correctamente.', data: modelo });
     } catch (error) {

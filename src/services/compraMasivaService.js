@@ -1,3 +1,4 @@
+import { catalogoModelosSql, validarAbastecimiento } from './catalogoCompraService.js';
 import {contratoPedidoService} from './contratoPedidoService.js';
 import { randomUUID, createHash } from 'node:crypto';
 import { pool } from '../config/db.js';
@@ -17,7 +18,7 @@ function iniciales(nombre) {
 async function resumenes(conn, ids) {
   const [rows] = await conn.query(`SELECT o.id_orden, o.codigo, o.id_proveedor, o.estado,
     p.razon_social AS proveedor, COALESCE(SUM(d.cantidad_pedida),0) AS total,
-    COUNT(DISTINCT d.id_producto) AS modelos
+    COUNT(DISTINCT d.id_modelo) AS modelos
     FROM ordenes_compra o JOIN proveedores p ON p.id_proveedor=o.id_proveedor
     LEFT JOIN orden_detalles d ON d.id_orden=o.id_orden
     WHERE o.id_orden IN (?) GROUP BY o.id_orden, o.codigo, o.id_proveedor, o.estado, p.razon_social
@@ -46,6 +47,8 @@ async function preparar(entrada) {
       if (seleccion.length !== 1) throw fail('La selección de modelos no coincide con la API.');
       const p = seleccion[0];
       const proveedor = proveedores.find((item) => item.id_proveedor === p.id_proveedor);
+      if (!original.proveedores?.some(item => item.id_proveedor === p.id_proveedor)) throw fail('El proveedor no abastece el diseno del modelo.', 409);
+      if (original.estado !== 1 || original.estado_diseno !== 1 || original.estado_categoria !== 1) throw fail('El modelo, diseno o categoria esta inactivo.', 409);
       if (!proveedor || !entero(p.cantidad) || p.cantidad < original.cantidad) throw fail('Selecciona proveedores activos y cantidades enteras iguales o mayores al contrato.');
       if (!ordenes.has(proveedor.id_proveedor)) ordenes.set(proveedor.id_proveedor, { ...proveedor, productos: [] });
       const orden = ordenes.get(proveedor.id_proveedor);
@@ -89,20 +92,20 @@ export const compraMasivaService = {
         FROM ordenes_compra o JOIN proveedores p ON p.id_proveedor=o.id_proveedor
         WHERE o.id_orden=?`, [id]);
       if (!orden) throw fail('Orden de compra no encontrada.', 404);
-      const [productos] = await conn.query(`SELECT od.id_orden_detalle, p.id_producto, p.nombre AS modelo,
+      const [productos] = await conn.query(`SELECT od.id_orden_detalle, p.id_modelo, p.nombre AS modelo,
         p.categoria, od.cantidad_pedida AS cantidad
-        FROM orden_detalles od JOIN productos p ON p.id_producto=od.id_producto
+        FROM orden_detalles od JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
         WHERE od.id_orden=? ORDER BY p.categoria, p.nombre, od.id_orden_detalle`, [id]);
       const [distribuciones] = await conn.query(`SELECT cr.id_contrato, cr.id_contrato_api,
-        cr.cliente_colegio AS colegio, p.id_producto, p.nombre AS modelo, p.categoria,
+        cr.cliente_colegio AS colegio, p.id_modelo, p.nombre AS modelo, p.categoria,
         SUM(d.cantidad_asignada) AS cantidad
         FROM orden_distribuciones d
         JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle
         JOIN contrato_detalles cd ON cd.id_detalle_contrato=d.id_detalle_contrato
         JOIN contratos_referencia cr ON cr.id_contrato=cd.id_contrato
-        JOIN productos p ON p.id_producto=od.id_producto
+        JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
         WHERE od.id_orden=?
-        GROUP BY cr.id_contrato, cr.id_contrato_api, cr.cliente_colegio, p.id_producto, p.nombre, p.categoria
+        GROUP BY cr.id_contrato, cr.id_contrato_api, cr.cliente_colegio, p.id_modelo, p.nombre, p.categoria
         ORDER BY cr.cliente_colegio, cr.id_contrato, p.categoria, p.nombre`, [id]);
       await conn.commit();
       return { ...orden, modelos: productos.length, productos, distribuciones: distribuciones.map((d) => ({ ...d, cantidad: Number(d.cantidad) })),
@@ -147,24 +150,19 @@ export const compraMasivaService = {
       const [activos] = await conn.query("SELECT id_proveedor FROM proveedores WHERE id_proveedor IN (?) AND estado = 'Activo' FOR UPDATE", [proveedoresIds]);
       if (activos.length !== proveedoresIds.length) throw fail('Un proveedor dejó de estar activo. Revisa la compra.', 409);
       const referencias = new Map();
-      const productosLocales = new Map();
       for (const contrato of actual.contratos) {
         await conn.query(`INSERT INTO contratos_referencia (id_contrato_api, origen, cliente_colegio, fecha_entrega)
           VALUES (?, 'API', ?, ?) ON DUPLICATE KEY UPDATE id_contrato=LAST_INSERT_ID(id_contrato)`,
         [contrato.id_contrato, contrato.colegio, contrato.fecha_entrega || null]);
         const [[referencia]] = await conn.query('SELECT id_contrato FROM contratos_referencia WHERE id_contrato_api=?', [contrato.id_contrato]);
         for (const p of contrato.productos) {
-          await conn.query(`INSERT INTO productos (id_modelo_api, nombre, tipo, categoria, nivel_educativo)
-            VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), tipo=VALUES(tipo), categoria=VALUES(categoria), nivel_educativo=VALUES(nivel_educativo)`,
-          [p.id_modelo, p.modelo, p.tipo ?? null, p.categoria ?? null, p.nivel ?? null]);
-          const [[producto]] = await conn.query('SELECT id_producto FROM productos WHERE id_modelo_api=?', [p.id_modelo]);
-          productosLocales.set(p.id_modelo, producto.id_producto);
+          await validarAbastecimiento(conn, p.id_modelo, p.id_proveedor);
           // Una nueva versión si cambió la cantidad: conserva las referencias históricas ya compradas.
-          const [detalles] = await conn.query('SELECT id_detalle_contrato FROM contrato_detalles WHERE id_contrato=? AND id_producto=? AND cantidad_requerida=? ORDER BY id_detalle_contrato LIMIT 1',
-            [referencia.id_contrato, producto.id_producto, p.cantidad]);
+          const [detalles] = await conn.query('SELECT id_detalle_contrato FROM contrato_detalles WHERE id_contrato=? AND id_modelo=? AND cantidad_requerida=? ORDER BY id_detalle_contrato LIMIT 1',
+            [referencia.id_contrato, p.id_modelo, p.cantidad]);
           let detalleId = detalles[0]?.id_detalle_contrato;
           if (!detalleId) {
-            const [insert] = await conn.query('INSERT INTO contrato_detalles (id_contrato,id_producto,cantidad_requerida) VALUES (?,?,?)', [referencia.id_contrato, producto.id_producto, p.cantidad]);
+            const [insert] = await conn.query('INSERT INTO contrato_detalles (id_contrato,id_modelo,cantidad_requerida) VALUES (?,?,?)', [referencia.id_contrato, p.id_modelo, p.cantidad]);
             detalleId = insert.insertId;
           }
           referencias.set(`${contrato.id_contrato}:${p.id_modelo}`, detalleId);
@@ -186,7 +184,7 @@ export const compraMasivaService = {
         if (ocupadas.length) throw fail('El código del proveedor coincide con otro pedido. Revisa los prefijos antes de guardar.',409);
         const [insert] = await conn.query(`INSERT INTO ordenes_compra (codigo,id_proveedor,fecha_emision,estado,observaciones) VALUES (?,?,DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-05:00')),'Borrador',?)`, [codigo, orden.id_proveedor, marker]);
         for (const p of orden.productos) {
-          const [linea] = await conn.query('INSERT INTO orden_detalles (id_orden,id_producto,cantidad_pedida) VALUES (?,?,?)', [insert.insertId, productosLocales.get(p.id_modelo), p.cantidad]);
+          const [linea] = await conn.query('INSERT INTO orden_detalles (id_orden,id_modelo,cantidad_pedida) VALUES (?,?,?)', [insert.insertId, p.id_modelo, p.cantidad]);
           for (const d of p.distribuciones) await conn.query('INSERT INTO orden_distribuciones (id_orden_detalle,id_detalle_contrato,cantidad_asignada) VALUES (?,?,?)', [linea.insertId, referencias.get(`${d.id_contrato}:${p.id_modelo}`), d.cantidad]);
         }
         generadas.push({ id_orden: insert.insertId, codigo, id_proveedor: orden.id_proveedor });

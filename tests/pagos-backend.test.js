@@ -192,23 +192,17 @@ test.after(async()=>{await pool.end();});
 
 
 
-test('instalacion limpia: 25 tablas unificadas y auditoria; pagos vinculados a solicitudes',async()=>{
+test('instalacion limpia: 23 tablas unificadas y auditoria; pagos vinculados a solicitudes',async()=>{
   const sql=await readFile(new URL('../database/ishume_bd_unificada.sql',import.meta.url),'utf8');
-  assert.equal((sql.match(/CREATE TABLE/g)||[]).length,25);
+  assert.equal((sql.match(/CREATE TABLE/g)||[]).length,23);
   assert.doesNotMatch(sql,/ALTER TABLE/);
   assert.doesNotMatch(sql,/fecha_documento DATE/);
-  const migracionPagos=await readFile(new URL('../migrations/propuestas/003_pagos_ordenes_masivas.sql',import.meta.url),'utf8');
-  assert.ok(migracionPagos.indexOf('IF EXISTS')<migracionPagos.indexOf('ALTER TABLE'),'Verifica pagos antes de cualquier DDL');
   assert.doesNotMatch(sql,/CREATE TABLE (?:cotizaciones_masivas|abonos_masivos|series_ordenes_masivas)/);
   const pagos=sql.match(/CREATE TABLE (?:IF NOT EXISTS )?pagos_proveedor\s*\([\s\S]*?\) ENGINE=InnoDB/)[0];
   assert.match(pagos,/FOREIGN KEY \(id_solicitud\)\s+REFERENCES solicitudes_cotizacion/);
   assert.doesNotMatch(pagos,/id_orden/);
   assert.match(sql,/uq_proveedor_prefijo_masivo/);
   assert.match(sql,/uq_sc_codigo/);
-  for(const nombre of ['../migrations/propuestas/003_pagos_ordenes_masivas.sql','../migrations/004_series_ordenes_masivas.sql']) {
-    const migracion=await readFile(new URL(nombre,import.meta.url),'utf8');
-    assert.doesNotMatch(migracion,/CREATE TABLE|DELETE FROM|TRUNCATE|DROP DATABASE/);
-  }
 });
 
 

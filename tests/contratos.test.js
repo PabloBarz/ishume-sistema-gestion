@@ -8,6 +8,12 @@ import express from 'express';
 import contratoRouter from '../src/routes/contratoRouter.js';
 
 test('consulta contratos mediante la API externa sin persistencia', async () => {
+  const queryOriginal = pool.query;
+  pool.query = async (sql, args) => {
+    if (sql.includes('FROM modelos m')) return [args[0].map(id => ({id_modelo:id,id_diseno:1,modelo:'Modelo local '+id,estado:1,estado_diseno:1,estado_categoria:1}))];
+    if (sql.includes('FROM disenio_proveedores')) return [[{id_diseno:1,id_proveedor:1,razon_social:'Proveedor'}]];
+    throw Error('Consulta inesperada: '+sql);
+  };
   const registradosOriginal=contratoPedidoService.registrados;
   contratoPedidoService.registrados=async ids=>new Set(ids.filter(id=>id===8));
   const originalUrl = process.env.CONTRATOS_API_URL;
@@ -73,7 +79,7 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     assert.equal(colegios.data[0].modelos_disponibles,true);
     assert.equal(colegios.data[0].pedido_registrado,true);assert.equal(colegios.data[1].pedido_registrado,false,'Mismo colegio y distinto contrato disponible');
     for(const productos of [[],null,[{id_modelo:1,modelo:'Modelo',cantidad:0}],[{id_modelo:0,modelo:'Modelo',cantidad:1}],
-      [{id_modelo:1,modelo:' ',cantidad:1}],[{id_modelo:1,modelo:'A',cantidad:1},{id_modelo:1,modelo:'A',cantidad:1}]]){
+      [{id_modelo:1,modelo:'A',cantidad:1},{id_modelo:1,modelo:'A',cantidad:1}]]){
       listado=[{...escolar,productos}];
       const d=(await (await fetch(`${base}/colegios`)).json()).data;
       assert.equal(d.length,1,'No oculta el contrato incompleto');
@@ -88,6 +94,7 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     assert.equal((await fetch(`${base}/colegios`)).status, 503);
     assert.equal((await fetch(`${base}?id=1`)).status, 503);
   } finally {
+    pool.query = queryOriginal;
     contratoPedidoService.registrados=registradosOriginal;
     if (originalUrl === undefined) delete process.env.CONTRATOS_API_URL;
     else process.env.CONTRATOS_API_URL = originalUrl;

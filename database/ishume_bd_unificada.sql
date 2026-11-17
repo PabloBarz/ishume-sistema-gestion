@@ -1,20 +1,20 @@
--- 25 tablas: 11 de Compras, 4 catalogos independientes y 10 para etapas posteriores.
+-- 23 tablas: catalogo unico con proveedores por diseno, Compras y seguimiento.
 -- Esquema completo propuesto; las funcionalidades futuras aun requieren backend.
--- Ejecutar solo en base vacia. No aplicar junto con los otros scripts completos.
--- DB_NAME debe apuntar a ishume_unificada al utilizar esta instalacion.
+-- Ejecutar solo en base vacia. Fuente unica del esquema de desarrollo.
+-- DB_NAME debe apuntar a bd_ishume al utilizar esta instalacion.
 -- ISHUME | ESQUEMA UNIFICADO DE DESARROLLO
 -- MySQL 8.0.16+ / MariaDB con CHECK y JSON.
 -- Ejecutar en una BASE NUEVA. No migra ni borra datos de bases anteriores.
 -- Convencion: identificadores INT UNSIGNED, InnoDB, utf8mb4_unicode_ci.
--- Compras conserva productos; el catalogo independiente conserva inventario_productos.
+-- El sistema externo consume nuestro catalogo y devuelve nuestros id_modelo.
 -- NOTA: la asignacion contractual no equivale a clasificacion fisica.
 
-CREATE DATABASE IF NOT EXISTS ishume_unificada
+CREATE DATABASE IF NOT EXISTS bd_ishume
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE ishume_unificada;
+USE bd_ishume;
 SET time_zone = '-05:00';
 
--- 01. Catalogos (se preservan columnas del modulo Inventario).
+-- 01. Catalogos para compras bajo pedido.
 CREATE TABLE categorias (
   id_categoria INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombre_categoria VARCHAR(30) NOT NULL,
@@ -27,51 +27,26 @@ CREATE TABLE disenios (
   id_diseno INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_categoria INT UNSIGNED NOT NULL,
   nombre_diseno VARCHAR(30) NOT NULL,
-  descripcion VARCHAR(255) NULL,
   estado TINYINT(1) NOT NULL DEFAULT 1,
   CONSTRAINT fk_disenios_categoria FOREIGN KEY (id_categoria)
     REFERENCES categorias(id_categoria) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 03. Se agrega id_modelo_api para relacionar los modelos importados de la API.
--- NULL para modelos creados solo en ISHUME; UNIQUE permite varios NULL.
+-- 03. Catalogo local compartido con el sistema externo.
 CREATE TABLE modelos (
   id_modelo INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_diseno INT UNSIGNED NOT NULL,
-  id_modelo_api INT NULL,
   nombre_modelo VARCHAR(30) NOT NULL,
+  descripcion VARCHAR(255) NULL,
   nivel_educativo VARCHAR(30) NULL,
+  precio DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  CONSTRAINT chk_modelos_precio CHECK (precio >= 0),
   estado TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT uq_modelos_api UNIQUE (id_modelo_api),
   CONSTRAINT fk_modelos_diseno FOREIGN KEY (id_diseno)
     REFERENCES disenios(id_diseno) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 04. Catalogo independiente de Inventario; no sustituye productos de Compras.
-CREATE TABLE inventario_productos (
-  id_producto INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  id_modelo INT UNSIGNED NOT NULL,
-  sku VARCHAR(30) NOT NULL,
-  precio DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-  stock_actual INT UNSIGNED NOT NULL DEFAULT 0,
-  estado TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT uq_productos_sku UNIQUE (sku),
-  CONSTRAINT chk_productos_precio CHECK (precio >= 0),
-  CONSTRAINT fk_productos_modelo FOREIGN KEY (id_modelo)
-    REFERENCES modelos(id_modelo) ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE=InnoDB;
 
--- Modelos de la API utilizados por Compras (sin SKU ni stock).
-CREATE TABLE productos (
-    id_producto INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    id_modelo_api INT NULL,
-    nombre VARCHAR(180) NOT NULL,
-    tipo VARCHAR(100) NULL,
-    categoria VARCHAR(100) NULL,
-    nivel_educativo VARCHAR(100) NULL,
-    activo TINYINT(1) NOT NULL DEFAULT 1,
-    UNIQUE KEY uq_producto_modelo_api (id_modelo_api)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 05. Proveedores: esquema funcional del modulo Compras.
 CREATE TABLE proveedores (
@@ -89,6 +64,17 @@ CREATE TABLE proveedores (
   CONSTRAINT uq_proveedor_prefijo_masivo UNIQUE (prefijo_orden_masiva)
 ) ENGINE=InnoDB;
 
+-- Cada diseno puede ser abastecido por varios proveedores.
+CREATE TABLE disenio_proveedores (
+  id_diseno INT UNSIGNED NOT NULL,
+  id_proveedor INT UNSIGNED NOT NULL,
+  PRIMARY KEY (id_diseno, id_proveedor),
+  CONSTRAINT fk_dp_diseno FOREIGN KEY (id_diseno)
+    REFERENCES disenios(id_diseno) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_dp_proveedor FOREIGN KEY (id_proveedor)
+    REFERENCES proveedores(id_proveedor) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
 -- 06. Contratos locales de API o excepciones manuales.
 CREATE TABLE contratos_referencia (
   id_contrato INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -101,17 +87,17 @@ CREATE TABLE contratos_referencia (
   CONSTRAINT uq_contrato_api UNIQUE (id_contrato_api)
 ) ENGINE=InnoDB;
 
--- 07. Detalles contractuales vinculados a productos de Compras.
+-- 07. Detalles contractuales vinculados al catalogo local de modelos.
 CREATE TABLE contrato_detalles (
   id_detalle_contrato INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_contrato INT UNSIGNED NOT NULL,
-  id_producto INT UNSIGNED NOT NULL,
+  id_modelo INT UNSIGNED NOT NULL,
   cantidad_requerida INT UNSIGNED NOT NULL,
   CONSTRAINT chk_cd_cantidad CHECK (cantidad_requerida > 0),
   CONSTRAINT fk_cd_contrato FOREIGN KEY (id_contrato)
     REFERENCES contratos_referencia(id_contrato) ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_cd_producto FOREIGN KEY (id_producto)
-    REFERENCES productos(id_producto) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_cd_modelo FOREIGN KEY (id_modelo)
+    REFERENCES modelos(id_modelo) ON UPDATE CASCADE ON DELETE RESTRICT,
   INDEX idx_cd_contrato (id_contrato)
 ) ENGINE=InnoDB;
 
@@ -133,20 +119,20 @@ CREATE TABLE ordenes_compra (
     REFERENCES proveedores(id_proveedor) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 09. Lineas consolidadas por producto/modelo de Compras.
+-- 09. Lineas consolidadas por modelo del catalogo.
 CREATE TABLE orden_detalles (
   id_orden_detalle INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_orden INT UNSIGNED NOT NULL,
-  id_producto INT UNSIGNED NOT NULL,
+  id_modelo INT UNSIGNED NOT NULL,
   cantidad_pedida INT UNSIGNED NOT NULL,
   precio_unitario DECIMAL(12,2) NULL,
   CONSTRAINT chk_od_cantidad CHECK (cantidad_pedida > 0),
   CONSTRAINT chk_od_precio CHECK (precio_unitario IS NULL OR precio_unitario >= 0),
-  CONSTRAINT uq_od_orden_producto UNIQUE (id_orden,id_producto),
+  CONSTRAINT uq_od_orden_modelo UNIQUE (id_orden,id_modelo),
   CONSTRAINT fk_od_orden FOREIGN KEY (id_orden)
     REFERENCES ordenes_compra(id_orden) ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_od_producto FOREIGN KEY (id_producto)
-    REFERENCES productos(id_producto) ON UPDATE CASCADE ON DELETE RESTRICT
+  CONSTRAINT fk_od_modelo FOREIGN KEY (id_modelo)
+    REFERENCES modelos(id_modelo) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- 10. Asignacion DOCUMENTAL de una linea de compra a cada contrato.
@@ -319,7 +305,7 @@ CREATE TABLE incidencias (
 ) ENGINE=InnoDB;
 
 -- 19. Reposiciones de proveedor: historico; ingreso fisico debe registrarse
--- como nueva recepcion, sin duplicar stock por esta tabla.
+-- como nueva recepcion vinculada al pedido.
 CREATE TABLE incidencia_reposiciones (
   id_reposicion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_incidencia INT UNSIGNED NOT NULL,
@@ -392,30 +378,6 @@ CREATE TABLE despacho_detalles (
     REFERENCES contrato_detalles(id_detalle_contrato) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 24. Trazabilidad fisica de entradas y salidas; no confundir con
--- asignacion documental de orden_distribuciones.
-CREATE TABLE movimientos_inventario (
-  id_movimiento INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  id_producto INT UNSIGNED NOT NULL,
-  id_recepcion_detalle INT UNSIGNED NULL,
-  id_despacho_detalle INT UNSIGNED NULL,
-  tipo ENUM('Entrada','Salida','Ajuste_Entrada','Ajuste_Salida') NOT NULL,
-  cantidad INT UNSIGNED NOT NULL,
-  fecha_movimiento DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  descripcion VARCHAR(255) NULL,
-  CONSTRAINT ck_mov_cantidad CHECK (cantidad > 0),
-  CONSTRAINT ck_mov_origen CHECK (
-    id_recepcion_detalle IS NULL OR id_despacho_detalle IS NULL
-  ),
-  CONSTRAINT fk_mov_producto FOREIGN KEY (id_producto)
-    REFERENCES productos(id_producto) ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_mov_recepcion FOREIGN KEY (id_recepcion_detalle)
-    REFERENCES recepcion_detalles(id_recepcion_detalle) ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_mov_despacho FOREIGN KEY (id_despacho_detalle)
-    REFERENCES despacho_detalles(id_despacho_detalle) ON UPDATE CASCADE ON DELETE RESTRICT,
-  INDEX idx_mov_producto_fecha (id_producto,fecha_movimiento)
-) ENGINE=InnoDB;
-
 -- Proveedores de prueba del modulo Compras (sin asumir IDs fijos).
 INSERT INTO proveedores (razon_social,estado)
 SELECT 'LALO','Activo' WHERE NOT EXISTS
@@ -428,8 +390,8 @@ SELECT 'LíderBook','Activo' WHERE NOT EXISTS
   (SELECT 1 FROM proveedores WHERE razon_social='LíderBook');
 
 -- REGLAS TRANSACCIONALES A IMPLEMENTAR EN EL BACKEND:
--- A. Compras importa modelos de la API en productos usando id_modelo_api.
---    No equiparar IDs ni sincronizar automaticamente con inventario_productos.
+-- A. Los contratos externos devuelven modelos.id_modelo de nuestro catalogo.
+--    El proveedor debe estar asociado al diseno del modelo.
 -- B. Cada distribucion debe relacionar EL MISMO producto en orden_detalles
 --    y contrato_detalles. Suma de distribuciones = cantidad_pedida al confirmar.
 -- C. Cada recepcion_detalle debe pertenecer a la misma orden de su recepcion.
@@ -439,13 +401,10 @@ SELECT 'LíderBook','Activo' WHERE NOT EXISTS
 --    no se registran como entrada fisica.
 -- F. Suma de avances preparados <= cantidad_requerida del contrato.
 -- G. Confirmar despacho completo exige todas las lineas preparadas,
---    sin duplicar confirmacion. Actualizar stock + movimiento atomico.
--- H. El Kardex operativo usa productos de Compras. Las entradas conformes y
---    salidas se registran una sola vez. El saldo fisico se deriva de movimientos.
---    No actualizar stock_actual del catalogo independiente por igualdad de IDs.
+--    sin duplicar confirmacion; registrar cantidades por pedido.
+-- H. No se administran existencias ni movimientos de inventario.
 -- I. Usar transacciones, bloqueo de filas y controles de idempotencia.
 -- J. No asumir que productos asignados documentalmente ya estan separados.
--- K. Si se permiten ajustes manuales, registrar motivo y autorizacion.
 -- L. No usar `precio` del catalogo como costo real de compra; para eso
 --    existe orden_detalles.precio_unitario y solicitudes_cotizacion.
 

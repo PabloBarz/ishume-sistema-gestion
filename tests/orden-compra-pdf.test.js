@@ -20,8 +20,8 @@ function contenido(pdf) {
 }
 
 const orden={id_orden:12,codigo:'ORDEN-MAS-LAL-123',version_documento:4,fecha:'31/10/2026',proveedor:'LALO',id_proveedor:1,total:23,
-  productos:[{id_producto:1,modelo:'Modelo A',cantidad:19},{id_producto:2,modelo:'Modelo B',cantidad:4}],
-  distribuciones:[{id_producto:1,id_contrato:1,colegio:'Colegio A',modelo:'Modelo A',cantidad:5},{id_producto:1,id_contrato:2,colegio:'Colegio B',modelo:'Modelo A',cantidad:11},{id_producto:1,id_contrato:3,colegio:'Colegio C',modelo:'Modelo A',cantidad:3},{id_producto:2,id_contrato:1,colegio:'Colegio A',modelo:'Modelo B',cantidad:4}]};
+  productos:[{id_modelo:1,modelo:'Modelo A',cantidad:19},{id_modelo:2,modelo:'Modelo B',cantidad:4}],
+  distribuciones:[{id_modelo:1,id_contrato:1,colegio:'Colegio A',modelo:'Modelo A',cantidad:5},{id_modelo:1,id_contrato:2,colegio:'Colegio B',modelo:'Modelo A',cantidad:11},{id_modelo:1,id_contrato:3,colegio:'Colegio C',modelo:'Modelo A',cantidad:3},{id_modelo:2,id_contrato:1,colegio:'Colegio A',modelo:'Modelo B',cantidad:4}]};
 test('PDF consolidado: una tabla por identidad, sin colegios y sin modificar datos',()=>{
   const antes=JSON.stringify(orden),texto=contenido(generarOrdenCompraPdf(orden));
   for(const dato of ['ISHUME',orden.codigo,'LALO','31/10/2026','Modelo A','Modelo B','19','23 UNIDADES'])assert.ok(texto.includes(dato),dato);
@@ -31,7 +31,7 @@ test('PDF consolidado: una tabla por identidad, sin colegios y sin modificar dat
   assert.throws(()=>generarOrdenCompraPdf({...orden,distribuciones:[{...orden.distribuciones[0],cantidad:30}]}),/distribuci/);
 });
 test('PDF consolidado multipagina: todos los modelos una vez y una cabecera principal',()=>{
-  const productos=Array.from({length:110},(_,i)=>({id_producto:i+1,modelo:'MODELO-'+String(i).padStart(3,'0'),cantidad:i+1}));
+  const productos=Array.from({length:110},(_,i)=>({id_modelo:i+1,modelo:'MODELO-'+String(i).padStart(3,'0'),cantidad:i+1}));
   const total=productos.reduce((n,p)=>n+p.cantidad,0);
   const data={...orden,productos,total,distribuciones:productos.map(p=>({...p,id_contrato:1,colegio:'No debe mostrarse'}))};
   const pdf=generarOrdenCompraPdf(data),texto=contenido(pdf);assert.ok([...pdf.toString('latin1').matchAll(/\/Type \/Page\b/g)].length>1);

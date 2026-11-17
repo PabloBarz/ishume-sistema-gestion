@@ -32,14 +32,9 @@ test('MariaDB/MySQL aislado: edición, auditoría, concurrencia, idempotencia, r
     await admin.query('CREATE DATABASE `'+base+'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
     await admin.query('USE `'+base+'`');
     let esquema=await readFile(new URL('../database/ishume_bd_unificada.sql',import.meta.url),'utf8');
-    esquema=esquema.replaceAll('ishume_unificada',base);
-    assert.ok(!esquema.includes('ishume_unificada'));
+    esquema=esquema.replaceAll('bd_ishume',base);
+    assert.ok(!esquema.includes('bd_ishume'));
     await admin.query(esquema);
-    // Prueba la actualización real 007 -> 008, sin modificar archivos ni la base del usuario.
-    await admin.query('DROP TABLE correcciones_pago_proveedor');
-    await admin.query(await readFile(new URL('../migrations/propuestas/007_correcciones_abonos.sql',import.meta.url),'utf8'));
-    const ampliacion=(await readFile(new URL('../migrations/008_datos_correcciones_abonos.sql',import.meta.url),'utf8')).replaceAll('bd_ishume',base);
-    await admin.query(ampliacion);
     process.env.DB_NAME=base;
     ({pool}=await import('../src/config/db.js'));
     const {pagosService}=await import('../src/services/pagosService.js');

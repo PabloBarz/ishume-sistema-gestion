@@ -17,8 +17,9 @@ function nombreValido(value) {
     Array.from(value.trim()).length <= 30;
 }
 
-function descripcionValida(value) {
-  return value == null || (typeof value === 'string' && Array.from(value).length <= 255);
+function proveedoresValidos(value) {
+  return Array.isArray(value) && value.length <= 100 && value.every(enteroPositivo) &&
+    new Set(value.map(Number)).size === value.length;
 }
 
 function responderError(res, error, operacion) {
@@ -69,7 +70,7 @@ export const disenioController = {
   },
 
   async crear(req, res) {
-    const { id_categoria: idCategoria, nombre_diseno: nombre, descripcion } = req.body ?? {};
+    const { id_categoria: idCategoria, nombre_diseno: nombre, proveedores = [] } = req.body ?? {};
     if (!enteroPositivo(idCategoria)) {
       return res.status(400).json({ success: false, message: 'El identificador de categoría debe ser un entero mayor que cero.' });
     }
@@ -79,15 +80,15 @@ export const disenioController = {
     if (!nombreValido(nombre)) {
       return res.status(400).json({ success: false, message: 'El nombre del diseño no debe superar los 30 caracteres.' });
     }
-    if (!descripcionValida(descripcion)) {
-      return res.status(400).json({ success: false, message: 'La descripción debe ser texto de hasta 255 caracteres.' });
+    if (!proveedoresValidos(proveedores)) {
+      return res.status(400).json({ success: false, message: 'Los proveedores deben ser una lista de identificadores positivos sin repetir.' });
     }
 
     try {
       const disenio = await disenioService.crear({
         idCategoria: Number(idCategoria),
         nombre: nombre.trim(),
-        descripcion: descripcion?.trim() || null,
+        proveedores: proveedores.map(Number),
       });
       return res.status(201).json({ success: true, message: 'Diseño creado correctamente.', data: disenio });
     } catch (error) {
@@ -97,7 +98,7 @@ export const disenioController = {
 
   async actualizar(req, res) {
     const { id } = req.params;
-    const { id_categoria: idCategoria, nombre_diseno: nombre, descripcion } = req.body ?? {};
+    const { id_categoria: idCategoria, nombre_diseno: nombre, proveedores = [] } = req.body ?? {};
     if (!idValido(id)) {
       return res.status(400).json({ success: false, message: 'El identificador debe ser un entero mayor que cero.' });
     }
@@ -110,15 +111,15 @@ export const disenioController = {
     if (!nombreValido(nombre)) {
       return res.status(400).json({ success: false, message: 'El nombre del diseño no debe superar los 30 caracteres.' });
     }
-    if (!descripcionValida(descripcion)) {
-      return res.status(400).json({ success: false, message: 'La descripción debe ser texto de hasta 255 caracteres.' });
+    if (!proveedoresValidos(proveedores)) {
+      return res.status(400).json({ success: false, message: 'Los proveedores deben ser una lista de identificadores positivos sin repetir.' });
     }
 
     try {
       const disenio = await disenioService.actualizar(Number(id), {
         idCategoria: Number(idCategoria),
         nombre: nombre.trim(),
-        descripcion: descripcion?.trim() || null,
+        proveedores: proveedores.map(Number),
       });
       return res.status(200).json({ success: true, message: 'Diseño actualizado correctamente.', data: disenio });
     } catch (error) {

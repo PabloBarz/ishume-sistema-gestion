@@ -1,3 +1,5 @@
+import { completarModelos } from './catalogoCompraService.js';
+
 function apiError(message, status) {
   return Object.assign(new Error(message), { status });
 }
@@ -6,7 +8,7 @@ function disponibilidad(productos) {
   const ids = new Set();
   const validos = Array.isArray(productos) && productos.length > 0 && productos.every(p => {
     if (!p || !Number.isInteger(p.id_modelo) || p.id_modelo < 1 || p.id_modelo > 2147483647 || ids.has(p.id_modelo) ||
-        typeof p.modelo !== 'string' || !p.modelo.trim() || !Number.isInteger(p.cantidad) || p.cantidad < 1 || p.cantidad > 2147483647) return false;
+        !Number.isInteger(p.cantidad) || p.cantidad < 1 || p.cantidad > 2147483647) return false;
     ids.add(p.id_modelo);return true;
   });
   return { modelos_disponibles: validos, aviso_modelos: validos ? ''
@@ -90,11 +92,12 @@ export const contratoService = {
         typeof data.cliente !== 'string' ||
         !(data.fecha_entrega === null || typeof data.fecha_entrega === 'string') ||
         !Array.isArray(data.productos) || data.productos.some((producto) =>
-          !producto || typeof producto.modelo !== 'string' ||
+          !producto || !Number.isSafeInteger(producto.id_modelo) || producto.id_modelo < 1 ||
           !Number.isSafeInteger(producto.cantidad) || producto.cantidad < 0)) {
       throw apiError('El sistema de contratos devolvió datos incompletos o inválidos.', 502);
     }
 
-    return { ...data, ...disponibilidad(data.productos) };
+    const productos = await completarModelos(data.productos);
+    return { ...data, productos, ...disponibilidad(productos) };
   },
 };

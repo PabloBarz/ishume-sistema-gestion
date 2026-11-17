@@ -48,7 +48,7 @@ function renderDesignTable(designs) {
     return [
       createCell(design.nombre_diseno, `ID: ${design.id_diseno}`),
       createCell(design.nombre_categoria, `Categoría #${design.id_categoria}${inactiveCategory ? ' · Inactiva (histórica)' : ''}`),
-      createCell(design.descripcion),
+      createCell((design.proveedores ?? []).map(p => p.razon_social).join(' / ') || 'Sin proveedores'),
       createNumericCell(totalModels, 'inventory-design-count'),
       createStatusCell(design.estado),
       actions,
@@ -56,7 +56,7 @@ function renderDesignTable(designs) {
   });
 
   return createTable(
-    ['Diseño', 'Categoría', 'Descripción', 'Modelos asociados', 'Estado', 'Acciones'],
+    ['Diseño', 'Categoría', 'Proveedores', 'Modelos asociados', 'Estado', 'Acciones'],
     rows,
     { className: 'inventory-design-table' },
   );
@@ -95,7 +95,6 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
   async function refreshAfterMutation({ categoryCountsChanged = false, labelsChanged = false } = {}) {
     if (labelsChanged) {
       appState.catalogos.invalidate('modelos');
-      appState.catalogos.invalidate('productos');
     }
     try {
       const reloads = [appState.catalogos.reload('disenios')];
@@ -111,8 +110,10 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
 
   async function openDesignForm(design = null) {
     let categories;
+    let suppliers;
     try {
-      categories = await appState.catalogos.get('categorias');
+      const [categorias, response] = await Promise.all([appState.catalogos.get('categorias'), http('/api/proveedores')]);
+      categories = categorias; suppliers = response.data;
     } catch (error) {
       showToast(error.message || 'No se pudieron cargar las categorías.', 'error');
       return;
@@ -212,39 +213,32 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
       categoryField.append(note);
     }
 
-    const descriptionField = document.createElement('div');
-    const descriptionLabel = document.createElement('label');
-    descriptionLabel.className = 'form-label-custom';
-    descriptionLabel.htmlFor = 'designDescriptionInput';
-    descriptionLabel.textContent = 'Descripción (opcional)';
-    const descriptionInput = document.createElement('textarea');
-    descriptionInput.className = 'input-custom inventory-design-description';
-    descriptionInput.id = 'designDescriptionInput';
-    descriptionInput.name = 'descripcion';
-    descriptionInput.rows = 3;
-    descriptionInput.setAttribute('aria-describedby', 'designDescriptionError');
-    descriptionInput.value = design?.descripcion ?? '';
-    const descriptionError = document.createElement('span');
-    descriptionError.className = 'field-error';
-    descriptionError.id = 'designDescriptionError';
-    descriptionError.setAttribute('role', 'alert');
-    descriptionInput.addEventListener('input', () => {
-      descriptionInput.classList.remove('is-invalid');
-      descriptionInput.removeAttribute('aria-invalid');
-      descriptionError.textContent = '';
-      requestError.hidden = true;
+    const supplierField = document.createElement('div');
+    const supplierLabel = document.createElement('label');
+    supplierLabel.className = 'form-label-custom'; supplierLabel.htmlFor = 'designSuppliersInput';
+    supplierLabel.textContent = 'Proveedores que abastecen este diseno';
+    const supplierInput = document.createElement('select');
+    supplierInput.className = 'input-custom'; supplierInput.id = 'designSuppliersInput';
+    supplierInput.multiple = true; supplierInput.size = 5;
+    const selectedSuppliers = design?.proveedores ?? [];
+    const options = [...suppliers, ...selectedSuppliers.filter(p => !suppliers.some(s => s.id_proveedor === p.id_proveedor))];
+    options.forEach(p => {
+      const option = document.createElement('option'); option.value = String(p.id_proveedor);
+      option.textContent = p.razon_social + (p.estado === 'Inactivo' ? ' (inactivo)' : '');
+      option.selected = selectedSuppliers.some(s => s.id_proveedor === p.id_proveedor);
+      supplierInput.append(option);
     });
-    descriptionField.append(descriptionLabel, descriptionInput, descriptionError);
-    form.append(nameField, categoryField, descriptionField);
+    const supplierNote = document.createElement('small');
+    supplierNote.textContent = 'Puedes seleccionar varios proveedores. Sus modelos usaran esta relacion al comprar.';
+    supplierField.append(supplierLabel, supplierInput, supplierNote);
+    form.append(nameField, categoryField, supplierField);
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const name = nameInput.value.trim();
       const categoryId = Number(categoryInput.value);
-      const description = descriptionInput.value.trim();
       nameError.textContent = '';
       categoryError.textContent = '';
-      descriptionError.textContent = '';
 
       const missing = validateRequiredFields({ nombre_diseno: name, id_categoria: categoryInput.value });
       if (missing.includes('nombre_diseno')) {
@@ -268,13 +262,6 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
         categoryInput.focus();
         return;
       }
-      if (Array.from(description).length > 255) {
-        descriptionInput.classList.add('is-invalid');
-        descriptionInput.setAttribute('aria-invalid', 'true');
-        descriptionError.textContent = 'La descripción no debe superar los 255 caracteres.';
-        descriptionInput.focus();
-        return;
-      }
       const isHistoricalCategory = isEdit && String(design.id_categoria) === String(categoryId) &&
         currentCategory && Number(currentCategory.estado) !== 1;
       if (!availableCategories.some((category) => Number(category.id_categoria) === categoryId) && !isHistoricalCategory) {
@@ -293,7 +280,7 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
         const response = await http(url, isEdit ? 'PUT' : 'POST', {
           id_categoria: categoryId,
           nombre_diseno: name,
-          descripcion: description || null,
+          proveedores: [...supplierInput.selectedOptions].map(option => Number(option.value)),
         });
         modal.close();
         showToast(response.message || (isEdit ? 'Diseño actualizado correctamente.' : 'Diseño creado correctamente.'), 'success');
@@ -319,7 +306,7 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
     submit.setAttribute('form', form.id);
     submit.textContent = isEdit ? 'Guardar cambios' : 'Guardar diseño';
     submit.disabled = !isEdit && availableCategories.length === 0;
-    modal.open(isEdit ? 'Editar diseño' : 'Nuevo diseño', 'El nombre admite hasta 30 caracteres y la descripción hasta 255.', form, [cancel, submit]);
+    modal.open(isEdit ? 'Editar diseño' : 'Nuevo diseño', 'El nombre admite hasta 30 caracteres. Selecciona los proveedores del diseno.', form, [cancel, submit]);
     nameInput.focus();
   }
 

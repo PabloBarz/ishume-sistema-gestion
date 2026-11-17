@@ -4,7 +4,6 @@ const endpoints = {
   categorias: '/api/categorias',
   disenios: '/api/disenios',
   modelos: '/api/modelos',
-  productos: '/api/inventario-productos',
 };
 
 // Caché compartida de catálogos; permanece independiente de la caché HTML del router.

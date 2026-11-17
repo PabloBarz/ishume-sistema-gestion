@@ -16,8 +16,8 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
     const data=body?.data;
     if(Array.isArray(data?.distribuciones)&&data.distribuciones.length){
       const clave=p=>p.modelo+'|'+(p.categoria??'');
-      const distribuciones=data.distribuciones.map(p=>{const k=clave(p);if(!idsFixture.has(k))idsFixture.set(k,idsFixture.size+1);return {...p,id_producto:idsFixture.get(k)};});
-      const productos=new Map();for(const p of distribuciones){const previo=productos.get(p.id_producto);productos.set(p.id_producto,{id_producto:p.id_producto,modelo:p.modelo,categoria:p.categoria,cantidad:(previo?.cantidad??0)+p.cantidad});}
+      const distribuciones=data.distribuciones.map(p=>{const k=clave(p);if(!idsFixture.has(k))idsFixture.set(k,idsFixture.size+1);return {...p,id_modelo:idsFixture.get(k)};});
+      const productos=new Map();for(const p of distribuciones){const previo=productos.get(p.id_modelo);productos.set(p.id_modelo,{id_modelo:p.id_modelo,modelo:p.modelo,categoria:p.categoria,cantidad:(previo?.cantidad??0)+p.cantidad});}
       body={...body,data:{...data,distribuciones,productos:[...productos.values()]}};
     }
     return json(body);
@@ -74,7 +74,7 @@ test('navegador: nueva orden, revisión, guardado y navegación a órdenes guard
     return res.json({ data: {
     pedido_registrado:confirmaciones>0&&[8,25].includes(Number(req.query.id)),
     id_contrato: Number(req.query.id), colegio:'Santo Domingo Tecnol\u00f3gico Ni\u00f1o', estado_trabajo:'en_proceso', promocion:'Promoci\u00f3n', cliente: `Cliente - Colegio ${req.query.id}${req.query.id==='8'?' - BENEFICIO INICIAL AVENIDA MELCHORITA 486 GROCIO':''}`, fecha_entrega: '2026-12-20',
-    productos: req.query.id==='95'?[]:[{ id_modelo: 1, modelo: 'Modelo compartido', categoria: 'Cuadro', cantidad: 30 }, { id_modelo: 2, modelo: 'Anuario A', categoria: 'Anuario', cantidad: 2 }].filter(p=>req.query.id==='40'?p.categoria==='Cuadro':req.query.id==='41'?p.categoria==='Anuario':true),
+    productos: req.query.id==='95'?[]:[{ id_modelo: 1, modelo: 'Modelo compartido', categoria: 'Cuadro', proveedores:[{id_proveedor:1}], cantidad: 30 }, { id_modelo: 2, modelo: 'Anuario A', categoria: 'Anuario', proveedores:[{id_proveedor:2}], cantidad: 2 }].filter(p=>req.query.id==='40'?p.categoria==='Cuadro':req.query.id==='41'?p.categoria==='Anuario':true),
   } });});
   app.get('/api/colegios-compras',(req,res)=>res.json({data:{colegios:[8,38,39].map(id=>({id_contrato:id,id_contrato_api:id,colegio:'Colegio '+id,modelos:2,situaciones:['Sin pedido']})),total:3,pagina:1,paginas:1}}));
   app.get('/api/colegios-compras/:id',(req,res)=>{

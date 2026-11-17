@@ -1,3 +1,4 @@
+import { catalogoModelosSql } from './catalogoCompraService.js';
 import {pool} from '../config/db.js';
 import {contratoService} from './contratoService.js';
 
@@ -30,20 +31,20 @@ export const colegioComprasService={
       !/^[1-9]\d*$/.test(String(pagina))||!Number.isSafeInteger(Number(pagina)))throw fallo('Filtros de consulta no válidos.');
     const contratos=await contratoService.listarEscolares();
     // Solo existencia de distribuciones: no sumar de nuevo los pedidos consolidados.
-    const [rows]=await pool.query(`SELECT cr.id_contrato,cr.id_contrato_api,p.id_modelo_api,
+    const [rows]=await pool.query(`SELECT cr.id_contrato,cr.id_contrato_api,p.id_modelo,
       SUM(d.cantidad_asignada) AS cantidad,
       MAX(s.id_solicitud IS NULL) AS pendiente,MAX(s.id_solicitud IS NOT NULL) AS generada
       FROM contratos_referencia cr
       JOIN contrato_detalles cd ON cd.id_contrato=cr.id_contrato
       JOIN orden_distribuciones d ON d.id_detalle_contrato=cd.id_detalle_contrato
-      JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle AND od.id_producto=cd.id_producto
-      JOIN productos p ON p.id_producto=od.id_producto
+      JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle AND od.id_modelo=cd.id_modelo
+      JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
       JOIN ordenes_compra o ON o.id_orden=od.id_orden
       LEFT JOIN solicitud_ordenes so ON so.id_orden=o.id_orden
       LEFT JOIN solicitudes_cotizacion s ON s.id_solicitud=so.id_solicitud
       WHERE d.cantidad_asignada>0 AND o.estado<>'Cancelada'
         AND (s.id_solicitud IS NULL OR s.estado<>'Cancelada')
-      GROUP BY cr.id_contrato,cr.id_contrato_api,p.id_modelo_api`);
+      GROUP BY cr.id_contrato,cr.id_contrato_api,p.id_modelo`);
     const compras=new Map();
     for(const r of rows){
       const id=Number(r.id_contrato_api);
@@ -55,7 +56,7 @@ export const colegioComprasService={
     const lista=[...new Map(contratos.map(c=>[c.id_contrato,c])).values()]
       .filter(c=>c.modelos>0&&normalizar(c.colegio).includes(texto)).map(c=>{
         const lineas=compras.get(c.id_contrato)||[],pendiente=lineas.some(r=>Number(r.pendiente)),generada=lineas.some(r=>Number(r.generada));
-        const porSolicitar=(c.productos||[]).some(p=>Number(lineas.find(r=>Number(r.id_modelo_api)===p.id_modelo)?.cantidad||0)<p.cantidad);
+        const porSolicitar=(c.productos||[]).some(p=>Number(lineas.find(r=>Number(r.id_modelo)===p.id_modelo)?.cantidad||0)<p.cantidad);
         return {id_contrato:lineas[0]?.id_contrato??'api-'+c.id_contrato,id_contrato_api:c.id_contrato,colegio:c.colegio,modelos:c.modelos,
           pendiente,generada,sin_pedido:!pendiente&&!generada,
           situaciones:[...(pendiente?['Pedido pendiente']:[]),...(generada?['Orden generada']:[]),...(!pendiente&&!generada?['Sin pedido']:porSolicitar?['Por solicitar']:[])]};
@@ -102,32 +103,32 @@ export const colegioComprasService={
       // Una fila por distribucion: nunca UNION con la instantanea de la orden masiva.
       // uq_so_orden garantiza que este LEFT JOIN no multiplique pedidos.
       const [rows]=await conn.query(`SELECT d.id_distribucion,d.cantidad_asignada AS cantidad,
-        cd.id_detalle_contrato,cd.id_contrato,cd.id_producto AS producto_contrato,
-        p.id_producto,p.id_modelo_api,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,
+        cd.id_detalle_contrato,cd.id_contrato,cd.id_modelo AS producto_contrato,
+        p.id_modelo,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,
         o.id_orden,o.codigo AS codigo_pedido,o.id_proveedor,pr.razon_social AS proveedor,
         s.id_solicitud,s.codigo AS codigo_masiva,s.id_proveedor AS proveedor_masiva
         FROM orden_distribuciones d
         JOIN contrato_detalles cd ON cd.id_detalle_contrato=d.id_detalle_contrato
         JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle
-        JOIN productos p ON p.id_producto=od.id_producto
+        JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
         JOIN ordenes_compra o ON o.id_orden=od.id_orden
         JOIN proveedores pr ON pr.id_proveedor=o.id_proveedor
         LEFT JOIN solicitud_ordenes so ON so.id_orden=o.id_orden
         LEFT JOIN solicitudes_cotizacion s ON s.id_solicitud=so.id_solicitud
         WHERE cd.id_contrato=? AND o.estado<>'Cancelada'
           AND (s.id_solicitud IS NULL OR s.estado<>'Cancelada')
-        ORDER BY o.id_orden DESC,p.id_producto,d.id_distribucion`,[id]);
+        ORDER BY o.id_orden DESC,p.id_modelo,d.id_distribucion`,[id]);
       const vistos=new Set(),grupos=new Map(),modelos=new Set(),proveedores=new Set();
       let total=0;
       for(const r of rows){
         const cantidad=Number(r.cantidad);
-        if(vistos.has(r.id_distribucion)||r.producto_contrato!==r.id_producto||
+        if(vistos.has(r.id_distribucion)||r.producto_contrato!==r.id_modelo||
           (r.id_solicitud!=null&&r.proveedor_masiva!==r.id_proveedor)||
           !Number.isSafeInteger(cantidad)||cantidad<=0)throw fallo('Hay una inconsistencia en la distribución del colegio. Revisa los pedidos originales.',409);
-        vistos.add(r.id_distribucion);modelos.add(r.id_producto);proveedores.add(r.id_proveedor);total+=cantidad;
+        vistos.add(r.id_distribucion);modelos.add(r.id_modelo);proveedores.add(r.id_proveedor);total+=cantidad;
         if(!Number.isSafeInteger(total))throw fallo('El total de unidades excede el rango válido.',409);
-        const clave=JSON.stringify([id,r.id_producto,r.id_proveedor,r.id_solicitud!=null?'masiva':'pedido',r.id_solicitud??r.id_orden]);
-        if(!grupos.has(clave))grupos.set(clave,{id_contrato:id,id_producto:r.id_producto,id_modelo:r.id_modelo_api,modelo:r.modelo,tipo:r.tipo,categoria:r.categoria,nivel:r.nivel,
+        const clave=JSON.stringify([id,r.id_modelo,r.id_proveedor,r.id_solicitud!=null?'masiva':'pedido',r.id_solicitud??r.id_orden]);
+        if(!grupos.has(clave))grupos.set(clave,{id_contrato:id,id_modelo:r.id_modelo,modelo:r.modelo,tipo:r.tipo,categoria:r.categoria,nivel:r.nivel,
           id_proveedor:r.id_proveedor,proveedor:r.proveedor,id_solicitud:r.id_solicitud,
           codigo:r.codigo_masiva??r.codigo_pedido,situacion:r.id_solicitud!=null?'Generada':'Pendiente',cantidad:0,
           pedidos:[],distribuciones:[]});

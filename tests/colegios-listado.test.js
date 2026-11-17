@@ -14,10 +14,10 @@ test('listado completo: filtros combinados, contratos distintos, modelos válido
   pool.query=async sql=>{
     sqlUsado=sql;
     return [[
-      {id_contrato:101,id_contrato_api:1,id_modelo_api:1,cantidad:10,pendiente:1,generada:0},
-      {id_contrato:102,id_contrato_api:2,id_modelo_api:1,cantidad:10,pendiente:0,generada:1},
-      {id_contrato:102,id_contrato_api:2,id_modelo_api:2,cantidad:5,pendiente:0,generada:1},
-      {id_contrato:103,id_contrato_api:3,id_modelo_api:1,cantidad:8,pendiente:1,generada:1},
+      {id_contrato:101,id_contrato_api:1,id_modelo:1,cantidad:10,pendiente:1,generada:0},
+      {id_contrato:102,id_contrato_api:2,id_modelo:1,cantidad:10,pendiente:0,generada:1},
+      {id_contrato:102,id_contrato_api:2,id_modelo:2,cantidad:5,pendiente:0,generada:1},
+      {id_contrato:103,id_contrato_api:3,id_modelo:1,cantidad:8,pendiente:1,generada:1},
     ]];
   };
   try{

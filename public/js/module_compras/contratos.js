@@ -38,16 +38,11 @@ export async function init() {
   let guardado = false;
   let resumenValido = false;
 
-  const esLiderBook = v => normalizar(v.razon_social).replace(/\s+/g, '') === 'liderbook';
-  const proveedoresPara = p => proveedores.filter(v => categoria(p) === 'Book' ? esLiderBook(v) : categoria(p) === 'Cuadros' ? !esLiderBook(v) : true);
+  const proveedoresPara = p => proveedores.filter(v => (p.proveedores ?? []).some(pr => pr.id_proveedor === v.id_proveedor));
+  const proveedorPara = p => proveedoresPara(p).find(v => v.id_proveedor === p.id_proveedor) ?? (proveedoresPara(p).length === 1 ? proveedoresPara(p)[0] : null);
   function ajustarProveedores() {
-    for (const c of contratos.values()) c.productos.forEach((p, index) => {
-      const opciones = proveedoresPara(p), anuario = categoria(p) === 'Book';
-      if (anuario) p.id_proveedor = opciones[0]?.id_proveedor ?? null;
-      else if (!opciones.some(v => v.id_proveedor === p.id_proveedor)) p.id_proveedor = null;
-      const card = colegios.querySelector(`[data-contrato="${c.id_contrato}"]`);
-      const select = card?.querySelector(`[data-proveedor="${index}"]`);
-      if (select) { select.value = p.id_proveedor ?? ''; select.disabled = bloqueado || anuario; }
+    for (const c of contratos.values()) c.productos.forEach(p => {
+      p.id_proveedor = proveedorPara(p)?.id_proveedor ?? null;
     });
   }
 
@@ -152,7 +147,10 @@ export async function init() {
       <button type="button" class="btn-action btn-action-delete" data-quitar aria-label="Quitar ${esc(c.colegio)}"><i class="bi bi-trash" aria-hidden="true"></i> Quitar</button></div>
       <div class="table-scroll"><table class="table-custom compra-table"><thead><tr><th scope="col">Modelo</th><th scope="col">Contrato</th><th scope="col">A pedir</th><th scope="col">Proveedor</th></tr></thead><tbody>
       ${c.productos.map((producto,index) => {const p={...producto,index};return `<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td><td><div class="compra-cantidad-control"><button type="button" data-cantidad-step="-1" data-index="${p.index}" aria-label="Reducir cantidad: ${esc(p.modelo)}">−</button><input type="number" class="input-custom" data-cantidad="${p.index}" value="${p.cantidad_pedir}" min="${Math.max(1, p.cantidad)}" max="2147483647" step="1" aria-label="Cantidad a pedir: ${esc(p.modelo)}" aria-describedby="extra-${c.id_contrato}-${p.index}"><button type="button" data-cantidad-step="1" data-index="${p.index}" aria-label="Aumentar cantidad: ${esc(p.modelo)}">+</button></div><span class="cell-secondary" id="extra-${c.id_contrato}-${p.index}" data-extra="${p.index}"></span></td>
-      <td><select class="input-custom" data-proveedor="${p.index}" aria-label="Proveedor: ${esc(p.modelo)}"${categoria(p) === 'Book' ? ' disabled' : ''}>${categoria(p) !== 'Book' || !p.id_proveedor ? '<option value="">Seleccionar proveedor</option>' : ''}${proveedoresPara(p).map((v) => `<option value="${v.id_proveedor}"${v.id_proveedor === p.id_proveedor ? ' selected' : ''}>${esc(v.razon_social)}</option>`).join('')}</select>${categoria(p) === 'Book' && !p.id_proveedor ? '<span class="cell-secondary" role="alert">LíderBook no está disponible. No se puede guardar este anuario sin proveedor.</span>' : ''}</td></tr>`;}).join('')}
+      <td><select class="input-custom" data-proveedor="${p.index}" aria-label="Proveedor de ${esc(p.modelo)}">
+        <option value="">${proveedoresPara(p).length ? 'Selecciona proveedor' : 'Sin proveedores asociados al diseno'}</option>
+        ${proveedoresPara(p).map(v => `<option value="${v.id_proveedor}" ${v.id_proveedor === p.id_proveedor ? 'selected' : ''}>${esc(v.razon_social)}</option>`).join('')}
+      </select></td></tr>`;}).join('')}
       </tbody></table></div>
       <div class="table-footer compra-totals"><span data-total></span></div>`;
     colegios.append(card);
@@ -215,9 +213,8 @@ export async function init() {
         listado=listado.map(c=>c.id_contrato===id?{...c,modelos_disponibles:false,aviso_modelos:data.aviso_modelos || 'Sin modelos disponibles'}:c);
         throw new Error(data.aviso_modelos || 'Sin modelos disponibles. Completa los modelos en el sistema de contratos.');
       }
-      const liderBook = proveedores.find(esLiderBook);
       const c = { ...data, productos: data.productos.map(p => ({ ...p, cantidad_pedir: p.cantidad,
-        id_proveedor: categoria(p) === 'Book' ? liderBook?.id_proveedor ?? null : null })) };
+        id_proveedor: proveedorPara(p)?.id_proveedor ?? null })) };
       const card = renderColegio(c);
       contratos.set(c.id_contrato, c); buscadorDesplegado=false;actualizarResumen(); actualizarBuscador(); input.value = ''; cerrarBusqueda();
       agregarColegio.focus({ preventScroll: true });
@@ -251,6 +248,13 @@ export async function init() {
     const card = quitar.closest('[data-contrato]');
     contratos.delete(Number(card.dataset.contrato)); card.remove(); actualizarResumen(); actualizarBuscador(); filtrarColegios(); showToast('Colegio quitado del pedido','info');
   });
+  colegios.addEventListener('change', event => {
+    const select = event.target.closest('[data-proveedor]');
+    if (!select || bloqueado) return;
+    const c = contratos.get(Number(select.closest('[data-contrato]').dataset.contrato));
+    c.productos[Number(select.dataset.proveedor)].id_proveedor = Number(select.value) || null;
+    actualizarResumen();
+  });
   function cambiar(event) {
     if (bloqueado) return;
     const control = event.target;
@@ -264,8 +268,7 @@ export async function init() {
       control.setAttribute('aria-invalid', String(!valida)); control.classList.toggle('is-invalid', !valida);
       card.querySelector(`[data-extra="${control.dataset.cantidad}"]`).textContent = !valida ? 'Usa un entero igual o mayor al contrato.' : p.cantidad_pedir > p.cantidad ? `+${formatNumber(p.cantidad_pedir - p.cantidad)} extra` : '';
       actualizarTotal(c, card);
-    } else if (control.matches('[data-proveedor]')) c.productos[Number(control.dataset.proveedor)].id_proveedor = Number(control.value) || null;
-    else return;
+    } else return;
     actualizarResumen();
   }
   colegios.addEventListener('input', cambiar); colegios.addEventListener('change', cambiar);
@@ -292,7 +295,7 @@ export async function init() {
   el('compraEditar').addEventListener('click', () => {
     token = null; editor.inert = false; setBloqueado(false); closeOverlay('compraRevision'); revision.hidden = true;
     el('contratos-title').textContent = 'Órdenes de compra';
-    el('ordenPaso').textContent = 'Selecciona colegios y asigna proveedores a sus productos';
+    el('ordenPaso').textContent = 'Selecciona colegios; cada modelo ya tiene su proveedor asignado';
     estado.textContent = 'Puedes continuar editando los colegios y modelos seleccionados.';
     preparar.focus();
   });
@@ -328,7 +331,7 @@ export async function init() {
     confirmar.disabled = false; el('compraEditar').disabled = false;
     actualizarResumen(); setBloqueado(false); editor.hidden = false; input.value = ''; filtrarColegios();
     el('contratos-title').textContent = 'Órdenes de compra';
-    el('ordenPaso').textContent = 'Selecciona colegios y asigna proveedores a sus productos';
+    el('ordenPaso').textContent = 'Selecciona colegios; cada modelo ya tiene su proveedor asignado';
     cerrarBusqueda();
     estado.textContent = ''; input.focus();
   }

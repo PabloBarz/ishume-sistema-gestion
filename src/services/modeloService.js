@@ -26,7 +26,7 @@ async function enTransaccion(callback) {
 
 async function buscarPorId(id, connection = pool, bloquear = false) {
   const [rows] = await connection.query(
-    `SELECT m.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado,
+    `SELECT m.id_modelo, m.nombre_modelo, m.descripcion, m.nivel_educativo, m.precio, m.estado,
             m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
             d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria
      FROM modelos AS m
@@ -96,7 +96,7 @@ export const modeloService = {
     }
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
     const [rows] = await pool.query(
-      `SELECT m.id_modelo, m.nombre_modelo, m.nivel_educativo, m.estado,
+      `SELECT m.id_modelo, m.nombre_modelo, m.descripcion, m.nivel_educativo, m.precio, m.estado,
               m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
               d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria
        FROM modelos AS m
@@ -113,25 +113,27 @@ export const modeloService = {
     return buscarPorId(id);
   },
 
-  async crear({ idDiseno, nombre, nivelEducativo }) {
+  async crear({ idDiseno, nombre, nivelEducativo, precio, descripcion = null }) {
     return enTransaccion(async (connection) => {
       await bloquearDiseno(connection, idDiseno);
       const [result] = await connection.query(
-        `INSERT INTO modelos (id_diseno, nombre_modelo, nivel_educativo)
-         VALUES (?, ?, ?)`,
-        [idDiseno, nombre, nivelEducativo],
+        `INSERT INTO modelos (id_diseno, nombre_modelo, nivel_educativo, precio, descripcion)
+         VALUES (?, ?, ?, ?, ?)`,
+        [idDiseno, nombre, nivelEducativo, precio, descripcion],
       );
       return {
         id_modelo: result.insertId,
         id_diseno: idDiseno,
         nombre_modelo: nombre,
         nivel_educativo: nivelEducativo,
+        precio,
+        descripcion,
         estado: 1,
       };
     });
   },
 
-  async actualizar(id, { idDiseno, nombre, nivelEducativo }) {
+  async actualizar(id, { idDiseno, nombre, nivelEducativo, precio, descripcion = null }) {
     return enTransaccion(async (connection) => {
       const modeloActual = await buscarPorId(id, connection);
       // Preserve an existing inactive relation when editing unrelated model fields;
@@ -140,9 +142,9 @@ export const modeloService = {
       await bloquearDiseno(connection, idDiseno, !conservaRelacionHistorica);
       const [result] = await connection.query(
         `UPDATE modelos
-         SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?
+         SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, descripcion = ?
          WHERE id_modelo = ?`,
-        [idDiseno, nombre, nivelEducativo, id],
+        [idDiseno, nombre, nivelEducativo, precio, descripcion, id],
       );
       if (result.affectedRows === 0) await buscarPorId(id, connection);
       return buscarPorId(id, connection);
@@ -160,19 +162,6 @@ export const modeloService = {
 
       if (estado === 1 && (disenio.estado !== 1 || categoria.estado !== 1)) {
         throw apiError('No se puede activar el modelo porque su diseño o categoría está inactivo.', 409);
-      }
-
-      if (estado === 0 && modelo.estado !== 0) {
-        const [productosActivos] = await connection.query(
-          `SELECT 1
-           FROM inventario_productos
-           WHERE id_modelo = ? AND estado = 1
-           LIMIT 1`,
-          [id],
-        );
-        if (productosActivos.length) {
-          throw apiError('No se puede desactivar el modelo porque tiene productos activos asociados.', 409);
-        }
       }
 
       if (modelo.estado !== estado) {

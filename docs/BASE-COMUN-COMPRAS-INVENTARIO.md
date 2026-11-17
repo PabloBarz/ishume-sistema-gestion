@@ -1,18 +1,15 @@
-# Base de datos para la integracion actual
+# Base de datos: Compras y catalogo
 
-El unico script de instalacion en database es database/ishume_bd_unificada.sql. Contiene 25 tablas: 11 de Compras, 4 del catalogo independiente de Inventario y 10 previstas para recepcion, clasificacion, incidencias, preparacion, despacho y Kardex.
+El script database/ishume_bd_unificada.sql instala 23 tablas: 10 de Compras, 4 de catalogo (categorias, disenios, modelos, disenio_proveedores) y 9 previstas para etapas posteriores de recepcion, clasificacion, incidencias, preparacion y despacho.
 
-Compras mantiene productos y sus relaciones actuales. Inventario mantiene inventario_productos y modelos. Los IDs de ambos catalogos son independientes; no se equiparan ni se sincronizan automaticamente. La propuesta de usar modelos como catalogo compartido todavia no esta implementada.
+El catalogo local es la fuente unica de modelos. La API externa consume modelos.id_modelo y devuelve ese mismo identificador en sus contratos. Contratos y ordenes referencian directamente modelos: no existe la tabla productos ni una equivalencia id_modelo_api.
 
-El servicio inventarioProductoService.js consulta las claves foraneas reales para comprobar dependencias, sin buscar tablas de otro esquema ni confundir productos de Compras con productos del catalogo local.
+Los proveedores se asocian a disenios mediante disenio_proveedores (varios proveedores por diseno). Todos los modelos del diseno usan esa relacion. La compra valida que modelo, diseno, categoria y proveedor esten activos y que exista la asociacion al revisar y al confirmar.
 
-El Kardex operativo propuesto referencia productos de Compras. Las tablas de etapas posteriores no implican que esas funcionalidades esten implementadas; requieren validaciones y transacciones al desarrollarlas.
+La descripcion pertenece a modelos, no a disenios. modelos.precio es referencial (DECIMAL(10,2), no negativo), distinto del precio cotizado por proveedor.
 
-## Instalacion manual
+No existen tablas de existencias ni Kardex en la instalacion nueva. Las cantidades de recepcion y despacho pertenecen al seguimiento de pedidos. Las tablas futuras requieren sus validaciones de backend.
 
-1. Revisar el script. Ejecutar solamente en una base nueva y vacia, no sobre datos existentes.
-2. El nombre predeterminado es ishume_unificada. Para una base separada, cambiar CREATE DATABASE y USE.
-3. Configurar DB_NAME con el nombre elegido y reiniciar Node. Contratos sigue requiriendo su API externa.
-4. Verificar Compras y los catalogos con datos controlados.
+Para instalar, usar una base vacia y configurar DB_NAME con el nombre real del script (bd_ishume). Contratos sigue requiriendo la API externa. El catalogo inicial se carga con src/database/ishume_inserts_catalogo.sql.
 
-El script no se ha ejecutado desde el proyecto ni esta validado mediante una instalacion real. No migra datos existentes. Las pruebas locales usan revision estatica del SQL y consultas simuladas. Las versiones alternativas de database se retiraron para evitar confundir instalaciones.
+En desarrollo se reinicia la base y se ejecutan el esquema completo y el catalogo. Los cambios se realizan en las definiciones de tablas; no se mantienen migraciones ni propuestas de actualizacion.

@@ -1,5 +1,5 @@
 import { appState } from '../../appState.js';
-import { http, showToast, validateRequiredFields } from '../../utils.js';
+import { http, showToast, validateRequiredFields, formatCurrencyPEN } from '../../utils.js';
 import { createActionButton, createCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
 
 let modelSearch = '';
@@ -40,11 +40,12 @@ function renderModels(models) {
     return [
       createCell(model.nombre_modelo, `ID: ${model.id_modelo}`),
       createCell(model.nivel_educativo || '—'),
+      createCell(formatCurrencyPEN(model.precio)),
       createStatusCell(model.estado),
       actions,
     ];
   });
-  return createTable(['Modelo', 'Nivel educativo', 'Estado', 'Acciones'], rows, { className: 'inventory-model-table' });
+  return createTable(['Modelo', 'Nivel educativo', 'Precio', 'Estado', 'Acciones'], rows, { className: 'inventory-model-table' });
 }
 
 function appendOption(select, value, label, disabled = false) {
@@ -80,7 +81,9 @@ function renderDetails(model) {
   list.className = 'inventory-model-details';
   [
     ['ID del modelo', model.id_modelo],
+    ['Precio', formatCurrencyPEN(model.precio)],
     ['Nombre del modelo', model.nombre_modelo],
+    ['Descripcion', model.descripcion || '—'],
     ['Nivel educativo', model.nivel_educativo || '—'],
     ['Diseño relacionado', model.nombre_diseno || '—'],
     ['Categoría relacionada', model.nombre_categoria || '—'],
@@ -140,11 +143,10 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     }
   }
 
-  async function refreshAfterMutation({ designCountChanged = false, productsChanged = false } = {}) {
+  async function refreshAfterMutation({ designCountChanged = false } = {}) {
     try {
       const reloads = [appState.catalogos.reload('modelos')];
       if (designCountChanged) reloads.push(appState.catalogos.reload('disenios'));
-      if (productsChanged) reloads.push(appState.catalogos.reload('productos'));
       await Promise.all(reloads);
       await onChanged();
       return true;
@@ -203,6 +205,15 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const designField = makeField('Diseño', design.id, design);
     const nameField = makeField('Nombre del modelo', name.id, name);
     const levelField = makeField('Nivel educativo', level.id, level);
+    const price = document.createElement('input');
+    price.className = 'input-custom'; price.id = 'modelPriceInput'; price.name = 'precio';
+    price.type = 'number'; price.min = '0'; price.max = '99999999.99'; price.step = '0.01'; price.required = true;
+    price.value = model?.precio ?? '';
+    const priceField = makeField('Precio (S/)', price.id, price);
+    const description = document.createElement('textarea');
+    description.className = 'input-custom'; description.id = 'modelDescriptionInput'; description.name = 'descripcion';
+    description.rows = 3; description.maxLength = 255; description.value = model?.descripcion ?? '';
+    const descriptionField = makeField('Descripcion (opcional)', description.id, description);
     const categoryError = document.createElement('span'); categoryError.className = 'field-error'; categoryError.setAttribute('role', 'alert');
     const nameError = document.createElement('span'); nameError.className = 'field-error'; nameError.setAttribute('role', 'alert');
     const designError = document.createElement('span'); designError.className = 'field-error'; designError.setAttribute('role', 'alert');
@@ -213,7 +224,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       note.textContent = 'La relación inactiva se conserva para este modelo histórico; selecciona relaciones activas para reasignarlo.';
       designField.append(note);
     }
-    form.append(requestError, categoryField, designField, nameField, levelField);
+    form.append(requestError, categoryField, designField, nameField, levelField, priceField, descriptionField);
 
     category.addEventListener('change', () => {
       updateDesignOptions(); categoryError.textContent = ''; designError.textContent = ''; requestError.hidden = true;
@@ -234,6 +245,12 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       if (Array.from(modelName).length > 30) {
         requestError.hidden = false; requestError.textContent = 'El nombre del modelo admite hasta 30 caracteres.'; return;
       }
+      if (!/^\d{1,8}(\.\d{1,2})?$/.test(price.value)) {
+        requestError.hidden = false; requestError.textContent = 'Ingresa un precio entre 0 y 99999999.99 con hasta dos decimales.'; price.focus(); return;
+      }
+      if (Array.from(description.value).length > 255) {
+        requestError.hidden = false; requestError.textContent = 'La descripcion admite hasta 255 caracteres.'; description.focus(); return;
+      }
       const selectedDesign = designs.find((item) => String(item.id_diseno) === String(designId));
       const isHistoricalDesign = isEdit && String(model.id_diseno) === String(designId) && currentDesign && Number(currentDesign.id_categoria) === Number(selectedDesign?.id_categoria);
       if (!selectedDesign || (!isHistoricalDesign && (Number(selectedDesign.estado) !== 1 || Number(selectedDesign.estado_categoria ?? 1) !== 1)) || (!isHistoricalDesign && Number(category.value) !== Number(selectedDesign.id_categoria))) {
@@ -243,17 +260,13 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       submit.disabled = true; form.setAttribute('aria-busy', 'true');
       try {
         const response = await http(isEdit ? `/api/modelos/${encodeURIComponent(model.id_modelo)}` : '/api/modelos', isEdit ? 'PUT' : 'POST', {
-          id_diseno: designId, nombre_modelo: modelName, nivel_educativo: level.value,
+          id_diseno: designId, nombre_modelo: modelName, nivel_educativo: level.value, precio: price.value, descripcion: description.value.trim() || null,
         });
         modal.close();
         showToast(response.message || (isEdit ? 'Modelo actualizado correctamente.' : 'Modelo creado correctamente.'), 'success');
         const relationChanged = isEdit && String(model.id_diseno) !== String(designId);
-        const productDetailsChanged = isEdit && (
-          relationChanged || model.nombre_modelo !== modelName || (model.nivel_educativo ?? '') !== level.value
-        );
         if (!await refreshAfterMutation({
           designCountChanged: !isEdit || relationChanged,
-          productsChanged: productDetailsChanged,
         })) {
           showToast('El cambio se guardó, pero no se pudieron actualizar todos los catálogos. Intenta recargarlos.', 'warning');
         }
@@ -296,7 +309,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const error = document.createElement('p'); error.className = 'field-error'; error.id = 'modelModalError'; error.setAttribute('role', 'alert'); error.hidden = true;
     content.append(message, error);
     const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => { void changeState(model, 0, deactivate); });
-    modal.open('Confirmar desactivación', 'No se podrá desactivar mientras tenga productos activos asociados.', content, [
+    modal.open('Confirmar desactivación', 'El modelo dejará de estar activo en el catálogo.', content, [
       modal.createButton('Cancelar', 'btn-cancel', () => modal.close()),
       deactivate,
     ]);

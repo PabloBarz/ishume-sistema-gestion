@@ -1,3 +1,4 @@
+import { catalogoModelosSql } from './catalogoCompraService.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { pool } from '../config/db.js';
 import { contratoService } from './contratoService.js';
@@ -37,17 +38,17 @@ async function construir(conn, ids, proveedor, bloquear = false, validarProveedo
     FROM orden_detalles od LEFT JOIN orden_distribuciones d ON d.id_orden_detalle=od.id_orden_detalle
     WHERE od.id_orden IN (?) GROUP BY od.id_orden,od.id_orden_detalle,od.cantidad_pedida`,[ids]);
   if (new Set(lineas.map(l=>l.id_orden)).size !== ids.length || lineas.some(l=>!entero(l.cantidad_pedida)||l.cantidad_pedida!==Number(l.asignada))) throw fail('Revisa las cantidades y distribuciones de las órdenes seleccionadas.',409);
-  const [productos] = await conn.query(`SELECT p.id_producto,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(od.cantidad_pedida) AS cantidad
-    FROM orden_detalles od JOIN productos p ON p.id_producto=od.id_producto WHERE od.id_orden IN (?)
-    GROUP BY p.id_producto,p.nombre,p.tipo,p.categoria,p.nivel_educativo ORDER BY p.id_producto`,[ids]);
+  const [productos] = await conn.query(`SELECT p.id_modelo,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(od.cantidad_pedida) AS cantidad
+    FROM orden_detalles od JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo WHERE od.id_orden IN (?)
+    GROUP BY p.id_modelo,p.nombre,p.tipo,p.categoria,p.nivel_educativo ORDER BY p.id_modelo`,[ids]);
   const [distribuciones] = await conn.query(`SELECT cr.id_contrato,cr.id_contrato_api,cr.cliente_colegio AS colegio,
-    p.id_producto,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(d.cantidad_asignada) AS cantidad
+    p.id_modelo,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(d.cantidad_asignada) AS cantidad
     FROM orden_distribuciones d JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle
-    JOIN productos p ON p.id_producto=od.id_producto
+    JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
     JOIN contrato_detalles cd ON cd.id_detalle_contrato=d.id_detalle_contrato
     JOIN contratos_referencia cr ON cr.id_contrato=cd.id_contrato
-    WHERE od.id_orden IN (?) GROUP BY cr.id_contrato,cr.id_contrato_api,cr.cliente_colegio,p.id_producto,p.nombre,p.tipo,p.categoria,p.nivel_educativo
-    ORDER BY cr.id_contrato,p.id_producto`,[ids]);
+    WHERE od.id_orden IN (?) GROUP BY cr.id_contrato,cr.id_contrato_api,cr.cliente_colegio,p.id_modelo,p.nombre,p.tipo,p.categoria,p.nivel_educativo
+    ORDER BY cr.id_contrato,p.id_modelo`,[ids]);
   const cantidades = productos.map(p=>({...p,cantidad:Number(p.cantidad)}));
   // Los registros antiguos pueden contener el cliente en cliente_colegio.
   // Verificar por contrato sin reescribir referencias ni documentos históricos.
@@ -135,7 +136,7 @@ export const solicitudCotizacionService = {
       for(const id of ids)await conn.query('INSERT INTO solicitud_ordenes (id_solicitud,id_orden) VALUES (?,?)',[insert.insertId,id]);
       await conn.commit();
       return {...resumen({id_solicitud:insert.insertId,codigo,estado:'Generada',contenido_json:JSON.stringify(documento)}),repetida:false};
-    }catch(error){await conn.rollback();if(error.code==='ER_BAD_FIELD_ERROR'&&/ultimo_orden_masiva|prefijo_orden_masiva/.test(error.message))throw fail('Faltan las columnas de numeracion en proveedores (prefijo_orden_masiva y ultimo_orden_masiva). Aplica migrations/004_series_ordenes_masivas.sql en MySQL Workbench; no crea tablas nuevas.',503);if(error.code==='ER_DUP_ENTRY'&&error.message.includes('uq_proveedor_prefijo_masivo'))throw fail('El prefijo de este proveedor ya pertenece a otro proveedor. Revisa su configuracion.',409);if(error.code==='ER_DUP_ENTRY')throw fail('Una orden ya pertenece a otra solicitud. Actualiza los pendientes.',409);throw error;}
+    }catch(error){await conn.rollback();if(error.code==='ER_BAD_FIELD_ERROR'&&/ultimo_orden_masiva|prefijo_orden_masiva/.test(error.message))throw fail('Faltan las columnas de numeracion en proveedores (prefijo_orden_masiva y ultimo_orden_masiva). Recrea la base de desarrollo con database/ishume_bd_unificada.sql.',503);if(error.code==='ER_DUP_ENTRY'&&error.message.includes('uq_proveedor_prefijo_masivo'))throw fail('El prefijo de este proveedor ya pertenece a otro proveedor. Revisa su configuracion.',409);if(error.code==='ER_DUP_ENTRY')throw fail('Una orden ya pertenece a otra solicitud. Actualiza los pendientes.',409);throw error;}
     finally{try{try{if(codigoLocked)await conn.query("SELECT RELEASE_LOCK('ishume_codigo_orden_masiva')");}finally{if(locked)await conn.query('SELECT RELEASE_LOCK(?)',[`ishume_solicitud_${clave_operacion}`]);}}finally{conn.release();}}
   },
   async realizadas(q='',pagina=1) {

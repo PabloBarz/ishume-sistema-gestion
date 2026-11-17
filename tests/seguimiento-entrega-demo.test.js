@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {simularEntrega,renderSeguimientoDemo} from '../public/js/module_compras/seguimientoEntregaDemo.js';
 test('recibidos manuales por linea sin modificar datos reales',()=>{
   const data={codigo:'ORDEN-MAS-LAL-123',proveedor:'Proveedor real',total:11,distribuciones:[
-    {id_producto:1,id_contrato:7,colegio:'Colegio uno',modelo:'Modelo igual',cantidad:3},
-    {id_producto:2,id_contrato:8,colegio:'Colegio dos',modelo:'Modelo igual',cantidad:8}]};
+    {id_modelo:1,id_contrato:7,colegio:'Colegio uno',modelo:'Modelo igual',cantidad:3},
+    {id_modelo:2,id_contrato:8,colegio:'Colegio dos',modelo:'Modelo igual',cantidad:8}]};
   const antes=JSON.stringify(data);
   for(const [valores,estado] of [[[0,0],'Pendiente'],[[2,4],'Parcial'],[[3,8],'Recibido']]){
     const r=simularEntrega(data,valores);assert.equal(r.total,11);assert.equal(r.recibido+r.pendiente,11);assert.equal(r.estado,estado);

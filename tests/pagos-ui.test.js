@@ -37,9 +37,8 @@ test('navegador: pagos rediseñados, órdenes reales y guardado pendiente sin es
   // La integración conserva los catálogos de main y las rutas de Compras.
   const categoria={id_categoria:1,nombre_categoria:'Categoria prueba',estado:1,total_disenios:1,total_modelos:1};
   const diseno={id_diseno:1,id_categoria:1,nombre_diseno:'Diseno prueba',nombre_categoria:categoria.nombre_categoria,estado:1,estado_categoria:1,total_modelos:1};
-  const modelo={id_modelo:1,id_diseno:1,id_categoria:1,nombre_modelo:'Modelo inventario',nivel_educativo:'Inicial',estado:1,estado_diseno:1,estado_categoria:1};
-  const producto={...modelo,id_producto:1,sku:'SKU-PRUEBA',precio:'25.00',stock_actual:8,estado_modelo:1};
-  for(const [endpoint,data] of Object.entries({categorias:[categoria],disenios:[diseno],modelos:[modelo],'inventario-productos':[producto]})){
+  const modelo={id_modelo:1,id_diseno:1,id_categoria:1,nombre_modelo:'Modelo catalogo',precio:'25.00',nivel_educativo:'INICIAL',estado:1,estado_diseno:1,estado_categoria:1};
+  for(const [endpoint,data] of Object.entries({categorias:[categoria],disenios:[diseno],modelos:[modelo]})){
     app.get('/api/'+endpoint,(req,res)=>res.json({success:true,data}));
   }
   app.use('/api',(req,res,next)=>{peticiones.push({metodo:req.method,url:req.url});if(req.method!=='GET'&&!habilitado)return res.status(405).json({message:'No se permiten escrituras'});next();});
@@ -64,7 +63,7 @@ test('navegador: pagos rediseñados, órdenes reales y guardado pendiente sin es
     res.json({data:{id_contrato_api:Number(req.params.id),colegio:'Colegio '+req.params.id,modelos:1,productos:[{modelo:'Modelo de prueba',cantidad_contratada:10,cantidad_por_solicitar:10,cantidad:0,referencias:[],situacion:'Por solicitar'}]}});
   });
   app.get('/api/colegios-compras/11',(req,res)=>res.json({data:{id_contrato_api:91,colegio:'Colegio con modelos sin compras',modelos:3,proveedores:0,total:0,productos:[1,2,3].map(id=>({modelo:'Modelo con nombre completo largo que debe conservarse sin desbordar la pantalla '+id,categoria:'Book',cantidad_contratada:8,cantidad:0,cantidad_por_solicitar:8,proveedor:'Sin asignar',referencias:[],proveedores:[],situacion:'Por solicitar'}))}}));
-  app.get('/api/colegios-compras/:id',(req,res)=>res.json({data:{id_contrato:Number(req.params.id),id_contrato_api:req.params.id==='8'?88:89,colegio:req.params.id==='8'?'Melchórita':'Colegio sin compras',modelos:req.params.id==='8'?3:0,proveedores:req.params.id==='8'?3:0,total:req.params.id==='8'?38:0,productos:req.params.id==='8'?[{id_producto:1,modelo:'Modelo LALO',proveedor:'LALO',cantidad:10,categoria:'Cuadro',cantidad_contratada:14,cantidad_por_solicitar:4,id_solicitud:72,pedidos:[{id_orden:1,codigo:'OC-LAL-0001'}],codigo:'ORDEN-MAS-LAL-001',referencias:[{id_solicitud:72,codigo:'ORDEN-MAS-LAL-001'}],situacion:'Generada'},{id_producto:2,modelo:'Modelo Joselito',proveedor:'Joselito',cantidad:22,categoria:'Cuadro',cantidad_contratada:20,cantidad_por_solicitar:0,id_solicitud:73,pedidos:[{id_orden:2,codigo:'OC-JOS-0001'}],codigo:'ORDEN-MAS-JOS-001',referencias:[{id_solicitud:73,codigo:'ORDEN-MAS-JOS-001'}],situacion:'Generada'},{id_producto:3,modelo:'Anuario',proveedor:'LíderBook',cantidad:6,categoria:'Book',cantidad_contratada:6,cantidad_por_solicitar:0,id_solicitud:null,pedidos:[{id_orden:3,codigo:'OC-LIB-0001'}],codigo:'OC-LIB-0001',referencias:[{id_orden:3,codigo:'OC-LIB-0001'}],situacion:'Pendiente'}]:[]}}));
+  app.get('/api/colegios-compras/:id',(req,res)=>res.json({data:{id_contrato:Number(req.params.id),id_contrato_api:req.params.id==='8'?88:89,colegio:req.params.id==='8'?'Melchórita':'Colegio sin compras',modelos:req.params.id==='8'?3:0,proveedores:req.params.id==='8'?3:0,total:req.params.id==='8'?38:0,productos:req.params.id==='8'?[{id_modelo:1,modelo:'Modelo LALO',proveedor:'LALO',cantidad:10,categoria:'Cuadro',cantidad_contratada:14,cantidad_por_solicitar:4,id_solicitud:72,pedidos:[{id_orden:1,codigo:'OC-LAL-0001'}],codigo:'ORDEN-MAS-LAL-001',referencias:[{id_solicitud:72,codigo:'ORDEN-MAS-LAL-001'}],situacion:'Generada'},{id_modelo:2,modelo:'Modelo Joselito',proveedor:'Joselito',cantidad:22,categoria:'Cuadro',cantidad_contratada:20,cantidad_por_solicitar:0,id_solicitud:73,pedidos:[{id_orden:2,codigo:'OC-JOS-0001'}],codigo:'ORDEN-MAS-JOS-001',referencias:[{id_solicitud:73,codigo:'ORDEN-MAS-JOS-001'}],situacion:'Generada'},{id_modelo:3,modelo:'Anuario',proveedor:'LíderBook',cantidad:6,categoria:'Book',cantidad_contratada:6,cantidad_por_solicitar:0,id_solicitud:null,pedidos:[{id_orden:3,codigo:'OC-LIB-0001'}],codigo:'OC-LIB-0001',referencias:[{id_orden:3,codigo:'OC-LIB-0001'}],situacion:'Pendiente'}]:[]}}));
   app.get('/api/contratos',(req,res)=>res.json({data:{id_contrato:Number(req.query.id),estado_trabajo:'en_proceso',modelos_disponibles:true,pedido_registrado:req.query.id==='88'}}));
   app.get('/api/proveedores',(req,res)=>res.json({data:proveedores}));
   let detallePagoFalla=true;
@@ -112,7 +111,7 @@ test('navegador: pagos rediseñados, órdenes reales y guardado pendiente sin es
     if(detalleFalla){detalleFalla=false;return res.status(503).json({message:'No se pudo consultar el detalle. Reintenta.'});}
     const orden=ordenes.find(o=>o.id_solicitud===Number(req.params.id));
     if(!orden)return res.status(404).json({message:'Orden de compra no encontrada.'});
-    res.json({data:{...orden,distribuciones:[{id_contrato:1,id_producto:1,colegio:'Colegio completo de prueba',modelo:'Modelo real de la orden',cantidad:orden.total}]}});
+    res.json({data:{...orden,distribuciones:[{id_contrato:1,id_modelo:1,colegio:'Colegio completo de prueba',modelo:'Modelo real de la orden',cantidad:orden.total}]}});
   });
   app.get('/api/compras-masivas/solicitudes',(req,res)=>{
     const filtro=String(req.query.q||'').toLowerCase(),pagina=Number(req.query.pagina||1);
@@ -512,10 +511,11 @@ test('navegador: pagos rediseñados, órdenes reales y guardado pendiente sin es
       const wait=async f=>{for(let i=0;i<200;i++){if(f())return;await new Promise(r=>setTimeout(r,25));}throw Error('Espera inventario');};
       const check=(ok,msg)=>{if(!ok)throw Error(msg);};
       document.querySelector('[data-page="inventario"]').click();
-      await wait(()=>document.querySelector('.inventory-product-table'));
+      await wait(()=>document.querySelector('.inventory-model-table'));
       check(document.querySelector('[data-page="inventario"]').getAttribute('aria-current')==='page','Sidebar Inventario activo');
-      check(document.querySelector('[data-stat="products"]').textContent==='1'&&document.querySelector('[data-stat="units"]').textContent==='8','Indicadores reales de los fixtures');
-      document.querySelector('[data-product-action="view"]').click();
+      check(document.querySelector('[data-stat="models"]').textContent==='1'&&!document.querySelector('[data-stat="units"]'),'Catalogo sin existencias');
+      check(document.querySelector('.inventory-model-table').textContent.includes('25.00'),'Precio del modelo visible');
+      document.querySelector('[data-model-action="view"]').click();
       await wait(()=>document.getElementById('inventoryModal').classList.contains('open'));
       document.getElementById('inventoryModalClose').click();
       for(const [tab,selector] of [['categorias','.inventory-category-table'],['disenios','.inventory-design-table'],['modelos','.inventory-model-table']]){
