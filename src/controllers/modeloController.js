@@ -1,4 +1,5 @@
 import { modeloService } from '../services/modeloService.js';
+import { persistModelImageChange } from '../services/modelImageService.js';
 
 const EDUCATION_LEVELS = ['INICIAL', 'SUPERIOR'];
 
@@ -88,6 +89,16 @@ export const modeloController = {
       return res.status(400).json({ success: false, message: 'El cuerpo de la solicitud debe ser un objeto JSON.' });
     }
     const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio, descripcion } = req.body;
+    const { id_categoria: idCategoria, id_proveedor: idProveedor } = req.body;
+    if ((idCategoria === undefined) !== (idProveedor === undefined)) {
+      return res.status(400).json({ success: false, message: 'La categoría y el proveedor deben enviarse juntos.' });
+    }
+    if (idCategoria !== undefined && !enteroPositivo(idCategoria)) {
+      return res.status(400).json({ success: false, message: 'El identificador de categoría debe ser un entero mayor que cero.' });
+    }
+    if (idProveedor !== undefined && !enteroPositivo(idProveedor)) {
+      return res.status(400).json({ success: false, message: 'El identificador de proveedor debe ser un entero mayor que cero.' });
+    }
     if (!enteroPositivo(idDiseno)) {
       return res.status(400).json({ success: false, message: 'El identificador de diseño debe ser un entero mayor que cero.' });
     }
@@ -108,12 +119,19 @@ export const modeloController = {
     }
 
     try {
-      const modelo = await modeloService.crear({
-        idDiseno: Number(idDiseno),
-        nombre: nombre.trim(),
-        nivelEducativo,
-        precio: Number(precio).toFixed(2),
-        descripcion: descripcion?.trim() || null,
+      const modelo = await persistModelImageChange({
+        file: req.file,
+        missingImagePath: null,
+        persist: (imagenPath) => modeloService.crear({
+          idDiseno: Number(idDiseno),
+          idCategoria: idCategoria === undefined ? null : Number(idCategoria),
+          idProveedor: idProveedor === undefined ? null : Number(idProveedor),
+          nombre: nombre.trim(),
+          nivelEducativo,
+          precio: Number(precio).toFixed(2),
+          descripcion: descripcion?.trim() || null,
+          imagenPath,
+        }),
       });
       return res.status(201).json({ success: true, message: 'Modelo creado correctamente.', data: modelo });
     } catch (error) {
@@ -130,6 +148,16 @@ export const modeloController = {
       return res.status(400).json({ success: false, message: 'El cuerpo de la solicitud debe ser un objeto JSON.' });
     }
     const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio, descripcion } = req.body;
+    const { id_categoria: idCategoria, id_proveedor: idProveedor } = req.body;
+    if ((idCategoria === undefined) !== (idProveedor === undefined)) {
+      return res.status(400).json({ success: false, message: 'La categoría y el proveedor deben enviarse juntos.' });
+    }
+    if (idCategoria !== undefined && !enteroPositivo(idCategoria)) {
+      return res.status(400).json({ success: false, message: 'El identificador de categoría debe ser un entero mayor que cero.' });
+    }
+    if (idProveedor !== undefined && !enteroPositivo(idProveedor)) {
+      return res.status(400).json({ success: false, message: 'El identificador de proveedor debe ser un entero mayor que cero.' });
+    }
     if (!enteroPositivo(idDiseno)) {
       return res.status(400).json({ success: false, message: 'El identificador de diseño debe ser un entero mayor que cero.' });
     }
@@ -150,13 +178,21 @@ export const modeloController = {
     }
 
     try {
-      const modelo = await modeloService.actualizar(Number(id), {
-        idDiseno: Number(idDiseno),
-        nombre: nombre.trim(),
-        nivelEducativo,
-        precio: Number(precio).toFixed(2),
-        descripcion: descripcion?.trim() || null,
+      const resultado = await persistModelImageChange({
+        file: req.file,
+        persist: (imagenPath) => modeloService.actualizar(Number(id), {
+          idDiseno: Number(idDiseno),
+          idCategoria: idCategoria === undefined ? null : Number(idCategoria),
+          idProveedor: idProveedor === undefined ? null : Number(idProveedor),
+          nombre: nombre.trim(),
+          nivelEducativo,
+          precio: Number(precio).toFixed(2),
+          descripcion: descripcion?.trim() || null,
+          imagenPath,
+        }),
+        removePrevious: (imagenPath) => modeloService.eliminarImagenSiNoReferenciada(imagenPath),
       });
+      const modelo = resultado.modelo;
       return res.status(200).json({ success: true, message: 'Modelo actualizado correctamente.', data: modelo });
     } catch (error) {
       return responderError(res, error, 'actualizar');

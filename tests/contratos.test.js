@@ -10,8 +10,8 @@ import contratoRouter from '../src/routes/contratoRouter.js';
 test('consulta contratos mediante la API externa sin persistencia', async () => {
   const queryOriginal = pool.query;
   pool.query = async (sql, args) => {
-    if (sql.includes('FROM modelos m')) return [args[0].map(id => ({id_modelo:id,id_diseno:1,modelo:'Modelo local '+id,estado:1,estado_diseno:1,estado_categoria:1}))];
-    if (sql.includes('FROM disenio_proveedores')) return [[{id_diseno:1,id_proveedor:1,razon_social:'Proveedor'}]];
+    if (sql.includes('FROM modelos m')) return [args[0].map(id => ({id_modelo:id,id_diseno:1,modelo:'Modelo local '+id,imagen_path:id===7?'/uploads/modelos/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg':null,estado:1,estado_diseno:1,estado_categoria:1}))];
+    if (sql.includes('FROM disenios d')) return [[{id_diseno:1,id_proveedor:1,nombre_proveedor:'Proveedor',estado_proveedor:'Activo'}]];
     throw Error('Consulta inesperada: '+sql);
   };
   const registradosOriginal=contratoPedidoService.registrados;
@@ -59,6 +59,10 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
       assert.equal(data.modelos_disponibles,true);
       assert.equal(data.cliente, 'Ana Pérez - Colegio San José, Lima');
       assert.deepEqual(data.productos.map(({ cantidad }) => cantidad), [23, 4]);
+      assert.equal(data.productos[0].imagen_path, '/uploads/modelos/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg');
+      assert.equal(data.productos[0].imagen_url, `${process.env.PUBLIC_BASE_URL}/uploads/modelos/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg`);
+      assert.equal(data.productos[1].imagen_path, null);
+      assert.equal(data.productos[1].imagen_url, null);
     }
     const empty = await (await fetch(`${base}?id=2`)).json();
     assert.deepEqual(empty.data.productos, []);

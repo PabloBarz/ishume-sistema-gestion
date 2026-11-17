@@ -2,8 +2,7 @@ node_modules/
 .atl/
 test/
 tests/
-!tests/integracion-esquemas.test.js
 odd/
 .env
-# Documentos privados, fuera de public. Respaldar esta carpeta junto con MySQL.
 /storage/pagos/
+/storage/uploads/modelos/.gitkeep

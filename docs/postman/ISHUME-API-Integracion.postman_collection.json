@@ -1,0 +1,131 @@
+{
+  "info": {
+    "_postman_id": "4ea9c979-1c58-4f26-8c3b-ea72573ed35a",
+    "name": "ISHUME - API Integración de Catálogo",
+    "description": "Consultas de solo lectura del catálogo oficial de ISHUME. Requiere INTEGRATION_API_KEY, excepto los casos de autenticación negativa.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{api_key}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "api_key", "value": "", "type": "string" },
+    { "key": "model_id", "value": "167", "type": "string" },
+    { "key": "category_id", "value": "1", "type": "string" },
+    { "key": "provider_id", "value": "2", "type": "string" },
+    { "key": "education_level", "value": "SUPERIOR", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Catálogo",
+      "item": [
+        {
+          "name": "Consultar todos los modelos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"] }
+          },
+          "response": [
+            {
+              "name": "200 - Modelos disponibles",
+              "originalRequest": { "method": "GET", "url": "{{base_url}}/api/integracion/v1/catalogo/modelos" },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json; charset=utf-8" }],
+              "body": "{\n  \"success\": true,\n  \"data\": [],\n  \"pagination\": { \"pagina\": 1, \"limite\": 50, \"total\": 0, \"total_paginas\": 0 }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consultar un modelo por ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos/{{model_id}}", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos", "{{model_id}}"] }
+          },
+          "response": [
+            {
+              "name": "200 - Modelo",
+              "originalRequest": { "method": "GET", "url": "{{base_url}}/api/integracion/v1/catalogo/modelos/{{model_id}}" },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json; charset=utf-8" }],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id_modelo\": 167,\n    \"nombre_modelo\": \"MARAVILLAS ACADÉMICO\",\n    \"descripcion\": null,\n    \"precio\": 67,\n    \"nivel_educativo\": \"SUPERIOR\",\n    \"estado\": \"Activo\",\n    \"imagen_url\": null,\n    \"id_diseno\": 5,\n    \"nombre_diseno\": \"PIEZAS 3D Y FONDO BRILLANTES\",\n    \"id_categoria\": 1,\n    \"nombre_categoria\": \"CUADROS\",\n    \"id_proveedor\": 2,\n    \"nombre_proveedor\": \"JOSELITO\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Buscar modelos por nombre o ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos?buscar=MARAVILLAS", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"], "query": [{ "key": "buscar", "value": "MARAVILLAS" }] }
+          }
+        },
+        {
+          "name": "Filtrar por categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos?id_categoria={{category_id}}", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"], "query": [{ "key": "id_categoria", "value": "{{category_id}}" }] }
+          }
+        },
+        {
+          "name": "Filtrar por proveedor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos?id_proveedor={{provider_id}}", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"], "query": [{ "key": "id_proveedor", "value": "{{provider_id}}" }] }
+          }
+        },
+        {
+          "name": "Filtrar por nivel educativo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos?nivel_educativo={{education_level}}", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"], "query": [{ "key": "nivel_educativo", "value": "{{education_level}}" }] }
+          }
+        },
+        {
+          "name": "Combinar categoría y proveedor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos?id_categoria={{category_id}}&id_proveedor={{provider_id}}", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"], "query": [{ "key": "id_categoria", "value": "{{category_id}}" }, { "key": "id_proveedor", "value": "{{provider_id}}" }] }
+          }
+        },
+        {
+          "name": "Sin API Key (espera 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"] }
+          },
+          "response": [
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": { "method": "GET", "url": "{{base_url}}/api/integracion/v1/catalogo/modelos" },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json; charset=utf-8" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"No autorizado.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "API Key incorrecta (espera 401)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "invalid-key-for-testing", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/integracion/v1/catalogo/modelos", "host": ["{{base_url}}"], "path": ["api", "integracion", "v1", "catalogo", "modelos"] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -17,11 +17,6 @@ function nombreValido(value) {
     Array.from(value.trim()).length <= 30;
 }
 
-function proveedoresValidos(value) {
-  return Array.isArray(value) && value.length <= 100 && value.every(enteroPositivo) &&
-    new Set(value.map(Number)).size === value.length;
-}
-
 function responderError(res, error, operacion) {
   if (error.status) {
     return res.status(error.status).json({ success: false, message: error.message });
@@ -36,18 +31,22 @@ function responderError(res, error, operacion) {
 
 export const disenioController = {
   async listar(req, res) {
-    const { estado, id_categoria: idCategoria } = req.query;
+    const { estado, id_categoria: idCategoria, id_proveedor: idProveedor } = req.query;
     if (estado !== undefined && estado !== '0' && estado !== '1') {
       return res.status(400).json({ success: false, message: 'El estado debe ser 0 o 1.' });
     }
     if (idCategoria !== undefined && !enteroPositivo(idCategoria)) {
       return res.status(400).json({ success: false, message: 'El identificador de categoría debe ser un entero mayor que cero.' });
     }
+    if (idProveedor !== undefined && !enteroPositivo(idProveedor)) {
+      return res.status(400).json({ success: false, message: 'El identificador de proveedor debe ser un entero mayor que cero.' });
+    }
 
     try {
       const disenios = await disenioService.obtenerTodos({
         estado: estado === undefined ? null : Number(estado),
         idCategoria: idCategoria === undefined ? null : Number(idCategoria),
+        idProveedor: idProveedor === undefined ? null : Number(idProveedor),
       });
       return res.status(200).json({ success: true, data: disenios });
     } catch (error) {
@@ -70,7 +69,7 @@ export const disenioController = {
   },
 
   async crear(req, res) {
-    const { id_categoria: idCategoria, nombre_diseno: nombre, proveedores = [] } = req.body ?? {};
+    const { id_categoria: idCategoria, id_proveedor: idProveedor, nombre_diseno: nombre } = req.body ?? {};
     if (!enteroPositivo(idCategoria)) {
       return res.status(400).json({ success: false, message: 'El identificador de categoría debe ser un entero mayor que cero.' });
     }
@@ -80,15 +79,15 @@ export const disenioController = {
     if (!nombreValido(nombre)) {
       return res.status(400).json({ success: false, message: 'El nombre del diseño no debe superar los 30 caracteres.' });
     }
-    if (!proveedoresValidos(proveedores)) {
-      return res.status(400).json({ success: false, message: 'Los proveedores deben ser una lista de identificadores positivos sin repetir.' });
+    if (!enteroPositivo(idProveedor)) {
+      return res.status(400).json({ success: false, message: 'El identificador de proveedor debe ser un entero mayor que cero.' });
     }
 
     try {
       const disenio = await disenioService.crear({
         idCategoria: Number(idCategoria),
+        idProveedor: Number(idProveedor),
         nombre: nombre.trim(),
-        proveedores: proveedores.map(Number),
       });
       return res.status(201).json({ success: true, message: 'Diseño creado correctamente.', data: disenio });
     } catch (error) {
@@ -98,7 +97,7 @@ export const disenioController = {
 
   async actualizar(req, res) {
     const { id } = req.params;
-    const { id_categoria: idCategoria, nombre_diseno: nombre, proveedores = [] } = req.body ?? {};
+    const { id_categoria: idCategoria, id_proveedor: idProveedor, nombre_diseno: nombre } = req.body ?? {};
     if (!idValido(id)) {
       return res.status(400).json({ success: false, message: 'El identificador debe ser un entero mayor que cero.' });
     }
@@ -111,15 +110,15 @@ export const disenioController = {
     if (!nombreValido(nombre)) {
       return res.status(400).json({ success: false, message: 'El nombre del diseño no debe superar los 30 caracteres.' });
     }
-    if (!proveedoresValidos(proveedores)) {
-      return res.status(400).json({ success: false, message: 'Los proveedores deben ser una lista de identificadores positivos sin repetir.' });
+    if (!enteroPositivo(idProveedor)) {
+      return res.status(400).json({ success: false, message: 'El identificador de proveedor debe ser un entero mayor que cero.' });
     }
 
     try {
       const disenio = await disenioService.actualizar(Number(id), {
         idCategoria: Number(idCategoria),
+        idProveedor: Number(idProveedor),
         nombre: nombre.trim(),
-        proveedores: proveedores.map(Number),
       });
       return res.status(200).json({ success: true, message: 'Diseño actualizado correctamente.', data: disenio });
     } catch (error) {

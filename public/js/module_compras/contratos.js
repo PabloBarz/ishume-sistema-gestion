@@ -38,7 +38,7 @@ export async function init() {
   let guardado = false;
   let resumenValido = false;
 
-  const proveedoresPara = p => proveedores.filter(v => (p.proveedores ?? []).some(pr => pr.id_proveedor === v.id_proveedor));
+  const proveedoresPara = p => proveedores.filter(v => Number(v.id_proveedor) === Number(p.id_proveedor));
   const proveedorPara = p => proveedoresPara(p).find(v => v.id_proveedor === p.id_proveedor) ?? (proveedoresPara(p).length === 1 ? proveedoresPara(p)[0] : null);
   function ajustarProveedores() {
     for (const c of contratos.values()) c.productos.forEach(p => {
@@ -148,7 +148,7 @@ export async function init() {
       <div class="table-scroll"><table class="table-custom compra-table"><thead><tr><th scope="col">Modelo</th><th scope="col">Contrato</th><th scope="col">A pedir</th><th scope="col">Proveedor</th></tr></thead><tbody>
       ${c.productos.map((producto,index) => {const p={...producto,index};return `<tr><td>${esc(p.modelo)}</td><td>${formatNumber(p.cantidad)}</td><td><div class="compra-cantidad-control"><button type="button" data-cantidad-step="-1" data-index="${p.index}" aria-label="Reducir cantidad: ${esc(p.modelo)}">−</button><input type="number" class="input-custom" data-cantidad="${p.index}" value="${p.cantidad_pedir}" min="${Math.max(1, p.cantidad)}" max="2147483647" step="1" aria-label="Cantidad a pedir: ${esc(p.modelo)}" aria-describedby="extra-${c.id_contrato}-${p.index}"><button type="button" data-cantidad-step="1" data-index="${p.index}" aria-label="Aumentar cantidad: ${esc(p.modelo)}">+</button></div><span class="cell-secondary" id="extra-${c.id_contrato}-${p.index}" data-extra="${p.index}"></span></td>
       <td><select class="input-custom" data-proveedor="${p.index}" aria-label="Proveedor de ${esc(p.modelo)}">
-        <option value="">${proveedoresPara(p).length ? 'Selecciona proveedor' : 'Sin proveedores asociados al diseno'}</option>
+        <option value="">${proveedoresPara(p).length ? 'Selecciona proveedor' : 'Sin proveedor activo asignado al diseño'}</option>
         ${proveedoresPara(p).map(v => `<option value="${v.id_proveedor}" ${v.id_proveedor === p.id_proveedor ? 'selected' : ''}>${esc(v.razon_social)}</option>`).join('')}
       </select></td></tr>`;}).join('')}
       </tbody></table></div>

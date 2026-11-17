@@ -9,6 +9,9 @@ test('HTTP compartido: timeout antes de cabeceras y al leer el cuerpo; permite r
     if(req.url==='/lento')return;
     if(req.url==='/cuerpo'){res.writeHead(200,{'Content-Type':'application/json'});res.flushHeaders();return;}
     if(req.url==='/error'){res.writeHead(404,{'Content-Type':'application/json'});res.end('{"message":"Contrato no encontrado"}');return;}
+    if(req.url==='/form'){let body='';req.setEncoding('utf8');req.on('data',chunk=>body+=chunk);req.on('end',()=>{
+      res.setHeader('Content-Type','application/json');res.end(JSON.stringify({contentType:req.headers['content-type'],body}));
+    });return;}
     res.setHeader('Content-Type','application/json');res.end('{"success":true}');
   });
   server.listen(0,'127.0.0.1'); await once(server,'listening');
@@ -17,5 +20,9 @@ test('HTTP compartido: timeout antes de cabeceras y al leer el cuerpo; permite r
     for(const path of ['/lento','/cuerpo'])await assert.rejects(http(base+path,'GET',null,{timeoutMs:100}),e=>e.name==='TimeoutError');
     await assert.rejects(http(base+'/error'),e=>e.status===404&&e.message==='Contrato no encontrado');
     assert.deepEqual(await http(base+'/ok'),{success:true});
+    const form=new FormData();form.append('nombre_modelo','Modelo con imagen');
+    const multipart=await http(base+'/form','POST',form);
+    assert.match(multipart.contentType,/^multipart\/form-data; boundary=/);
+    assert.match(multipart.body,/name="nombre_modelo"\r\n\r\nModelo con imagen/);
   }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
 });

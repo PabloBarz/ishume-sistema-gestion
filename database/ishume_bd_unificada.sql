@@ -14,41 +14,7 @@ CREATE DATABASE IF NOT EXISTS bd_ishume
 USE bd_ishume;
 SET time_zone = '-05:00';
 
--- 01. Catalogos para compras bajo pedido.
-CREATE TABLE categorias (
-  id_categoria INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  nombre_categoria VARCHAR(30) NOT NULL,
-  estado TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT uq_categorias_nombre UNIQUE (nombre_categoria)
-) ENGINE=InnoDB;
-
--- 02
-CREATE TABLE disenios (
-  id_diseno INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  id_categoria INT UNSIGNED NOT NULL,
-  nombre_diseno VARCHAR(30) NOT NULL,
-  estado TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT fk_disenios_categoria FOREIGN KEY (id_categoria)
-    REFERENCES categorias(id_categoria) ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
--- 03. Catalogo local compartido con el sistema externo.
-CREATE TABLE modelos (
-  id_modelo INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  id_diseno INT UNSIGNED NOT NULL,
-  nombre_modelo VARCHAR(30) NOT NULL,
-  descripcion VARCHAR(255) NULL,
-  nivel_educativo VARCHAR(30) NULL,
-  precio DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  CONSTRAINT chk_modelos_precio CHECK (precio >= 0),
-  estado TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT fk_modelos_diseno FOREIGN KEY (id_diseno)
-    REFERENCES disenios(id_diseno) ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
-
-
--- 05. Proveedores: esquema funcional del modulo Compras.
+-- 01. Proveedores: esquema funcional del modulo Compras.
 CREATE TABLE proveedores (
   id_proveedor INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   razon_social VARCHAR(200) NOT NULL,
@@ -64,18 +30,52 @@ CREATE TABLE proveedores (
   CONSTRAINT uq_proveedor_prefijo_masivo UNIQUE (prefijo_orden_masiva)
 ) ENGINE=InnoDB;
 
--- Cada diseno puede ser abastecido por varios proveedores.
-CREATE TABLE disenio_proveedores (
-  id_diseno INT UNSIGNED NOT NULL,
-  id_proveedor INT UNSIGNED NOT NULL,
-  PRIMARY KEY (id_diseno, id_proveedor),
-  CONSTRAINT fk_dp_diseno FOREIGN KEY (id_diseno)
-    REFERENCES disenios(id_diseno) ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_dp_proveedor FOREIGN KEY (id_proveedor)
-    REFERENCES proveedores(id_proveedor) ON UPDATE CASCADE ON DELETE RESTRICT
+-- 02. Catalogos para compras bajo pedido.
+CREATE TABLE categorias (
+  id_categoria INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nombre_categoria VARCHAR(30) NOT NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1,
+  CONSTRAINT uq_categorias_nombre UNIQUE (nombre_categoria)
 ) ENGINE=InnoDB;
 
--- 06. Contratos locales de API o excepciones manuales.
+
+-- 03
+CREATE TABLE disenios (
+    id_diseno INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_categoria INT UNSIGNED NOT NULL,
+    id_proveedor INT UNSIGNED NOT NULL,
+    nombre_diseno VARCHAR(30) NOT NULL,
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_disenios_categoria
+        FOREIGN KEY (id_categoria)
+        REFERENCES categorias(id_categoria)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_disenios_proveedor
+        FOREIGN KEY (id_proveedor)
+        REFERENCES proveedores(id_proveedor)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- 04. Catalogo local compartido con el sistema externo.
+CREATE TABLE modelos (
+  id_modelo INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  id_diseno INT UNSIGNED NOT NULL,
+  imagen_path VARCHAR(500) NULL,
+  nombre_modelo VARCHAR(30) NOT NULL,
+  descripcion VARCHAR(255) NULL,
+  nivel_educativo VARCHAR(30) NULL,
+  precio DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  CONSTRAINT chk_modelos_precio CHECK (precio >= 0),
+  estado TINYINT(1) NOT NULL DEFAULT 1,
+  CONSTRAINT fk_modelos_diseno FOREIGN KEY (id_diseno)
+    REFERENCES disenios(id_diseno) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- 05. Contratos locales de API o excepciones manuales.
 CREATE TABLE contratos_referencia (
   id_contrato INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_contrato_api INT NULL,
@@ -87,7 +87,7 @@ CREATE TABLE contratos_referencia (
   CONSTRAINT uq_contrato_api UNIQUE (id_contrato_api)
 ) ENGINE=InnoDB;
 
--- 07. Detalles contractuales vinculados al catalogo local de modelos.
+-- 06. Detalles contractuales vinculados al catalogo local de modelos.
 CREATE TABLE contrato_detalles (
   id_detalle_contrato INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_contrato INT UNSIGNED NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE contrato_detalles (
   INDEX idx_cd_contrato (id_contrato)
 ) ENGINE=InnoDB;
 
--- 08. Ordenes internas por proveedor (Compras).
+-- 07. Ordenes internas por proveedor (Compras).
 CREATE TABLE ordenes_compra (
   id_orden INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   codigo VARCHAR(30) NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE ordenes_compra (
     REFERENCES proveedores(id_proveedor) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 09. Lineas consolidadas por modelo del catalogo.
+-- 08. Lineas consolidadas por modelo del catalogo.
 CREATE TABLE orden_detalles (
   id_orden_detalle INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_orden INT UNSIGNED NOT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE orden_detalles (
     REFERENCES modelos(id_modelo) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 10. Asignacion DOCUMENTAL de una linea de compra a cada contrato.
+-- 09. Asignacion DOCUMENTAL de una linea de compra a cada contrato.
 CREATE TABLE orden_distribuciones (
   id_distribucion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_orden_detalle INT UNSIGNED NOT NULL,
@@ -149,7 +149,7 @@ CREATE TABLE orden_distribuciones (
     REFERENCES contrato_detalles(id_detalle_contrato) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 11. Ordenes masivas/cotizaciones: campos originales de Compras.
+-- 10. Ordenes masivas/cotizaciones: campos originales de Compras.
 CREATE TABLE solicitudes_cotizacion (
   id_solicitud INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   codigo VARCHAR(30) NOT NULL,
@@ -176,7 +176,7 @@ CREATE TABLE solicitudes_cotizacion (
     REFERENCES proveedores(id_proveedor) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 12. Una orden interna pertenece como maximo a una solicitud masiva.
+-- 11. Una orden interna pertenece como maximo a una solicitud masiva.
 CREATE TABLE solicitud_ordenes (
   id_solicitud INT UNSIGNED NOT NULL,
   id_orden INT UNSIGNED NOT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE solicitud_ordenes (
     REFERENCES ordenes_compra(id_orden) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 13. Abonos parciales, saldo calculado por consultas.
+-- 12. Abonos parciales, saldo calculado por consultas.
 CREATE TABLE pagos_proveedor (
   id_pago INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_solicitud INT UNSIGNED NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE pagos_proveedor (
     REFERENCES solicitudes_cotizacion(id_solicitud) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 14. Auditoria de correcciones de pagos: esquema conservado.
+-- 13. Auditoria de correcciones de pagos: esquema conservado.
 CREATE TABLE correcciones_pago_proveedor (
   id_correccion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_pago INT UNSIGNED NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE correcciones_pago_proveedor (
   )
 ) ENGINE=InnoDB;
 
--- 15. Recepciones: lote real mezclado, ligado a orden interna por proveedor.
+-- 14. Recepciones: lote real mezclado, ligado a orden interna por proveedor.
 -- No obliga a asignar fisicamente cajas a colegios al momento de recibir.
 CREATE TABLE recepciones (
   id_recepcion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -251,7 +251,7 @@ CREATE TABLE recepciones (
     REFERENCES ordenes_compra(id_orden) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 16. Cantidades por producto dentro de cada lote, incluidas incidencias.
+-- 15. Cantidades por producto dentro de cada lote, incluidas incidencias.
 CREATE TABLE recepcion_detalles (
   id_recepcion_detalle INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_recepcion INT UNSIGNED NOT NULL,
@@ -271,7 +271,7 @@ CREATE TABLE recepcion_detalles (
     REFERENCES orden_detalles(id_orden_detalle) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 17. Clasificacion FISICA posterior: cuantas unidades conformes de un lote
+-- 16. Clasificacion FISICA posterior: cuantas unidades conformes de un lote
 -- se separaron para un contrato concreto. Puede hacerse por etapas.
 CREATE TABLE recepcion_asignaciones (
   id_asignacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -288,7 +288,7 @@ CREATE TABLE recepcion_asignaciones (
   INDEX idx_ra_distribucion (id_distribucion)
 ) ENGINE=InnoDB;
 
--- 18. Incidencias al recibir: faltantes, danos o producto incorrecto.
+-- 17. Incidencias al recibir: faltantes, danos o producto incorrecto.
 CREATE TABLE incidencias (
   id_incidencia INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_recepcion_detalle INT UNSIGNED NOT NULL,
@@ -304,7 +304,7 @@ CREATE TABLE incidencias (
     REFERENCES recepcion_detalles(id_recepcion_detalle) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 19. Reposiciones de proveedor: historico; ingreso fisico debe registrarse
+-- 18. Reposiciones de proveedor: historico; ingreso fisico debe registrarse
 -- como nueva recepcion vinculada al pedido.
 CREATE TABLE incidencia_reposiciones (
   id_reposicion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -319,7 +319,7 @@ CREATE TABLE incidencia_reposiciones (
     REFERENCES recepcion_detalles(id_recepcion_detalle) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 20. Cabecera de preparacion por contrato (armado tras editar fotos).
+-- 19. Cabecera de preparacion por contrato (armado tras editar fotos).
 CREATE TABLE preparaciones (
   id_preparacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_contrato INT UNSIGNED NOT NULL,
@@ -331,7 +331,7 @@ CREATE TABLE preparaciones (
     REFERENCES contratos_referencia(id_contrato) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 21. Avances parciales de armado por detalle del contrato.
+-- 20. Avances parciales de armado por detalle del contrato.
 CREATE TABLE preparacion_detalles (
   id_preparacion_detalle INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_preparacion INT UNSIGNED NOT NULL,
@@ -348,7 +348,7 @@ CREATE TABLE preparacion_detalles (
   INDEX idx_pd_contrato_detalle (id_detalle_contrato)
 ) ENGINE=InnoDB;
 
--- 22. Despacho completo por contrato; se confirma una sola vez.
+-- 21. Despacho completo por contrato; se confirma una sola vez.
 CREATE TABLE despachos (
   id_despacho INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   codigo VARCHAR(50) NOT NULL,
@@ -364,7 +364,7 @@ CREATE TABLE despachos (
     REFERENCES contratos_referencia(id_contrato) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 23. Cantidades confirmadas por linea contractual, sin despacho parcial.
+-- 22. Cantidades confirmadas por linea contractual, sin despacho parcial.
 CREATE TABLE despacho_detalles (
   id_despacho_detalle INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_despacho INT UNSIGNED NOT NULL,
@@ -378,16 +378,6 @@ CREATE TABLE despacho_detalles (
     REFERENCES contrato_detalles(id_detalle_contrato) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- Proveedores de prueba del modulo Compras (sin asumir IDs fijos).
-INSERT INTO proveedores (razon_social,estado)
-SELECT 'LALO','Activo' WHERE NOT EXISTS
-  (SELECT 1 FROM proveedores WHERE razon_social='LALO');
-INSERT INTO proveedores (razon_social,estado)
-SELECT 'Joselito','Activo' WHERE NOT EXISTS
-  (SELECT 1 FROM proveedores WHERE razon_social='Joselito');
-INSERT INTO proveedores (razon_social,estado)
-SELECT 'LíderBook','Activo' WHERE NOT EXISTS
-  (SELECT 1 FROM proveedores WHERE razon_social='LíderBook');
 
 -- REGLAS TRANSACCIONALES A IMPLEMENTAR EN EL BACKEND:
 -- A. Los contratos externos devuelven modelos.id_modelo de nuestro catalogo.

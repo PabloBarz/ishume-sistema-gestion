@@ -4,6 +4,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { pool } from '../config/db.js';
 import { contratoService } from './contratoService.js';
 import { proveedorService } from './proveedorService.js';
+import { withModelImageUrl } from './modelImageService.js';
 
 const revisiones = new Map();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -47,7 +48,7 @@ async function preparar(entrada) {
       if (seleccion.length !== 1) throw fail('La selección de modelos no coincide con la API.');
       const p = seleccion[0];
       const proveedor = proveedores.find((item) => item.id_proveedor === p.id_proveedor);
-      if (!original.proveedores?.some(item => item.id_proveedor === p.id_proveedor)) throw fail('El proveedor no abastece el diseno del modelo.', 409);
+      if (Number(original.id_proveedor) !== Number(p.id_proveedor)) throw fail('El proveedor no abastece el diseno del modelo.', 409);
       if (original.estado !== 1 || original.estado_diseno !== 1 || original.estado_categoria !== 1) throw fail('El modelo, diseno o categoria esta inactivo.', 409);
       if (!proveedor || !entero(p.cantidad) || p.cantidad < original.cantidad) throw fail('Selecciona proveedores activos y cantidades enteras iguales o mayores al contrato.');
       if (!ordenes.has(proveedor.id_proveedor)) ordenes.set(proveedor.id_proveedor, { ...proveedor, productos: [] });
@@ -92,12 +93,12 @@ export const compraMasivaService = {
         FROM ordenes_compra o JOIN proveedores p ON p.id_proveedor=o.id_proveedor
         WHERE o.id_orden=?`, [id]);
       if (!orden) throw fail('Orden de compra no encontrada.', 404);
-      const [productos] = await conn.query(`SELECT od.id_orden_detalle, p.id_modelo, p.nombre AS modelo,
+      const [productos] = await conn.query(`SELECT od.id_orden_detalle, p.id_modelo, p.imagen_path, p.nombre AS modelo,
         p.categoria, od.cantidad_pedida AS cantidad
         FROM orden_detalles od JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
         WHERE od.id_orden=? ORDER BY p.categoria, p.nombre, od.id_orden_detalle`, [id]);
       const [distribuciones] = await conn.query(`SELECT cr.id_contrato, cr.id_contrato_api,
-        cr.cliente_colegio AS colegio, p.id_modelo, p.nombre AS modelo, p.categoria,
+        cr.cliente_colegio AS colegio, p.id_modelo, p.imagen_path, p.nombre AS modelo, p.categoria,
         SUM(d.cantidad_asignada) AS cantidad
         FROM orden_distribuciones d
         JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle
@@ -105,10 +106,11 @@ export const compraMasivaService = {
         JOIN contratos_referencia cr ON cr.id_contrato=cd.id_contrato
         JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
         WHERE od.id_orden=?
-        GROUP BY cr.id_contrato, cr.id_contrato_api, cr.cliente_colegio, p.id_modelo, p.nombre, p.categoria
+        GROUP BY cr.id_contrato, cr.id_contrato_api, cr.cliente_colegio, p.id_modelo, p.imagen_path, p.nombre, p.categoria
         ORDER BY cr.cliente_colegio, cr.id_contrato, p.categoria, p.nombre`, [id]);
       await conn.commit();
-      return { ...orden, modelos: productos.length, productos, distribuciones: distribuciones.map((d) => ({ ...d, cantidad: Number(d.cantidad) })),
+      return { ...orden, modelos: productos.length, productos: productos.map(withModelImageUrl),
+        distribuciones: distribuciones.map((d) => ({ ...withModelImageUrl(d), cantidad: Number(d.cantidad) })),
         total: productos.reduce((sum, p) => sum + p.cantidad, 0) };
     } catch (error) {
       await conn.rollback();

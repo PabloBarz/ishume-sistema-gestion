@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { compraMasivaService } from '../src/services/compraMasivaService.js';
 import { contratoService } from '../src/services/contratoService.js';
 import { proveedorService } from '../src/services/proveedorService.js';
+import { disenioService } from '../src/services/disenioService.js';
 import { pool } from '../src/config/db.js';
 
 test('revisión: agrupa por modelo y proveedor, valida cantidades y conserva colegios', async () => {
@@ -10,7 +11,7 @@ test('revisión: agrupa por modelo y proveedor, valida cantidades y conserva col
   const getProveedores = proveedorService.listarActivos;
   contratoService.obtenerPorId = async (id) => ({
     id_contrato: Number(id), colegio: `Colegio ${id}`, cliente: `Responsable ${id}`, fecha_entrega: null,
-    productos: [{ id_modelo: 100, modelo: 'Cuadro A', categoria: 'Cuadro', estado:1, estado_diseno:1, estado_categoria:1, proveedores:[{id_proveedor:1}], cantidad: 30 }],
+    productos: [{ id_modelo: 100, id_proveedor: 1, modelo: 'Cuadro A', categoria: 'Cuadro', estado:1, estado_diseno:1, estado_categoria:1, cantidad: 30 }],
   });
   proveedorService.listarActivos = async () => [{ id_proveedor: 1, razon_social: 'Proveedor activo' }];
   const entrada = [8, 25].map((id) => ({ id_contrato: id, productos: [{ id_modelo: 100, cantidad: 35, id_proveedor: 1 }] }));
@@ -68,15 +69,14 @@ test('MySQL: inserciones, distribuciones, idempotencia y rollback sin compras pe
   for (const proveedor of proveedores.slice(0,2)) {
     const [[modelo]] = await conn.query(`SELECT m.id_modelo FROM modelos m
       JOIN disenios d ON d.id_diseno=m.id_diseno JOIN categorias c ON c.id_categoria=d.id_categoria
-      JOIN disenio_proveedores dp ON dp.id_diseno=d.id_diseno
-      WHERE dp.id_proveedor=? AND m.estado=1 AND d.estado=1 AND c.estado=1 LIMIT 1`, [proveedor.id_proveedor]);
+      WHERE d.id_proveedor=? AND m.estado=1 AND d.estado=1 AND c.estado=1 LIMIT 1`, [proveedor.id_proveedor]);
     assert.ok(modelo, 'Asociar un diseno con modelos activos al proveedor antes de esta prueba');
     modelosPrueba.push({...modelo,id_proveedor:proveedor.id_proveedor});
   }
   assert.notEqual(modelosPrueba[0].id_modelo,modelosPrueba[1].id_modelo,'Esta prueba requiere dos modelos distintos');
   contratoService.obtenerPorId = async (id) => ({id_contrato:Number(id),colegio:`Colegio real ${id}`,cliente:'Responsable',fecha_entrega:null,
     productos:modelosPrueba.map((m,i)=>({...m,modelo:'Modelo local '+m.id_modelo,categoria:'Cuadro',cantidad:i?2:30,
-      estado:1,estado_diseno:1,estado_categoria:1,proveedores:[{id_proveedor:m.id_proveedor}]}))});
+      estado:1,estado_diseno:1,estado_categoria:1,id_proveedor:m.id_proveedor}))});
   const entrada = [2000000101,2000000102].map(id=>({id_contrato:id,productos:modelosPrueba.map((m,i)=>({id_modelo:m.id_modelo,cantidad:i?2:35,id_proveedor:m.id_proveedor}))}));
   try {
     const revision = await compraMasivaService.revisar(entrada);
@@ -144,9 +144,11 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
   ];
   const historicos=structuredClone(registros);
   let siguienteId=9000, cola=Promise.resolve(), fallar=false;
+  const modeloPorProveedor = new Map([[42,100],[73,101],[84,102]]);
+  const proveedorPorContrato = new Map();
   proveedorService.listarActivos=async()=>catalogo;
   contratoService.obtenerPorId=async id=>({id_contrato:Number(id),colegio:'Colegio de prueba',cliente:'Cliente',fecha_entrega:null,
-    productos:[{id_modelo:100,modelo:'Modelo',categoria:'Cuadro',estado:1,estado_diseno:1,estado_categoria:1,proveedores:catalogo,cantidad:1}]});
+    productos:[{id_modelo:modeloPorProveedor.get(proveedorPorContrato.get(Number(id))),id_proveedor:proveedorPorContrato.get(Number(id)),modelo:'Modelo',categoria:'Cuadro',estado:1,estado_diseno:1,estado_categoria:1,cantidad:1}]});
   // Simula transacciones y el bloqueo compartido de MySQL, incluso entre conexiones.
   pool.getConnection=async()=>{
     let liberar, transaccion=null, bloqueado=false, contratoActual=null;
@@ -188,7 +190,10 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
     };
   };
   let siguienteContrato=10000;
-  const revisar=(id,contrato=++siguienteContrato)=>compraMasivaService.revisar([{id_contrato:contrato,productos:[{id_modelo:100,cantidad:1,id_proveedor:id}]}]);
+  const revisar=(id,contrato=++siguienteContrato)=>{
+    proveedorPorContrato.set(contrato,id);
+    return compraMasivaService.revisar([{id_contrato:contrato,productos:[{id_modelo:modeloPorProveedor.get(id),cantidad:1,id_proveedor:id}]}]);
+  };
   const guardar=async id=>compraMasivaService.confirmar((await revisar(id)).token);
   try {
     assert.equal((await guardar(73)).ordenes[0].codigo,'OC-JOS-0008');
@@ -207,18 +212,90 @@ test('códigos por proveedor: independientes, concurrentes, reintentables y sin 
     assert.equal((await compraMasivaService.confirmar(fallida.token)).ordenes[0].codigo,'OC-LIB-0008','Reintento tras fallo no consume correlativo visible');
     assert.deepEqual(registros.slice(0,historicos.length),historicos,'No renumera registros previos ni OC-MAS');
     assert.equal(new Set(registros.map(o=>o.codigo)).size,registros.length);
-    const uno=await revisar(73,99999),dos=await revisar(42,99999),conteo=registros.length;
+    const uno=await revisar(73,99999),dos=await revisar(73,99999),conteo=registros.length;
     const concurrentes=await Promise.allSettled([compraMasivaService.confirmar(uno.token),compraMasivaService.confirmar(dos.token)]);
     assert.equal(concurrentes.filter(r=>r.status==='fulfilled').length,1,'Solo una operacion compra el mismo contrato');
     const rechazo=concurrentes.find(r=>r.status==='rejected');assert.equal(rechazo.reason.status,409);assert.match(rechazo.reason.message,/ya tiene un pedido registrado/);
     assert.equal(registros.length,conteo+1,'No deja pedidos parciales');
-    const conservados=structuredClone(registros);const otra=await revisar(84,99999);await assert.rejects(compraMasivaService.confirmar(otra.token),e=>e.status===409);assert.deepEqual(registros,conservados);
+    const conservados=structuredClone(registros);const otra=await revisar(73,99999);await assert.rejects(compraMasivaService.confirmar(otra.token),e=>e.status===409);assert.deepEqual(registros,conservados);
     registros.find(o=>o.id_contrato_api===99999).estado='Cancelada';
-    const cancelada=await revisar(84,99999);await assert.rejects(compraMasivaService.confirmar(cancelada.token),e=>e.status===409);
+    const cancelada=await revisar(73,99999);await assert.rejects(compraMasivaService.confirmar(cancelada.token),e=>e.status===409);
 
   } finally {
     pool.getConnection=originales.conexion;contratoService.obtenerPorId=originales.contrato;proveedorService.listarActivos=originales.proveedores;
   }
+});
+
+function instalarConexionDisenio({ proveedorEstado = 'Activo', proveedorId = 7 } = {}) {
+  const original = pool.getConnection;
+  const design = { id_diseno: 12, id_categoria: 3, estado_categoria: 1, id_proveedor: 7,
+    nombre_proveedor: 'Proveedor 7', estado_proveedor: 'Inactivo', nombre_diseno: 'Diseño',
+    estado: 1, total_modelos: 2 };
+  const ejecutadas = [];
+  let rollback = false;
+  const connection = {
+    async query(sql, params = []) {
+      ejecutadas.push({ sql, params });
+      if (sql.includes('FROM categorias')) return [[{ id_categoria: 3, estado: 1 }]];
+      if (sql.includes('FROM proveedores')) {
+        return [proveedorId === Number(params[0]) ? [{ id_proveedor: proveedorId, estado: proveedorEstado }] : []];
+      }
+      if (sql.includes('SELECT id_categoria, id_proveedor, estado')) {
+        return [[{ id_categoria: 3, id_proveedor: 7, estado: 1 }]];
+      }
+      if (sql.includes('FROM disenios AS d')) return [[{ ...design }]];
+      if (sql.startsWith('INSERT INTO disenios')) return [{ insertId: 12, affectedRows: 1 }];
+      if (sql.startsWith('UPDATE disenios')) {
+        design.id_proveedor = params[1];
+        design.nombre_proveedor = `Proveedor ${params[1]}`;
+        return [{ affectedRows: 1 }];
+      }
+      throw new Error(`Consulta no prevista: ${sql}`);
+    },
+    async beginTransaction() {}, async commit() {}, async rollback() { rollback = true; }, release() {},
+  };
+  pool.getConnection = async () => connection;
+  return { restore: () => { pool.getConnection = original; }, ejecutadas, get rollback() { return rollback; } };
+}
+
+test('diseños: crea con proveedor único y rechaza proveedores inactivos o inexistentes', async () => {
+  const active = instalarConexionDisenio();
+  try {
+    await disenioService.crear({ idCategoria: 3, idProveedor: 7, nombre: 'Diseño' });
+    const insert = active.ejecutadas.find(({ sql }) => sql.startsWith('INSERT INTO disenios'));
+    assert.match(insert.sql, /id_categoria, id_proveedor, nombre_diseno/);
+    assert.deepEqual(insert.params, [3, 7, 'Diseño']);
+  } finally { active.restore(); }
+
+  for (const { proveedorEstado, proveedorId, status } of [
+    { proveedorEstado: 'Inactivo', proveedorId: 7, status: 409 },
+    { proveedorEstado: 'Activo', proveedorId: 8, status: 404 },
+  ]) {
+    const mock = instalarConexionDisenio({ proveedorEstado, proveedorId });
+    try {
+      await assert.rejects(disenioService.crear({ idCategoria: 3, idProveedor: 7, nombre: 'Diseño' }),
+        (error) => error.status === status);
+      assert.equal(mock.ejecutadas.some(({ sql }) => sql.startsWith('INSERT INTO disenios')), false);
+      assert.equal(mock.rollback, true);
+    } finally { mock.restore(); }
+  }
+});
+
+test('diseños: conserva proveedor histórico inactivo, pero no permite reasignar otro inactivo', async () => {
+  const retained = instalarConexionDisenio({ proveedorEstado: 'Inactivo', proveedorId: 7 });
+  try {
+    const updated = await disenioService.actualizar(12, { idCategoria: 3, idProveedor: 7, nombre: 'Renombrado' });
+    assert.equal(updated.id_proveedor, 7);
+    assert.ok(retained.ejecutadas.some(({ sql }) => sql.startsWith('UPDATE disenios')));
+  } finally { retained.restore(); }
+
+  const changed = instalarConexionDisenio({ proveedorEstado: 'Inactivo', proveedorId: 8 });
+  try {
+    await assert.rejects(disenioService.actualizar(12, { idCategoria: 3, idProveedor: 8, nombre: 'Renombrado' }),
+      (error) => error.status === 409);
+    assert.equal(changed.ejecutadas.some(({ sql }) => sql.startsWith('UPDATE disenios')), false);
+    assert.equal(changed.rollback, true);
+  } finally { changed.restore(); }
 });
 
 test.after(async () => { await pool.end(); });

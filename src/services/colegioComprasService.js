@@ -1,6 +1,7 @@
 import { catalogoModelosSql } from './catalogoCompraService.js';
 import {pool} from '../config/db.js';
 import {contratoService} from './contratoService.js';
+import { withModelImageUrl } from './modelImageService.js';
 
 const fallo=(mensaje,status=400)=>Object.assign(new Error(mensaje),{status});
 async function complementar(colegio,compras){
@@ -9,12 +10,12 @@ async function complementar(colegio,compras){
   for(const p of contrato.productos){
     if(!Number.isSafeInteger(p.id_modelo)||p.id_modelo<1||modelos.has(p.id_modelo)||!Number.isSafeInteger(p.cantidad)||p.cantidad<0)
       throw fallo('La API devolvió modelos o cantidades inválidos para este contrato.',502);
-    modelos.set(p.id_modelo,{id_modelo:p.id_modelo,modelo:p.modelo,categoria:p.categoria,cantidad_contratada:p.cantidad,cantidad:0,proveedores:[],referencias:[],pedidos:[],distribuciones:[]});
+    modelos.set(p.id_modelo,{id_modelo:p.id_modelo,imagen_path:p.imagen_path,imagen_url:p.imagen_url,modelo:p.modelo,categoria:p.categoria,cantidad_contratada:p.cantidad,cantidad:0,proveedores:[],referencias:[],pedidos:[],distribuciones:[]});
   }
   for(const p of compras){
     // La relación es por ID de modelo de origen, nunca por nombre.
     if(!Number.isSafeInteger(p.id_modelo)||p.id_modelo<1)throw fallo('Un producto comprado no conserva su ID de modelo de origen.',409);
-    if(!modelos.has(p.id_modelo))modelos.set(p.id_modelo,{id_modelo:p.id_modelo,modelo:p.modelo,categoria:p.categoria,cantidad_contratada:null,cantidad:0,proveedores:[],referencias:[],pedidos:[],distribuciones:[]});
+    if(!modelos.has(p.id_modelo))modelos.set(p.id_modelo,{...withModelImageUrl({id_modelo:p.id_modelo,imagen_path:p.imagen_path}),modelo:p.modelo,categoria:p.categoria,cantidad_contratada:null,cantidad:0,proveedores:[],referencias:[],pedidos:[],distribuciones:[]});
     const m=modelos.get(p.id_modelo);m.cantidad+=p.cantidad;
     if(!Number.isSafeInteger(m.cantidad))throw fallo('Cantidad solicitada fuera de rango.',409);
     if(!m.proveedores.some(pr=>pr.id_proveedor===p.id_proveedor))m.proveedores.push({id_proveedor:p.id_proveedor,nombre:p.proveedor});
@@ -104,7 +105,7 @@ export const colegioComprasService={
       // uq_so_orden garantiza que este LEFT JOIN no multiplique pedidos.
       const [rows]=await conn.query(`SELECT d.id_distribucion,d.cantidad_asignada AS cantidad,
         cd.id_detalle_contrato,cd.id_contrato,cd.id_modelo AS producto_contrato,
-        p.id_modelo,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,
+        p.id_modelo,p.imagen_path,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,
         o.id_orden,o.codigo AS codigo_pedido,o.id_proveedor,pr.razon_social AS proveedor,
         s.id_solicitud,s.codigo AS codigo_masiva,s.id_proveedor AS proveedor_masiva
         FROM orden_distribuciones d
@@ -128,7 +129,7 @@ export const colegioComprasService={
         vistos.add(r.id_distribucion);modelos.add(r.id_modelo);proveedores.add(r.id_proveedor);total+=cantidad;
         if(!Number.isSafeInteger(total))throw fallo('El total de unidades excede el rango válido.',409);
         const clave=JSON.stringify([id,r.id_modelo,r.id_proveedor,r.id_solicitud!=null?'masiva':'pedido',r.id_solicitud??r.id_orden]);
-        if(!grupos.has(clave))grupos.set(clave,{id_contrato:id,id_modelo:r.id_modelo,modelo:r.modelo,tipo:r.tipo,categoria:r.categoria,nivel:r.nivel,
+        if(!grupos.has(clave))grupos.set(clave,{id_contrato:id,...withModelImageUrl({id_modelo:r.id_modelo,imagen_path:r.imagen_path}),modelo:r.modelo,tipo:r.tipo,categoria:r.categoria,nivel:r.nivel,
           id_proveedor:r.id_proveedor,proveedor:r.proveedor,id_solicitud:r.id_solicitud,
           codigo:r.codigo_masiva??r.codigo_pedido,situacion:r.id_solicitud!=null?'Generada':'Pendiente',cantidad:0,
           pedidos:[],distribuciones:[]});

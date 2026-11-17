@@ -66,8 +66,12 @@ export async function http(url, method = 'GET', body = null, { timeoutMs = 20000
   const options = { method, headers: {}, signal: controller.signal };
 
   if (body !== null && body !== undefined) {
-    options.headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(body);
+    if (typeof FormData !== 'undefined' && body instanceof FormData) {
+      options.body = body;
+    } else {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(body);
+    }
   }
 
   let response;

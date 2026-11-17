@@ -1,10 +1,10 @@
 # Base de datos: Compras y catalogo
 
-El script database/ishume_bd_unificada.sql instala 23 tablas: 10 de Compras, 4 de catalogo (categorias, disenios, modelos, disenio_proveedores) y 9 previstas para etapas posteriores de recepcion, clasificacion, incidencias, preparacion y despacho.
+El script database/ishume_bd_unificada.sql instala 22 tablas: 10 de Compras, 3 de catálogo (categorias, disenios y modelos) y 9 previstas para etapas posteriores de recepción, clasificación, incidencias, preparación y despacho.
 
 El catalogo local es la fuente unica de modelos. La API externa consume modelos.id_modelo y devuelve ese mismo identificador en sus contratos. Contratos y ordenes referencian directamente modelos: no existe la tabla productos ni una equivalencia id_modelo_api.
 
-Los proveedores se asocian a disenios mediante disenio_proveedores (varios proveedores por diseno). Todos los modelos del diseno usan esa relacion. La compra valida que modelo, diseno, categoria y proveedor esten activos y que exista la asociacion al revisar y al confirmar.
+Un proveedor puede abastecer varios diseños, pero cada diseño tiene un solo `id_proveedor` en `disenios`. Todos los modelos del diseño usan esa relación. La compra valida que modelo, diseño, categoría y proveedor estén activos y que el proveedor seleccionado sea el asignado al diseño al revisar y al confirmar.
 
 La descripcion pertenece a modelos, no a disenios. modelos.precio es referencial (DECIMAL(10,2), no negativo), distinto del precio cotizado por proveedor.
 

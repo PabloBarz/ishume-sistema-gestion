@@ -1,7 +1,73 @@
 import { pool } from '../config/db.js';
+import { modelImageStorage, withModelImageUrl } from './modelImageService.js';
 
 function apiError(message, status) {
   return Object.assign(new Error(message), { status });
+}
+
+const MODEL_CATALOG_SELECT = `SELECT m.id_modelo, m.nombre_modelo, m.descripcion, m.nivel_educativo, m.precio, m.estado, m.imagen_path,
+            m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
+            d.id_proveedor, p.razon_social AS nombre_proveedor, p.estado AS estado_proveedor,
+            d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria`;
+const MODEL_CATALOG_JOINS = `
+     FROM modelos AS m
+     INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
+     INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
+     INNER JOIN proveedores AS p ON p.id_proveedor = d.id_proveedor`;
+
+export function buildIntegrationCatalogQuery(filters = {}, { count = false } = {}) {
+  const clauses = ['m.estado = 1', 'd.estado = 1', 'c.estado = 1', "p.estado = 'Activo'"];
+  const params = [];
+
+  if (filters.idModelo != null) {
+    clauses.push('m.id_modelo = ?');
+    params.push(filters.idModelo);
+  }
+  if (filters.buscar) {
+    clauses.push('(m.nombre_modelo LIKE ? OR CAST(m.id_modelo AS CHAR) LIKE ?)');
+    params.push(`%${filters.buscar}%`, `%${filters.buscar}%`);
+  }
+  if (filters.idCategoria != null) {
+    clauses.push('d.id_categoria = ?');
+    params.push(filters.idCategoria);
+  }
+  if (filters.idProveedor != null) {
+    clauses.push('d.id_proveedor = ?');
+    params.push(filters.idProveedor);
+  }
+  if (filters.nivelEducativo) {
+    clauses.push('m.nivel_educativo = ?');
+    params.push(filters.nivelEducativo);
+  }
+
+  const fromWhere = `${MODEL_CATALOG_JOINS}\n     WHERE ${clauses.join(' AND ')}`;
+  if (count) return { sql: `SELECT COUNT(*) AS total${fromWhere}`, params };
+
+  const limit = filters.limite ?? 50;
+  const offset = ((filters.pagina ?? 1) - 1) * limit;
+  return {
+    sql: `${MODEL_CATALOG_SELECT}${fromWhere}\n     ORDER BY m.id_modelo DESC\n     LIMIT ? OFFSET ?`,
+    params: [...params, limit, offset],
+  };
+}
+
+export function projectIntegrationCatalogModel(model) {
+  const { imagen_url: imagenUrl } = withModelImageUrl(model);
+  return {
+    id_modelo: Number(model.id_modelo),
+    nombre_modelo: model.nombre_modelo,
+    descripcion: model.descripcion,
+    precio: model.precio == null ? null : Number(model.precio),
+    nivel_educativo: model.nivel_educativo,
+    estado: Number(model.estado) === 1 ? 'Activo' : 'Inactivo',
+    imagen_url: imagenUrl,
+    id_diseno: Number(model.id_diseno),
+    nombre_diseno: model.nombre_diseno,
+    id_categoria: Number(model.id_categoria),
+    nombre_categoria: model.nombre_categoria,
+    id_proveedor: Number(model.id_proveedor),
+    nombre_proveedor: model.nombre_proveedor,
+  };
 }
 
 async function enTransaccion(callback) {
@@ -26,27 +92,27 @@ async function enTransaccion(callback) {
 
 async function buscarPorId(id, connection = pool, bloquear = false) {
   const [rows] = await connection.query(
-    `SELECT m.id_modelo, m.nombre_modelo, m.descripcion, m.nivel_educativo, m.precio, m.estado,
-            m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
-            d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria
-     FROM modelos AS m
-     INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
-     INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
-     WHERE m.id_modelo = ?${bloquear ? ' FOR UPDATE' : ''}`,
+    `${MODEL_CATALOG_SELECT}${MODEL_CATALOG_JOINS}\n     WHERE m.id_modelo = ?${bloquear ? ' FOR UPDATE' : ''}`,
     [id],
   );
   if (!rows.length) throw apiError('Modelo no encontrado.', 404);
-  return rows[0];
+  return withModelImageUrl(rows[0]);
 }
 
-async function bloquearDiseno(connection, idDiseno, validarActivo = true) {
+async function bloquearDiseno(connection, idDiseno, validarActivo = true, seleccion = {}) {
   const [referencias] = await connection.query(
-    `SELECT id_categoria
+    `SELECT id_categoria, id_proveedor
      FROM disenios
      WHERE id_diseno = ?`,
     [idDiseno],
   );
   if (!referencias.length) throw apiError('El diseño seleccionado no existe.', 404);
+  if (seleccion.idCategoria != null && Number(referencias[0].id_categoria) !== Number(seleccion.idCategoria)) {
+    throw apiError('El diseño no pertenece a la categoría seleccionada.', 409);
+  }
+  if (seleccion.idProveedor != null && Number(referencias[0].id_proveedor) !== Number(seleccion.idProveedor)) {
+    throw apiError('El diseño no pertenece al proveedor seleccionado.', 409);
+  }
 
   const [categorias] = await connection.query(
     `SELECT id_categoria, estado
@@ -58,15 +124,16 @@ async function bloquearDiseno(connection, idDiseno, validarActivo = true) {
   if (!categorias.length) throw apiError('La categoría del diseño no existe.', 404);
 
   const [disenios] = await connection.query(
-    `SELECT id_diseno, id_categoria, estado
+    `SELECT id_diseno, id_categoria, id_proveedor, estado
      FROM disenios
      WHERE id_diseno = ?
      FOR UPDATE`,
     [idDiseno],
   );
   if (!disenios.length) throw apiError('El diseño seleccionado no existe.', 404);
-  if (disenios[0].id_categoria !== categorias[0].id_categoria) {
-    throw apiError('La categoría del diseño cambió durante la operación. Intenta nuevamente.', 409);
+  if (Number(disenios[0].id_categoria) !== Number(categorias[0].id_categoria) ||
+      Number(disenios[0].id_proveedor) !== Number(referencias[0].id_proveedor)) {
+    throw apiError('Las relaciones del diseño cambiaron durante la operación. Intenta nuevamente.', 409);
   }
   if (validarActivo && categorias[0].estado !== 1) {
     throw apiError('No se puede asignar el modelo porque la categoría del diseño está inactiva.', 409);
@@ -75,7 +142,19 @@ async function bloquearDiseno(connection, idDiseno, validarActivo = true) {
     throw apiError('No se puede asignar el modelo a un diseño inactivo.', 409);
   }
 
-  return { categoria: categorias[0], disenio: disenios[0] };
+  const [proveedores] = await connection.query(
+    `SELECT id_proveedor, estado
+     FROM proveedores
+     WHERE id_proveedor = ?
+     FOR UPDATE`,
+    [disenios[0].id_proveedor],
+  );
+  if (!proveedores.length) throw apiError('El proveedor del diseño no existe.', 404);
+  if (validarActivo && proveedores[0].estado !== 'Activo') {
+    throw apiError('No se puede asignar el modelo a un diseño cuyo proveedor está inactivo.', 409);
+  }
+
+  return { categoria: categorias[0], disenio: disenios[0], proveedor: proveedores[0] };
 }
 
 export const modeloService = {
@@ -96,32 +175,52 @@ export const modeloService = {
     }
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
     const [rows] = await pool.query(
-      `SELECT m.id_modelo, m.nombre_modelo, m.descripcion, m.nivel_educativo, m.precio, m.estado,
-              m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
-              d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria
-       FROM modelos AS m
-       INNER JOIN disenios AS d ON d.id_diseno = m.id_diseno
-       INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
+      `${MODEL_CATALOG_SELECT}${MODEL_CATALOG_JOINS}
        ${where}
        ORDER BY m.id_modelo DESC`,
       parametros,
     );
-    return rows;
+    return rows.map(withModelImageUrl);
+  },
+
+  async obtenerCatalogoIntegracion(filters) {
+    const countQuery = buildIntegrationCatalogQuery(filters, { count: true });
+    const listQuery = buildIntegrationCatalogQuery(filters);
+    const [[countRows], [rows]] = await Promise.all([
+      pool.query(countQuery.sql, countQuery.params),
+      pool.query(listQuery.sql, listQuery.params),
+    ]);
+    const total = Number(countRows[0]?.total ?? 0);
+    return {
+      data: rows.map(projectIntegrationCatalogModel),
+      pagination: {
+        pagina: filters.pagina,
+        limite: filters.limite,
+        total,
+        total_paginas: total === 0 ? 0 : Math.ceil(total / filters.limite),
+      },
+    };
+  },
+
+  async obtenerCatalogoIntegracionPorId(id) {
+    const { sql, params } = buildIntegrationCatalogQuery({ idModelo: id, pagina: 1, limite: 1 });
+    const [rows] = await pool.query(sql, params);
+    return rows.length ? projectIntegrationCatalogModel(rows[0]) : null;
   },
 
   async obtenerPorId(id) {
     return buscarPorId(id);
   },
 
-  async crear({ idDiseno, nombre, nivelEducativo, precio, descripcion = null }) {
+  async crear({ idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, precio, descripcion = null, imagenPath = null }) {
     return enTransaccion(async (connection) => {
-      await bloquearDiseno(connection, idDiseno);
+      await bloquearDiseno(connection, idDiseno, true, { idCategoria, idProveedor });
       const [result] = await connection.query(
-        `INSERT INTO modelos (id_diseno, nombre_modelo, nivel_educativo, precio, descripcion)
-         VALUES (?, ?, ?, ?, ?)`,
-        [idDiseno, nombre, nivelEducativo, precio, descripcion],
+        `INSERT INTO modelos (id_diseno, nombre_modelo, nivel_educativo, precio, descripcion, imagen_path)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [idDiseno, nombre, nivelEducativo, precio, descripcion, imagenPath],
       );
-      return {
+      return withModelImageUrl({
         id_modelo: result.insertId,
         id_diseno: idDiseno,
         nombre_modelo: nombre,
@@ -129,25 +228,34 @@ export const modeloService = {
         precio,
         descripcion,
         estado: 1,
-      };
+        imagen_path: imagenPath,
+      });
     });
   },
 
-  async actualizar(id, { idDiseno, nombre, nivelEducativo, precio, descripcion = null }) {
+  async actualizar(id, { idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, precio, descripcion = null, imagenPath = undefined }) {
     return enTransaccion(async (connection) => {
       const modeloActual = await buscarPorId(id, connection);
       // Preserve an existing inactive relation when editing unrelated model fields;
       // assigning a different design still requires an active design and category.
       const conservaRelacionHistorica = String(modeloActual.id_diseno) === String(idDiseno);
-      await bloquearDiseno(connection, idDiseno, !conservaRelacionHistorica);
-      const [result] = await connection.query(
-        `UPDATE modelos
-         SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, descripcion = ?
-         WHERE id_modelo = ?`,
-        [idDiseno, nombre, nivelEducativo, precio, descripcion, id],
-      );
+      await bloquearDiseno(connection, idDiseno, !conservaRelacionHistorica, { idCategoria, idProveedor });
+      const [result] = imagenPath === undefined
+        ? await connection.query(
+          `UPDATE modelos
+           SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, descripcion = ?
+           WHERE id_modelo = ?`,
+          [idDiseno, nombre, nivelEducativo, precio, descripcion, id],
+        )
+        : await connection.query(
+          `UPDATE modelos
+           SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, descripcion = ?, imagen_path = ?
+           WHERE id_modelo = ?`,
+          [idDiseno, nombre, nivelEducativo, precio, descripcion, imagenPath, id],
+        );
       if (result.affectedRows === 0) await buscarPorId(id, connection);
-      return buscarPorId(id, connection);
+      const modelo = await buscarPorId(id, connection);
+      return { modelo, previousImagePath: imagenPath === undefined ? null : modeloActual.imagen_path };
     });
   },
 
@@ -174,5 +282,15 @@ export const modeloService = {
       }
       return { ...modelo, estado };
     });
+  },
+
+  async eliminarImagenSiNoReferenciada(imagenPath) {
+    if (typeof imagenPath !== 'string' || !imagenPath) return false;
+    const [referencias] = await pool.query(
+      'SELECT id_modelo FROM modelos WHERE imagen_path = ? LIMIT 1',
+      [imagenPath],
+    );
+    if (referencias.length) return false;
+    return modelImageStorage.remove(imagenPath);
   },
 };

@@ -551,11 +551,18 @@ body:has(.orden-confirmacion.open) { overflow: hidden; }
 .inventory-design-table td:nth-child(4) { text-align: center; }
 .inventory-design-table td:nth-child(3) { min-width: 180px; max-width: 320px; white-space: normal; }
 .inventory-design-count { font-weight: 600; }
-.inventory-model-table { min-width: 640px; }
+.inventory-model-table { min-width: 720px; }
 .inventory-model-table th:first-child,
-.inventory-model-table td:first-child { min-width: 220px; }
+.inventory-model-table td:first-child { min-width: 90px; width: 90px; }
 .inventory-model-table th:nth-child(2),
-.inventory-model-table td:nth-child(2) { min-width: 170px; }
+.inventory-model-table td:nth-child(2) { min-width: 220px; }
+.inventory-model-thumbnail { display: block; width: 64px; height: 54px; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface-2); }
+.inventory-model-image-missing { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 8px; color: var(--text-muted); background: var(--surface-2); border-radius: var(--radius-sm); font-size: 12px; }
+.inventory-model-preview { display: block; max-width: 220px; max-height: 160px; margin: 10px 0; object-fit: contain; border-radius: var(--radius-sm); }
+.inventory-model-image-cancel { margin: 8px 0; }
+.inventory-model-detail-content { display: grid; gap: 16px; }
+.inventory-model-detail-image { display: flex; justify-content: center; min-height: 80px; align-items: center; }
+.inventory-model-detail-image img { max-width: min(100%, 420px); max-height: 280px; object-fit: contain; border-radius: var(--radius-sm); }
 .inventory-model-actions { white-space: nowrap; }
 .inventory-model-actions .btn-action { margin-right: 3px; }
 .inventory-model-actions .btn-action:disabled { color: var(--text-muted); opacity: .55; cursor: not-allowed; }

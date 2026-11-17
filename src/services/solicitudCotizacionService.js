@@ -1,4 +1,5 @@
 import { catalogoModelosSql } from './catalogoCompraService.js';
+import { withModelImageUrl } from './modelImageService.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { pool } from '../config/db.js';
 import { contratoService } from './contratoService.js';
@@ -38,16 +39,16 @@ async function construir(conn, ids, proveedor, bloquear = false, validarProveedo
     FROM orden_detalles od LEFT JOIN orden_distribuciones d ON d.id_orden_detalle=od.id_orden_detalle
     WHERE od.id_orden IN (?) GROUP BY od.id_orden,od.id_orden_detalle,od.cantidad_pedida`,[ids]);
   if (new Set(lineas.map(l=>l.id_orden)).size !== ids.length || lineas.some(l=>!entero(l.cantidad_pedida)||l.cantidad_pedida!==Number(l.asignada))) throw fail('Revisa las cantidades y distribuciones de las órdenes seleccionadas.',409);
-  const [productos] = await conn.query(`SELECT p.id_modelo,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(od.cantidad_pedida) AS cantidad
+  const [productos] = await conn.query(`SELECT p.id_modelo,p.imagen_path,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(od.cantidad_pedida) AS cantidad
     FROM orden_detalles od JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo WHERE od.id_orden IN (?)
-    GROUP BY p.id_modelo,p.nombre,p.tipo,p.categoria,p.nivel_educativo ORDER BY p.id_modelo`,[ids]);
+    GROUP BY p.id_modelo,p.imagen_path,p.nombre,p.tipo,p.categoria,p.nivel_educativo ORDER BY p.id_modelo`,[ids]);
   const [distribuciones] = await conn.query(`SELECT cr.id_contrato,cr.id_contrato_api,cr.cliente_colegio AS colegio,
-    p.id_modelo,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(d.cantidad_asignada) AS cantidad
+    p.id_modelo,p.imagen_path,p.nombre AS modelo,p.tipo,p.categoria,p.nivel_educativo AS nivel,SUM(d.cantidad_asignada) AS cantidad
     FROM orden_distribuciones d JOIN orden_detalles od ON od.id_orden_detalle=d.id_orden_detalle
     JOIN ${catalogoModelosSql} p ON p.id_modelo=od.id_modelo
     JOIN contrato_detalles cd ON cd.id_detalle_contrato=d.id_detalle_contrato
     JOIN contratos_referencia cr ON cr.id_contrato=cd.id_contrato
-    WHERE od.id_orden IN (?) GROUP BY cr.id_contrato,cr.id_contrato_api,cr.cliente_colegio,p.id_modelo,p.nombre,p.tipo,p.categoria,p.nivel_educativo
+    WHERE od.id_orden IN (?) GROUP BY cr.id_contrato,cr.id_contrato_api,cr.cliente_colegio,p.id_modelo,p.imagen_path,p.nombre,p.tipo,p.categoria,p.nivel_educativo
     ORDER BY cr.id_contrato,p.id_modelo`,[ids]);
   const cantidades = productos.map(p=>({...p,cantidad:Number(p.cantidad)}));
   // Los registros antiguos pueden contener el cliente en cliente_colegio.
@@ -80,7 +81,10 @@ export const solicitudCotizacionService = {
       if (!ordenes.length) throw fail('No hay pedidos pendientes disponibles para esta consulta.',404);
       const data=await construir(conn,ordenes.map(o=>o.id_orden),ordenes[0].id_proveedor,false,false);
       await conn.commit();
-      return data;
+      return { ...data,
+        productos: data.productos.map(withModelImageUrl),
+        distribuciones: data.distribuciones.map(withModelImageUrl),
+      };
     } catch(error){await conn.rollback();throw error;}finally{conn.release();}
   },
   async pendientes(q='',pagina=1) {
@@ -109,7 +113,12 @@ export const solicitudCotizacionService = {
     ids=seleccion(ids,proveedor);
     const conn=await pool.getConnection();
     try {await conn.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');await conn.query('START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY');
-      const data=await construir(conn,ids,proveedor);await conn.commit();return {...data,huella:hash(data)};
+      const data=await construir(conn,ids,proveedor);await conn.commit();return {
+        ...data,
+        productos: data.productos.map(withModelImageUrl),
+        distribuciones: data.distribuciones.map(withModelImageUrl),
+        huella: hash(data),
+      };
     } catch(error){await conn.rollback();throw error;}finally{conn.release();}
   },
   async confirmar({ordenes:entrada,id_proveedor,clave_operacion,huella}={}) {
