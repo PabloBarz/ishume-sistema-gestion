@@ -15,39 +15,12 @@ const MODEL_CATALOG_JOINS = `
      INNER JOIN categorias AS c ON c.id_categoria = d.id_categoria
      INNER JOIN proveedores AS p ON p.id_proveedor = d.id_proveedor`;
 
-export function buildIntegrationCatalogQuery(filters = {}, { count = false } = {}) {
+export function buildIntegrationCatalogQuery() {
   const clauses = ['m.estado = 1', 'd.estado = 1', 'c.estado = 1', "p.estado = 'Activo'"];
-  const params = [];
-
-  if (filters.idModelo != null) {
-    clauses.push('m.id_modelo = ?');
-    params.push(filters.idModelo);
-  }
-  if (filters.buscar) {
-    clauses.push('(m.nombre_modelo LIKE ? OR CAST(m.id_modelo AS CHAR) LIKE ?)');
-    params.push(`%${filters.buscar}%`, `%${filters.buscar}%`);
-  }
-  if (filters.idCategoria != null) {
-    clauses.push('d.id_categoria = ?');
-    params.push(filters.idCategoria);
-  }
-  if (filters.idProveedor != null) {
-    clauses.push('d.id_proveedor = ?');
-    params.push(filters.idProveedor);
-  }
-  if (filters.nivelEducativo) {
-    clauses.push('m.nivel_educativo = ?');
-    params.push(filters.nivelEducativo);
-  }
-
   const fromWhere = `${MODEL_CATALOG_JOINS}\n     WHERE ${clauses.join(' AND ')}`;
-  if (count) return { sql: `SELECT COUNT(*) AS total${fromWhere}`, params };
-
-  const limit = filters.limite ?? 50;
-  const offset = ((filters.pagina ?? 1) - 1) * limit;
   return {
-    sql: `${MODEL_CATALOG_SELECT}${fromWhere}\n     ORDER BY m.id_modelo DESC\n     LIMIT ? OFFSET ?`,
-    params: [...params, limit, offset],
+    sql: `${MODEL_CATALOG_SELECT}${fromWhere}\n     ORDER BY m.id_modelo DESC`,
+    params: [],
   };
 }
 
@@ -183,29 +156,10 @@ export const modeloService = {
     return rows.map(withModelImageUrl);
   },
 
-  async obtenerCatalogoIntegracion(filters) {
-    const countQuery = buildIntegrationCatalogQuery(filters, { count: true });
-    const listQuery = buildIntegrationCatalogQuery(filters);
-    const [[countRows], [rows]] = await Promise.all([
-      pool.query(countQuery.sql, countQuery.params),
-      pool.query(listQuery.sql, listQuery.params),
-    ]);
-    const total = Number(countRows[0]?.total ?? 0);
-    return {
-      data: rows.map(projectIntegrationCatalogModel),
-      pagination: {
-        pagina: filters.pagina,
-        limite: filters.limite,
-        total,
-        total_paginas: total === 0 ? 0 : Math.ceil(total / filters.limite),
-      },
-    };
-  },
-
-  async obtenerCatalogoIntegracionPorId(id) {
-    const { sql, params } = buildIntegrationCatalogQuery({ idModelo: id, pagina: 1, limite: 1 });
+  async obtenerCatalogoIntegracion() {
+    const { sql, params } = buildIntegrationCatalogQuery();
     const [rows] = await pool.query(sql, params);
-    return rows.length ? projectIntegrationCatalogModel(rows[0]) : null;
+    return rows.map(projectIntegrationCatalogModel);
   },
 
   async obtenerPorId(id) {

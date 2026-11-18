@@ -1,11 +1,14 @@
 import { Router } from 'express';
+import cors from 'cors';
 import { catalogoIntegracionController } from '../controllers/catalogoIntegracionController.js';
-import { requireIntegrationApiKey } from '../middleware/integrationApiKey.js';
 
 const router = Router();
 
-router.use(requireIntegrationApiKey);
-router.get('/modelos', catalogoIntegracionController.listar);
-router.get('/modelos/:id', catalogoIntegracionController.obtener);
+export function createIntegrationCors(origin = process.env.PHP_SYSTEM_ORIGIN) {
+  return cors({ origin: origin ? [origin] : false, methods: ['GET'] });
+}
+
+router.use(createIntegrationCors());
+router.get('/', catalogoIntegracionController.listar);
 
 export default router;

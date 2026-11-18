@@ -31,7 +31,7 @@ app.use('/api/proveedores', proveedorRouter);
 app.use('/api/compras-masivas', compraMasivaRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/colegios-compras', colegioComprasRouter);
-app.use('/api/integracion/v1/catalogo', catalogoIntegracionRouter);
+app.use('/api/integracion/catalogo', catalogoIntegracionRouter);
 
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada.' });
