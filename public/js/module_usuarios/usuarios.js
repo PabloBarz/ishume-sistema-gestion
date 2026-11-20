@@ -1,6 +1,7 @@
 import { appState } from '../appState.js';
 import { clearAuthContext } from '../auth.js';
 import { clearErrors, closeOverlay, formatDate, http, openOverlay, setError, showToast } from '../utils.js';
+import { createInventoryModal } from '../components/inventoryModal.js';
 
 const MODULE_NAMES = {
   dashboard: 'Panel', inventario: 'Inventario', categorias: 'Categorías', disenios: 'Diseños',
@@ -20,6 +21,7 @@ export async function init() {
   const root = document.getElementById('usersAdmin');
   if (!root || appState.auth.user?.rol !== 'administrador') return;
 
+  const deactivationModal = createInventoryModal(root);
   const editor = document.getElementById('userEditorModal');
   const passwordModal = document.getElementById('userPasswordModal');
   const editorForm = document.getElementById('userEditorForm');
@@ -409,19 +411,55 @@ export async function init() {
     }
   }
 
-  async function changeStatus(user) {
-    const nextStatus = user.estado === 1 ? 0 : 1;
-    const prompt = nextStatus === 0
-      ? `¿Desactivar la cuenta de ${user.nombres} ${user.apellidos}? Sus sesiones se revocarán.`
-      : `¿Activar la cuenta de ${user.nombres} ${user.apellidos}?`;
-    if (!window.confirm(prompt)) return;
+  async function persistStatus(user, nextStatus, button = null, errorMessage = null) {
+    if (button) button.disabled = true;
     try {
       await http(`/api/usuarios/${user.id_usuario}/estado`, 'PATCH', { estado: nextStatus });
+      if (nextStatus === 0) deactivationModal.close();
       showToast(nextStatus === 1 ? 'Cuenta activada.' : 'Cuenta desactivada y sesiones revocadas.', 'success');
       await loadUsers();
     } catch (error) {
+      if (errorMessage) {
+        errorMessage.textContent = error.message || (nextStatus === 1 ? 'No se pudo activar la cuenta.' : 'No se pudo desactivar la cuenta.');
+        errorMessage.hidden = false;
+      }
       showToast(error.message || 'No se pudo cambiar el estado de la cuenta.', 'error');
+    } finally {
+      if (button?.isConnected) button.disabled = false;
     }
+  }
+
+  function confirmUserDeactivation(user) {
+    const content = document.createElement('div');
+    const message = document.createElement('p');
+    message.className = 'category-confirm-message';
+    message.append(document.createTextNode('Se desactivará la cuenta de '));
+    const name = document.createElement('strong');
+    name.textContent = `${user.nombres} ${user.apellidos}`;
+    message.append(name, document.createTextNode(' y se revocarán sus sesiones activas.'));
+    const errorMessage = document.createElement('p');
+    errorMessage.className = 'field-error';
+    errorMessage.setAttribute('role', 'alert');
+    errorMessage.hidden = true;
+    content.append(message, errorMessage);
+
+    const deactivate = deactivationModal.createButton('Desactivar', 'btn-danger-action', () => {
+      void persistStatus(user, 0, deactivate, errorMessage);
+    });
+    deactivate.dataset.requiresPermission = 'usuarios.desactivar';
+    deactivationModal.open('Confirmar desactivación', 'La cuenta quedará inactiva y sus sesiones serán revocadas.', content, [
+      deactivationModal.createButton('Cancelar', 'btn-cancel', () => deactivationModal.close()),
+      deactivate,
+    ]);
+  }
+
+  async function changeStatus(user) {
+    const nextStatus = user.estado === 1 ? 0 : 1;
+    if (nextStatus === 0) {
+      confirmUserDeactivation(user);
+      return;
+    }
+    await persistStatus(user, nextStatus);
   }
 
   function openPasswordEditor(user) {
