@@ -65,11 +65,12 @@ CREATE TABLE modelos (
   id_modelo INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_diseno INT UNSIGNED NOT NULL,
   imagen_path VARCHAR(500) NULL,
-  nombre_modelo VARCHAR(30) NOT NULL,
-  descripcion VARCHAR(255) NULL,
+  nombre_modelo VARCHAR(60) NOT NULL,
+  presentacion VARCHAR(255) NULL,
   nivel_educativo VARCHAR(30) NULL,
-  precio DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  precio DECIMAL(10,2) NULL DEFAULT NULL,
   CONSTRAINT chk_modelos_precio CHECK (precio >= 0),
+  CONSTRAINT chk_modelos_nivel_educativo CHECK (nivel_educativo IS NULL OR nivel_educativo IN ('PRONOEI - Inicial', 'Primaria - Superior')),
   estado TINYINT(1) NOT NULL DEFAULT 1,
   CONSTRAINT fk_modelos_diseno FOREIGN KEY (id_diseno)
     REFERENCES disenios(id_diseno) ON UPDATE CASCADE ON DELETE RESTRICT

@@ -1,6 +1,6 @@
 # Catalogo de modelos para compras bajo pedido
 
-La estructura es Categoria -> Diseno -> Modelo. Cada modelo contiene nombre, descripcion opcional (hasta 255 caracteres), nivel educativo, diseno, estado y precio referencial en soles. El precio admite de 0 a 99999999.99 y hasta dos decimales; es obligatorio al crear o editar. El valor inicial SQL 0.00 permite cargar modelos pendientes de valorizacion.
+La estructura es Categoría -> Diseño -> Modelo. Cada modelo contiene nombre (hasta 60 caracteres), presentación opcional (hasta 255 caracteres), nivel educativo, diseño, estado y precio referencial en soles. La presentación permite distinguir orientación, formato y variantes del mismo nombre. El precio admite de 0 a 99999999.99 y hasta dos decimales; puede quedar pendiente (`NULL`) hasta contar con un precio confirmado. Los únicos niveles oficiales son `PRONOEI - Inicial` y `Primaria - Superior`.
 
 Se retiro InventarioProducto: no hay CRUD de productos locales, SKU, stock, disponibilidad, alertas de existencias ni Kardex. El precio se muestra y edita desde Modelos. La ruta existente #/inventario se conserva para los enlaces guardados, con el nombre visible Catalogo.
 
@@ -14,9 +14,9 @@ Recepciones, clasificacion por colegio, preparacion y despachos siguen siendo ca
 
 ## Desarrollo
 
-El unico esquema es database/ishume_bd_unificada.sql. Los cambios se hacen directamente en CREATE TABLE; no se generan migraciones ni ALTER para actualizar bases existentes.
+El esquema de instalaciones nuevas es database/ishume_bd_unificada.sql. Los cambios compatibles con bases existentes se documentan en database/migrations/ y tienen su script de reversión correspondiente.
 
-Para reiniciar, recrear la base y ejecutar el esquema completo. Despues ejecutar src/database/ishume_inserts_catalogo.sql, que conserva categorias, disenos y 73 modelos con precios demostrativos. Ambos archivos usan bd_ishume; configurar DB_NAME con ese nombre.
+Para una instalacion nueva, ejecutar el esquema, luego database/ishume_insert_proveedores.sql y database/ishume_inserts_catalogo.sql (catalogo demostrativo de 73 modelos). Despues aplicar database/migrations/20261118_catalogo_giratorios_up.sql para incluir los cinco modelos oficiales y copiar las cinco imagenes de storage/uploads/modelos/. Configurar DB_NAME=bd_ishume.
 
 El reinicio elimina los registros anteriores. Las compras, ordenes y pagos se crean desde la aplicacion. No se ejecuta ningun reinicio automaticamente desde el proyecto.
 
@@ -24,6 +24,6 @@ El reinicio elimina los registros anteriores. Las compras, ordenes y pagos se cr
 
 Las imagenes principales se administran desde el CRUD de Modelos y se almacenan como archivos en `storage/uploads/modelos/`, fuera de `public/`; la base solo conserva `modelos.imagen_path` (ruta relativa `/uploads/modelos/<archivo>`). El endpoint HTTP publico es `/uploads/modelos/` y el catalogo devuelve `imagen_path` e `imagen_url`; si el modelo no tiene foto, ambos valores son `null`. El usuario puede agregar o reemplazar la imagen desde la edicion del mismo modelo, sin crear otro registro. Desactivar un modelo no elimina su imagen.
 
-Configura `PUBLIC_BASE_URL` con el origen HTTP de esta instancia de Express, por ejemplo `http://localhost:3000` en el mismo equipo. Para que otras computadoras de la red accedan, reemplaza `localhost` por la IP LAN del servidor ISHUME (por ejemplo `http://192.168.1.20:3000`) o por el dominio publicado; no se modifican las rutas relativas guardadas en MySQL. El puerto debe coincidir con `PORT`, y la red/firewall debe permitir HTTP al servidor Express.
+Configura `PUBLIC_BASE_URL` con la IP LAN o el dominio accesible de esta instancia de Express, por ejemplo `http://192.168.1.20:3000`. No uses `localhost` cuando PHP o los usuarios est?n en otra computadora. No se modifican las rutas relativas guardadas en MySQL. El puerto debe coincidir con `PORT`, y el firewall debe permitir HTTP al servidor Express.
 
 El directorio `storage/uploads/modelos/` debe persistir entre reinicios y actualizaciones/deploys; excluye el contenido de uploads de Git y respalda este almacenamiento junto con la base de datos. No lo borres durante una actualización de la aplicación.

@@ -560,6 +560,9 @@ body:has(.orden-confirmacion.open) { overflow: hidden; }
 .inventory-model-image-missing { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 8px; color: var(--text-muted); background: var(--surface-2); border-radius: var(--radius-sm); font-size: 12px; }
 .inventory-model-preview { display: block; max-width: 220px; max-height: 160px; margin: 10px 0; object-fit: contain; border-radius: var(--radius-sm); }
 .inventory-model-image-cancel { margin: 8px 0; }
+.inventory-model-create-design { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.inventory-model-create-design[hidden] { display: none; }
+.inventory-model-create-design-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .inventory-model-detail-content { display: grid; gap: 16px; }
 .inventory-model-detail-image { display: flex; justify-content: center; min-height: 80px; align-items: center; }
 .inventory-model-detail-image img { max-width: min(100%, 420px); max-height: 280px; object-fit: contain; border-radius: var(--radius-sm); }

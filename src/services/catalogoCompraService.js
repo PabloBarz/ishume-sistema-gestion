@@ -14,7 +14,7 @@ export async function completarModelos(lineas, connection = pool) {
     throw Object.assign(new Error('El contrato contiene IDs de modelo invalidos o repetidos.'), { status: 502 });
   }
   const [modelos] = await connection.query(`SELECT m.id_modelo, m.id_diseno, m.imagen_path, m.nombre_modelo AS modelo,
-    m.descripcion, m.precio, m.estado, d.nombre_diseno AS tipo, d.estado AS estado_diseno,
+    m.presentacion, m.presentacion AS descripcion, m.precio, m.estado, d.nombre_diseno AS tipo, d.estado AS estado_diseno,
     c.nombre_categoria AS categoria, c.estado AS estado_categoria, m.nivel_educativo AS nivel
     FROM modelos m JOIN disenios d ON d.id_diseno=m.id_diseno
     JOIN categorias c ON c.id_categoria=d.id_categoria WHERE m.id_modelo IN (?)`, [ids]);

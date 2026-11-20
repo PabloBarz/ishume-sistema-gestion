@@ -32,6 +32,31 @@
 
 .modal-panel.modal-sm { max-width: 400px; }
 
+/* El formulario de catálogo puede superar la altura disponible en laptops. */
+#inventoryModal .modal-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+}
+#inventoryModal .modal-header-custom,
+#inventoryModal .modal-footer-custom { flex: 0 0 auto; }
+#inventoryModal .modal-body-custom {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body:has(#inventoryModal.open) { overflow: hidden; }
+
+@media (max-height: 700px) {
+  #inventoryModal.modal-overlay { padding: 10px; }
+  #inventoryModal .modal-panel { max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); }
+  #inventoryModal .modal-header-custom { padding-block: 14px 10px; }
+  #inventoryModal .modal-body-custom { padding: 14px 18px; }
+  #inventoryModal .modal-footer-custom { padding: 10px 18px; }
+}
+
 
 @keyframes modalIn {
   from { opacity: 0; transform: scale(.92) translateY(16px); }

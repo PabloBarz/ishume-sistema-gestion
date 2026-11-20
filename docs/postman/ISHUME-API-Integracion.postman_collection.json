@@ -27,7 +27,7 @@
           "status": "OK",
           "code": 200,
           "header": [{ "key": "Content-Type", "value": "application/json; charset=utf-8" }],
-          "body": "{\n  \"success\": true,\n  \"data\": [{\n    \"id_modelo\": 167,\n    \"nombre_modelo\": \"MARAVILLAS ACADÉMICO\",\n    \"descripcion\": null,\n    \"precio\": 67,\n    \"nivel_educativo\": \"SUPERIOR\",\n    \"estado\": \"Activo\",\n    \"imagen_url\": \"http://localhost:3000/uploads/modelos/imagen.png\",\n    \"id_diseno\": 5,\n    \"nombre_diseno\": \"PIEZAS 3D Y FONDO BRILLANTES\",\n    \"id_categoria\": 1,\n    \"nombre_categoria\": \"CUADROS\",\n    \"id_proveedor\": 2,\n    \"nombre_proveedor\": \"JOSELITO\"\n  }]\n}"
+          "body": "{\n  \"success\": true,\n  \"data\": [{\n    \"id_modelo\": 167,\n    \"nombre_modelo\": \"MARAVILLAS ACADÉMICO\",\n    \"presentacion\": \"Piezas 3D y fondo brillantes\",\n    \"descripcion\": \"Piezas 3D y fondo brillantes\",\n    \"precio\": 67,\n    \"nivel_educativo\": \"Primaria - Superior\",\n    \"estado\": \"Activo\",\n    \"imagen_url\": \"http://192.168.1.20:3000/uploads/modelos/imagen.png\",\n    \"id_diseno\": 5,\n    \"nombre_diseno\": \"PIEZAS 3D Y FONDO BRILLANTES\",\n    \"id_categoria\": 1,\n    \"nombre_categoria\": \"CUADROS\",\n    \"id_proveedor\": 2,\n    \"nombre_proveedor\": \"JOSELITO\"\n  }]\n}"
         }
       ]
     }

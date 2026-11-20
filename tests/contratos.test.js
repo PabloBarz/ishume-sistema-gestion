@@ -30,11 +30,12 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     if (id === '502') { res.end('<html>Error PHP</html>'); return; }
     if (id === '503') { res.end('{}'); return; }
     res.end(JSON.stringify({
-      id_contrato: Number(id), cliente: 'Ana Pérez - Colegio San José, Lima',
-      fecha_entrega: null, productos: id === '2' ? [] : [
-        { id_modelo: 7, modelo: 'Modelo A', cantidad: 23 },
-        { id_modelo: 8, modelo: 'Modelo B', cantidad: 4 },
-      ],
+      id_contrato: Number(id), colegio: 'Colegio San José', cliente: 'Ana Pérez - Colegio San José, Lima',
+      fecha_entrega: null, promocion: 'Promoción', estado_trabajo: 'en_proceso',
+      productos: id === '2' ? [] : [
+        { id_modelo: 9007, id_modelo_compras: 7, proveedor_id: 1, modelo: 'Modelo A', cantidad: 23 },
+        { id_modelo: 9008, id_modelo_compras: 8, proveedor_id: 1, modelo: 'Modelo B', cantidad: 4 },
+      ], combos: [],
     }));
   });
   const app = express();
@@ -59,6 +60,9 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
       assert.equal(data.modelos_disponibles,true);
       assert.equal(data.cliente, 'Ana Pérez - Colegio San José, Lima');
       assert.deepEqual(data.productos.map(({ cantidad }) => cantidad), [23, 4]);
+      assert.deepEqual(data.productos.map(({ id_modelo }) => id_modelo), [7, 8], 'usa id_modelo_compras, no el ID PHP');
+      assert.deepEqual(data.productos.map(({ id_modelo_compras }) => id_modelo_compras), [7, 8]);
+      assert.deepEqual(data.productos.map(({ id_proveedor }) => id_proveedor), [1, 1], 'el proveedor proviene del catálogo local');
       assert.equal(data.productos[0].imagen_path, '/uploads/modelos/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg');
       assert.equal(data.productos[0].imagen_url, `${process.env.PUBLIC_BASE_URL}/uploads/modelos/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg`);
       assert.equal(data.productos[1].imagen_path, null);
@@ -67,13 +71,13 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     const empty = await (await fetch(`${base}?id=2`)).json();
     assert.deepEqual(empty.data.productos, []);
     assert.equal(empty.data.modelos_disponibles,false);
-    assert.equal(empty.data.aviso_modelos,'Sin modelos disponibles');
+    assert.equal(empty.data.aviso_modelos,'Este contrato aún no tiene modelos asignados');
     assert.equal(empty.data.fecha_entrega, null);
     for (const [id, expected] of [[404, 404], [500, 502], [502, 502], [503, 502]]) {
       assert.equal((await fetch(`${base}?id=${id}`)).status, expected);
     }
     const escolar = { id_contrato: 8, colegio: 'Santo Domingo Niño', cliente: 'Responsable',
-      fecha_entrega: null, promocion: 'Promoción', estado_trabajo: 'en_proceso', productos: [{id_modelo:7,modelo:'Cuadro real',cantidad:5}] };
+      fecha_entrega: null, promocion: 'Promoción', estado_trabajo: 'en_proceso', productos: [{id_modelo:9007,id_modelo_compras:7,proveedor_id:1,modelo:'Cuadro real',cantidad:5}] };
     listado = [escolar, {...escolar,id_contrato:25}, {...escolar}, {...escolar,id_contrato:30,colegio:null},
       {...escolar,id_contrato:31,estado_trabajo:'entregado'}, {...escolar,id_contrato:32,promocion:'Audiovisual'}];
     const colegios = await (await fetch(`${base}/colegios`)).json();
@@ -82,8 +86,8 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     assert.equal(colegios.data[0].cliente, escolar.cliente);
     assert.equal(colegios.data[0].modelos_disponibles,true);
     assert.equal(colegios.data[0].pedido_registrado,true);assert.equal(colegios.data[1].pedido_registrado,false,'Mismo colegio y distinto contrato disponible');
-    for(const productos of [[],null,[{id_modelo:1,modelo:'Modelo',cantidad:0}],[{id_modelo:0,modelo:'Modelo',cantidad:1}],
-      [{id_modelo:1,modelo:'A',cantidad:1},{id_modelo:1,modelo:'A',cantidad:1}]]){
+    for(const productos of [[],null,[{id_modelo_compras:1,proveedor_id:1,modelo:'Modelo',cantidad:0}],[{id_modelo_compras:0,proveedor_id:1,modelo:'Modelo',cantidad:1}],
+      [{id_modelo_compras:1,proveedor_id:1,modelo:'A',cantidad:1},{id_modelo_compras:1,proveedor_id:1,modelo:'A',cantidad:1}]]){
       listado=[{...escolar,productos}];
       const d=(await (await fetch(`${base}/colegios`)).json()).data;
       assert.equal(d.length,1,'No oculta el contrato incompleto');

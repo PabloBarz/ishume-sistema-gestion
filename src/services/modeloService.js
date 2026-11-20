@@ -5,7 +5,7 @@ function apiError(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
-const MODEL_CATALOG_SELECT = `SELECT m.id_modelo, m.nombre_modelo, m.descripcion, m.nivel_educativo, m.precio, m.estado, m.imagen_path,
+const MODEL_CATALOG_SELECT = `SELECT m.id_modelo, m.nombre_modelo, m.presentacion, m.nivel_educativo, m.precio, m.estado, m.imagen_path,
             m.id_diseno, d.nombre_diseno, d.estado AS estado_diseno,
             d.id_proveedor, p.razon_social AS nombre_proveedor, p.estado AS estado_proveedor,
             d.id_categoria, c.nombre_categoria, c.estado AS estado_categoria`;
@@ -29,7 +29,9 @@ export function projectIntegrationCatalogModel(model) {
   return {
     id_modelo: Number(model.id_modelo),
     nombre_modelo: model.nombre_modelo,
-    descripcion: model.descripcion,
+    presentacion: model.presentacion,
+    // Compatibilidad temporal con el consumidor PHP que aún espera `descripcion`.
+    descripcion: model.presentacion,
     precio: model.precio == null ? null : Number(model.precio),
     nivel_educativo: model.nivel_educativo,
     estado: Number(model.estado) === 1 ? 'Activo' : 'Inactivo',
@@ -41,6 +43,10 @@ export function projectIntegrationCatalogModel(model) {
     id_proveedor: Number(model.id_proveedor),
     nombre_proveedor: model.nombre_proveedor,
   };
+}
+
+function withLegacyPresentationAlias(model) {
+  return { ...model, descripcion: model.presentacion };
 }
 
 async function enTransaccion(callback) {
@@ -69,7 +75,7 @@ async function buscarPorId(id, connection = pool, bloquear = false) {
     [id],
   );
   if (!rows.length) throw apiError('Modelo no encontrado.', 404);
-  return withModelImageUrl(rows[0]);
+  return withModelImageUrl(withLegacyPresentationAlias(rows[0]));
 }
 
 async function bloquearDiseno(connection, idDiseno, validarActivo = true, seleccion = {}) {
@@ -153,7 +159,7 @@ export const modeloService = {
        ORDER BY m.id_modelo DESC`,
       parametros,
     );
-    return rows.map(withModelImageUrl);
+    return rows.map((row) => withModelImageUrl(withLegacyPresentationAlias(row)));
   },
 
   async obtenerCatalogoIntegracion() {
@@ -166,13 +172,13 @@ export const modeloService = {
     return buscarPorId(id);
   },
 
-  async crear({ idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, precio, descripcion = null, imagenPath = null }) {
+  async crear({ idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, presentacion = null, imagenPath = null }) {
     return enTransaccion(async (connection) => {
       await bloquearDiseno(connection, idDiseno, true, { idCategoria, idProveedor });
       const [result] = await connection.query(
-        `INSERT INTO modelos (id_diseno, nombre_modelo, nivel_educativo, precio, descripcion, imagen_path)
+        `INSERT INTO modelos (id_diseno, nombre_modelo, nivel_educativo, precio, presentacion, imagen_path)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [idDiseno, nombre, nivelEducativo, precio, descripcion, imagenPath],
+        [idDiseno, nombre, nivelEducativo, precio, presentacion, imagenPath],
       );
       return withModelImageUrl({
         id_modelo: result.insertId,
@@ -180,14 +186,15 @@ export const modeloService = {
         nombre_modelo: nombre,
         nivel_educativo: nivelEducativo,
         precio,
-        descripcion,
+        presentacion,
+        descripcion: presentacion,
         estado: 1,
         imagen_path: imagenPath,
       });
     });
   },
 
-  async actualizar(id, { idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, precio, descripcion = null, imagenPath = undefined }) {
+  async actualizar(id, { idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, precio, presentacion = null, imagenPath = undefined }) {
     return enTransaccion(async (connection) => {
       const modeloActual = await buscarPorId(id, connection);
       // Preserve an existing inactive relation when editing unrelated model fields;
@@ -197,15 +204,15 @@ export const modeloService = {
       const [result] = imagenPath === undefined
         ? await connection.query(
           `UPDATE modelos
-           SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, descripcion = ?
+           SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, presentacion = ?
            WHERE id_modelo = ?`,
-          [idDiseno, nombre, nivelEducativo, precio, descripcion, id],
+          [idDiseno, nombre, nivelEducativo, precio, presentacion, id],
         )
         : await connection.query(
           `UPDATE modelos
-           SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, descripcion = ?, imagen_path = ?
+           SET id_diseno = ?, nombre_modelo = ?, nivel_educativo = ?, precio = ?, presentacion = ?, imagen_path = ?
            WHERE id_modelo = ?`,
-          [idDiseno, nombre, nivelEducativo, precio, descripcion, imagenPath, id],
+          [idDiseno, nombre, nivelEducativo, precio, presentacion, imagenPath, id],
         );
       if (result.affectedRows === 0) await buscarPorId(id, connection);
       const modelo = await buscarPorId(id, connection);

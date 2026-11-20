@@ -1,7 +1,7 @@
 import { modeloService } from '../services/modeloService.js';
 import { persistModelImageChange } from '../services/modelImageService.js';
 
-const EDUCATION_LEVELS = ['INICIAL', 'SUPERIOR'];
+const EDUCATION_LEVELS = ['PRONOEI - Inicial', 'Primaria - Superior'];
 
 function idValido(value) {
   return typeof value === 'string' && /^\d+$/.test(value) &&
@@ -17,16 +17,24 @@ function enteroPositivo(value) {
 
 function nombreValido(value) {
   return typeof value === 'string' && value.trim().length > 0 &&
-    Array.from(value.trim()).length <= 30;
+    Array.from(value.trim()).length <= 60;
 }
 
 function nivelValido(value) {
   return typeof value === 'string' && EDUCATION_LEVELS.includes(value);
 }
 
-function precioValido(value) {
+function precioValido(value, { permitirAusente = false } = {}) {
+  if (value === undefined) return permitirAusente;
+  if (value === null || (typeof value === 'string' && value.trim() === '')) return true;
   return (typeof value === 'string' || typeof value === 'number') &&
     /^\d{1,8}(\.\d{1,2})?$/.test(String(value)) && Number.isFinite(Number(value));
+}
+
+function normalizarPrecio(value) {
+  return value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
+    ? null
+    : Number(value).toFixed(2);
 }
 
 function datosModeloValidos(body) {
@@ -88,7 +96,8 @@ export const modeloController = {
     if (!datosModeloValidos(req.body)) {
       return res.status(400).json({ success: false, message: 'El cuerpo de la solicitud debe ser un objeto JSON.' });
     }
-    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio, descripcion } = req.body;
+    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio } = req.body;
+    const presentacion = req.body.presentacion ?? req.body.descripcion;
     const { id_categoria: idCategoria, id_proveedor: idProveedor } = req.body;
     if ((idCategoria === undefined) !== (idProveedor === undefined)) {
       return res.status(400).json({ success: false, message: 'La categoría y el proveedor deben enviarse juntos.' });
@@ -106,16 +115,16 @@ export const modeloController = {
       return res.status(400).json({ success: false, message: 'El nombre del modelo es obligatorio.' });
     }
     if (!nombreValido(nombre)) {
-      return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 30 caracteres.' });
+      return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 60 caracteres.' });
     }
-    if (descripcion != null && (typeof descripcion !== 'string' || Array.from(descripcion).length > 255)) {
-      return res.status(400).json({ success: false, message: 'La descripcion debe ser texto de hasta 255 caracteres.' });
+    if (presentacion != null && (typeof presentacion !== 'string' || Array.from(presentacion).length > 255)) {
+      return res.status(400).json({ success: false, message: 'La presentación debe ser texto de hasta 255 caracteres.' });
     }
-    if (!precioValido(precio)) {
-      return res.status(400).json({ success: false, message: 'El precio es obligatorio: ingresa un valor entre 0 y 99999999.99 con hasta dos decimales.' });
+    if (!precioValido(precio, { permitirAusente: true })) {
+      return res.status(400).json({ success: false, message: 'El precio debe estar vacío o ser un valor entre 0 y 99999999.99 con hasta dos decimales.' });
     }
     if (!nivelValido(nivelEducativo)) {
-      return res.status(400).json({ success: false, message: 'El nivel educativo es obligatorio y debe ser INICIAL o SUPERIOR.' });
+      return res.status(400).json({ success: false, message: 'Selecciona un nivel educativo válido.' });
     }
 
     try {
@@ -128,8 +137,8 @@ export const modeloController = {
           idProveedor: idProveedor === undefined ? null : Number(idProveedor),
           nombre: nombre.trim(),
           nivelEducativo,
-          precio: Number(precio).toFixed(2),
-          descripcion: descripcion?.trim() || null,
+          precio: normalizarPrecio(precio),
+          presentacion: presentacion?.trim() || null,
           imagenPath,
         }),
       });
@@ -147,7 +156,8 @@ export const modeloController = {
     if (!datosModeloValidos(req.body)) {
       return res.status(400).json({ success: false, message: 'El cuerpo de la solicitud debe ser un objeto JSON.' });
     }
-    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio, descripcion } = req.body;
+    const { id_diseno: idDiseno, nombre_modelo: nombre, nivel_educativo: nivelEducativo, precio } = req.body;
+    const presentacion = req.body.presentacion ?? req.body.descripcion;
     const { id_categoria: idCategoria, id_proveedor: idProveedor } = req.body;
     if ((idCategoria === undefined) !== (idProveedor === undefined)) {
       return res.status(400).json({ success: false, message: 'La categoría y el proveedor deben enviarse juntos.' });
@@ -165,16 +175,16 @@ export const modeloController = {
       return res.status(400).json({ success: false, message: 'El nombre del modelo es obligatorio.' });
     }
     if (!nombreValido(nombre)) {
-      return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 30 caracteres.' });
+      return res.status(400).json({ success: false, message: 'El nombre del modelo no debe superar los 60 caracteres.' });
     }
-    if (descripcion != null && (typeof descripcion !== 'string' || Array.from(descripcion).length > 255)) {
-      return res.status(400).json({ success: false, message: 'La descripcion debe ser texto de hasta 255 caracteres.' });
+    if (presentacion != null && (typeof presentacion !== 'string' || Array.from(presentacion).length > 255)) {
+      return res.status(400).json({ success: false, message: 'La presentación debe ser texto de hasta 255 caracteres.' });
     }
     if (!precioValido(precio)) {
-      return res.status(400).json({ success: false, message: 'El precio es obligatorio: ingresa un valor entre 0 y 99999999.99 con hasta dos decimales.' });
+      return res.status(400).json({ success: false, message: 'El precio debe estar vacío o ser un valor entre 0 y 99999999.99 con hasta dos decimales.' });
     }
     if (!nivelValido(nivelEducativo)) {
-      return res.status(400).json({ success: false, message: 'El nivel educativo es obligatorio y debe ser INICIAL o SUPERIOR.' });
+      return res.status(400).json({ success: false, message: 'Selecciona un nivel educativo válido.' });
     }
 
     try {
@@ -186,8 +196,8 @@ export const modeloController = {
           idProveedor: idProveedor === undefined ? null : Number(idProveedor),
           nombre: nombre.trim(),
           nivelEducativo,
-          precio: Number(precio).toFixed(2),
-          descripcion: descripcion?.trim() || null,
+          precio: normalizarPrecio(precio),
+          presentacion: presentacion?.trim() || null,
           imagenPath,
         }),
         removePrevious: (imagenPath) => modeloService.eliminarImagenSiNoReferenciada(imagenPath),

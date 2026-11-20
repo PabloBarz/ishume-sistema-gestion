@@ -6,7 +6,7 @@ El catalogo local es la fuente unica de modelos. La API externa consume modelos.
 
 Un proveedor puede abastecer varios diseños, pero cada diseño tiene un solo `id_proveedor` en `disenios`. Todos los modelos del diseño usan esa relación. La compra valida que modelo, diseño, categoría y proveedor estén activos y que el proveedor seleccionado sea el asignado al diseño al revisar y al confirmar.
 
-La descripcion pertenece a modelos, no a disenios. modelos.precio es referencial (DECIMAL(10,2), no negativo), distinto del precio cotizado por proveedor.
+La presentacion pertenece a modelos, no a disenios. modelos.precio es referencial (DECIMAL(10,2), no negativo), distinto del precio cotizado por proveedor.
 
 No existen tablas de existencias ni Kardex en la instalacion nueva. Las cantidades de recepcion y despacho pertenecen al seguimiento de pedidos. Las tablas futuras requieren sus validaciones de backend.
 

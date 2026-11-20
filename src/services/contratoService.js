@@ -7,12 +7,12 @@ function apiError(message, status) {
 function disponibilidad(productos) {
   const ids = new Set();
   const validos = Array.isArray(productos) && productos.length > 0 && productos.every(p => {
-    if (!p || !Number.isInteger(p.id_modelo) || p.id_modelo < 1 || p.id_modelo > 2147483647 || ids.has(p.id_modelo) ||
+    if (!p || !Number.isInteger(p.id_modelo_compras) || p.id_modelo_compras < 1 || p.id_modelo_compras > 2147483647 || ids.has(p.id_modelo_compras) ||
         !Number.isInteger(p.cantidad) || p.cantidad < 1 || p.cantidad > 2147483647) return false;
-    ids.add(p.id_modelo);return true;
+    ids.add(p.id_modelo_compras);return true;
   });
   return { modelos_disponibles: validos, aviso_modelos: validos ? ''
-    : Array.isArray(productos) && productos.length === 0 ? 'Sin modelos disponibles' : 'Modelos incompletos o cantidades inválidas' };
+    : Array.isArray(productos) && productos.length === 0 ? 'Este contrato aún no tiene modelos asignados' : 'Modelos incompletos o cantidades inválidas' };
 }
 
 async function consultarApi(params) {
@@ -89,15 +89,24 @@ export const contratoService = {
     const data = await consultarApi({ id });
 
     if (!data || String(data.id_contrato) !== String(Number(id)) ||
+        typeof data.colegio !== 'string' || !data.colegio.trim() ||
         typeof data.cliente !== 'string' ||
         !(data.fecha_entrega === null || typeof data.fecha_entrega === 'string') ||
+        data.estado_trabajo !== 'en_proceso' ||
+        String(data.promocion ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() !== 'promocion' ||
         !Array.isArray(data.productos) || data.productos.some((producto) =>
-          !producto || !Number.isSafeInteger(producto.id_modelo) || producto.id_modelo < 1 ||
-          !Number.isSafeInteger(producto.cantidad) || producto.cantidad < 0)) {
+          !producto || !Number.isSafeInteger(producto.id_modelo_compras) || producto.id_modelo_compras < 1 ||
+          !Number.isSafeInteger(producto.cantidad) || producto.cantidad < 1 ||
+          !Number.isSafeInteger(producto.proveedor_id) || producto.proveedor_id < 1)) {
       throw apiError('El sistema de contratos devolvió datos incompletos o inválidos.', 502);
     }
 
-    const productos = await completarModelos(data.productos);
+    // El ID antiguo de PHP (id_modelo) nunca se usa para resolver el catálogo local.
+    const lineas = data.productos.map(producto => ({ ...producto, id_modelo: producto.id_modelo_compras }));
+    const productos = await completarModelos(lineas);
+    if (productos.some((producto, index) => Number(producto.id_proveedor) !== Number(data.productos[index].proveedor_id))) {
+      throw apiError('El proveedor indicado por Contratos no coincide con el catálogo local de Compras.', 409);
+    }
     return { ...data, productos, ...disponibilidad(productos) };
   },
 };

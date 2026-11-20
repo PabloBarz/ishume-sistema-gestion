@@ -8,7 +8,7 @@ let modelProviderFilter = '';
 let modelDesignFilter = '';
 let modelLevelFilter = '';
 let modelStateFilter = '';
-const EDUCATION_LEVELS = ['INICIAL', 'SUPERIOR'];
+const EDUCATION_LEVELS = ['PRONOEI - Inicial', 'Primaria - Superior'];
 const MODEL_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const MODEL_IMAGE_EXTENSIONS = new Map([['jpg', 'image/jpeg'], ['jpeg', 'image/jpeg'], ['png', 'image/png'], ['webp', 'image/webp']]);
 
@@ -90,7 +90,7 @@ function renderModels(models) {
       imageCell(model),
       createCell(model.nombre_modelo, `ID: ${model.id_modelo}`),
       createCell(model.nivel_educativo || '—'),
-      createCell(formatCurrencyPEN(model.precio)),
+      createCell(model.precio == null ? 'Pendiente de asignar' : formatCurrencyPEN(model.precio)),
       createStatusCell(model.estado),
       actions,
     ];
@@ -146,9 +146,9 @@ function renderDetails(model) {
   list.className = 'inventory-model-details';
   [
     ['ID del modelo', model.id_modelo],
-    ['Precio', formatCurrencyPEN(model.precio)],
+    ['Precio', model.precio == null ? 'Pendiente de asignar' : formatCurrencyPEN(model.precio)],
     ['Nombre del modelo', model.nombre_modelo],
-    ['Descripcion', model.descripcion || '—'],
+    ['Presentación', model.presentacion || '—'],
     ['Nivel educativo', model.nivel_educativo || '—'],
     ['Diseño relacionado', model.nombre_diseno || '—'],
     ['Proveedor relacionado', model.nombre_proveedor || '—'],
@@ -285,7 +285,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
           const active = Number(item.estado) === 1 && Number(item.estado_categoria) === 1 && item.estado_proveedor === 'Activo';
           return active || historical;
         });
-        setDesignPlaceholder(filteredDesigns.length ? 'Selecciona un diseño' : 'No hay diseños disponibles para esta categoría y proveedor.');
+        setDesignPlaceholder(filteredDesigns.length ? 'Selecciona un diseño' : 'No hay diseños; puedes crear uno aquí.');
         filteredDesigns.forEach((item) => {
           const active = Number(item.estado) === 1 && Number(item.estado_categoria) === 1 && item.estado_proveedor === 'Activo';
           appendOption(design, item.id_diseno, active ? item.nombre_diseno : `${item.nombre_diseno} (inactivo; relación histórica)`, !active);
@@ -313,14 +313,14 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       design.disabled = true;
       if (!category.value) return;
       try {
-        const response = await http(`/api/proveedores?id_categoria=${encodeURIComponent(category.value)}`);
+        const response = await http('/api/proveedores');
         if (requestId !== providerRequest) return;
         const availableRows = Array.isArray(response.data) ? response.data : [];
         const rows = isEdit && currentCategory && Number(currentCategory.estado) !== 1
           ? availableRows.filter((item) => String(item.id_proveedor) === String(currentDesign?.id_proveedor))
           : availableRows;
         supplier.replaceChildren();
-        appendOption(supplier, '', rows.length ? 'Selecciona un proveedor' : 'No hay proveedores disponibles para esta categoría.', true);
+        appendOption(supplier, '', rows.length ? 'Selecciona un proveedor' : 'No hay proveedores activos.', true);
         rows.forEach((item) => appendOption(supplier, item.id_proveedor, item.razon_social));
         const currentHistoricalProvider = isEdit && currentDesign &&
           String(currentDesign.id_categoria) === String(category.value) &&
@@ -348,24 +348,139 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     if (category.value) await loadProviderOptions(currentDesign?.id_proveedor ?? '', model?.id_diseno ?? '');
 
     const name = document.createElement('input');
-    name.className = 'input-custom'; name.id = 'modelNameInput'; name.name = 'nombre_modelo'; name.type = 'text'; name.required = true; name.maxLength = 30; name.autocomplete = 'off'; name.value = model?.nombre_modelo ?? '';
+    name.className = 'input-custom'; name.id = 'modelNameInput'; name.name = 'nombre_modelo'; name.type = 'text'; name.required = true; name.maxLength = 60; name.autocomplete = 'off'; name.value = model?.nombre_modelo ?? '';
     const level = makeSelect('modelLevelInput', 'nivel_educativo', 'Selecciona un nivel educativo');
     EDUCATION_LEVELS.forEach((value) => appendOption(level, value, value));
     level.value = EDUCATION_LEVELS.includes(model?.nivel_educativo) ? model.nivel_educativo : '';
     const categoryField = makeField('Categoría', category.id, category);
     const supplierField = makeField('Proveedor', supplier.id, supplier);
     const designField = makeField('Diseño', design.id, design);
+    const createDesignButton = document.createElement('button');
+    createDesignButton.type = 'button';
+    createDesignButton.className = 'btn-cancel inventory-model-create-design-toggle';
+    createDesignButton.textContent = '+ Crear diseño para este proveedor';
+    createDesignButton.disabled = true;
+    designField.append(createDesignButton);
+
+    const createDesignPanel = document.createElement('div');
+    createDesignPanel.className = 'inventory-model-create-design';
+    createDesignPanel.hidden = true;
+    const createDesignName = document.createElement('input');
+    createDesignName.className = 'input-custom';
+    createDesignName.id = 'modelNewDesignNameInput';
+    createDesignName.type = 'text';
+    createDesignName.maxLength = 30;
+    createDesignName.autocomplete = 'off';
+    createDesignName.placeholder = 'Ejemplo: Resinado';
+    const createDesignNameField = makeField('Nombre del tipo o diseño (máximo 30 caracteres)', createDesignName.id, createDesignName);
+    const createDesignError = document.createElement('span');
+    createDesignError.className = 'field-error';
+    createDesignError.setAttribute('role', 'alert');
+    createDesignNameField.append(createDesignError);
+    const createDesignHint = document.createElement('small');
+    createDesignHint.className = 'inventory-model-note';
+    createDesignHint.textContent = 'Quedará asociado a la categoría y al proveedor seleccionados.';
+    const createDesignActions = document.createElement('div');
+    createDesignActions.className = 'inventory-model-create-design-actions';
+    const saveDesignButton = document.createElement('button');
+    saveDesignButton.type = 'button';
+    saveDesignButton.className = 'btn-primary-action';
+    saveDesignButton.textContent = 'Guardar diseño';
+    const cancelDesignButton = document.createElement('button');
+    cancelDesignButton.type = 'button';
+    cancelDesignButton.className = 'btn-cancel';
+    cancelDesignButton.textContent = 'Cancelar';
+    createDesignActions.append(saveDesignButton, cancelDesignButton);
+    createDesignPanel.append(createDesignNameField, createDesignHint, createDesignActions);
+
+    const updateCreateDesignAvailability = () => {
+      createDesignButton.disabled = !category.value || !supplier.value ||
+        Boolean(category.selectedOptions[0]?.disabled || supplier.selectedOptions[0]?.disabled);
+    };
+    updateCreateDesignAvailability();
+    createDesignButton.addEventListener('click', () => {
+      createDesignError.textContent = '';
+      createDesignPanel.hidden = false;
+      createDesignName.focus();
+    });
+    cancelDesignButton.addEventListener('click', () => {
+      createDesignName.value = '';
+      createDesignError.textContent = '';
+      createDesignPanel.hidden = true;
+    });
+    saveDesignButton.addEventListener('click', async () => {
+      const designName = createDesignName.value.trim();
+      createDesignError.textContent = '';
+      if (!category.value || !supplier.value) {
+        createDesignError.textContent = 'Selecciona primero la categoría y el proveedor.';
+        return;
+      }
+      if (!designName) {
+        createDesignError.textContent = 'Escribe el nombre del tipo o diseño.';
+        createDesignName.focus();
+        return;
+      }
+      if (Array.from(designName).length > 30) {
+        createDesignError.textContent = 'El nombre del diseño admite hasta 30 caracteres.';
+        createDesignName.focus();
+        return;
+      }
+      const normalizeDesignName = (value) => String(value ?? '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
+      const duplicate = designs.find((item) =>
+        String(item.id_categoria) === String(category.value) &&
+        String(item.id_proveedor) === String(supplier.value) &&
+        normalizeDesignName(item.nombre_diseno) === normalizeDesignName(designName));
+      if (duplicate) {
+        createDesignError.textContent = Number(duplicate.estado) === 1
+          ? 'Ese diseño ya existe para este proveedor; selecciónalo en la lista.'
+          : 'Ese diseño ya existe, pero está inactivo. Actívalo desde la pestaña Diseños.';
+        return;
+      }
+
+      saveDesignButton.disabled = true;
+      createDesignPanel.setAttribute('aria-busy', 'true');
+      try {
+        const response = await http('/api/disenios', 'POST', {
+          id_categoria: Number(category.value),
+          id_proveedor: Number(supplier.value),
+          nombre_diseno: designName,
+        });
+        const createdDesign = response.data;
+        if (!createdDesign?.id_diseno) throw new Error('El servidor no devolvió el diseño creado.');
+        try {
+          designs = await appState.catalogos.reload('disenios');
+          if (isActive()) onChanged({ renderOnly: true, refreshStats: true });
+        } catch {
+          designs.push(createdDesign);
+          showToast('El diseño se guardó, pero no se pudo actualizar el contador del catálogo.', 'warning');
+        }
+        await loadDesignOptions(supplier.value, createdDesign.id_diseno);
+        if (String(design.value) !== String(createdDesign.id_diseno)) {
+          throw new Error('El diseño se guardó, pero no se pudo seleccionar. Vuelve a cargar los diseños e inténtalo de nuevo.');
+        }
+        createDesignName.value = '';
+        createDesignPanel.hidden = true;
+        showToast('Diseño guardado y listo para asociar al modelo.', 'success');
+      } catch (error) {
+        createDesignError.textContent = error.message || 'No se pudo guardar el diseño.';
+      } finally {
+        createDesignPanel.removeAttribute('aria-busy');
+        saveDesignButton.disabled = false;
+      }
+    });
+
     const nameField = makeField('Nombre del modelo', name.id, name);
     const levelField = makeField('Nivel educativo', level.id, level);
     const price = document.createElement('input');
     price.className = 'input-custom'; price.id = 'modelPriceInput'; price.name = 'precio';
-    price.type = 'number'; price.min = '0'; price.max = '99999999.99'; price.step = '0.01'; price.required = true;
+    price.type = 'number'; price.min = '0'; price.max = '99999999.99'; price.step = '0.01'; price.required = false;
     price.value = model?.precio ?? '';
-    const priceField = makeField('Precio (S/)', price.id, price);
-    const description = document.createElement('textarea');
-    description.className = 'input-custom'; description.id = 'modelDescriptionInput'; description.name = 'descripcion';
-    description.rows = 3; description.maxLength = 255; description.value = model?.descripcion ?? '';
-    const descriptionField = makeField('Descripcion (opcional)', description.id, description);
+    const priceField = makeField('Precio referencial (S/, opcional)', price.id, price);
+    const presentation = document.createElement('textarea');
+    presentation.className = 'input-custom'; presentation.id = 'modelPresentationInput'; presentation.name = 'presentacion';
+    presentation.rows = 3; presentation.maxLength = 255; presentation.value = model?.presentacion ?? model?.descripcion ?? '';
+    const presentationField = makeField('Presentación (opcional)', presentation.id, presentation);
     const imageInput = document.createElement('input');
     imageInput.className = 'input-custom'; imageInput.id = 'modelImageInput'; imageInput.name = 'imagen';
     imageInput.type = 'file'; imageInput.accept = '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp';
@@ -429,15 +544,17 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       note.textContent = 'La relación inactiva se conserva para este modelo histórico; selecciona relaciones activas para reasignarlo.';
       designField.append(note);
     }
-    form.append(requestError, categoryField, supplierField, designField, nameField, levelField, priceField, descriptionField, imageField);
+    form.append(requestError, categoryField, supplierField, designField, createDesignPanel, nameField, levelField, priceField, presentationField, imageField);
 
     category.addEventListener('change', () => {
       supplier.value = ''; design.value = '';
       categoryError.textContent = ''; supplierError.textContent = ''; designError.textContent = ''; requestError.hidden = true;
+      updateCreateDesignAvailability();
       void loadProviderOptions();
     });
     supplier.addEventListener('change', () => {
       design.value = ''; supplierError.textContent = ''; designError.textContent = ''; requestError.hidden = true;
+      updateCreateDesignAvailability();
       void loadDesignOptions(supplier.value);
     });
     level.addEventListener('change', () => { levelError.textContent = ''; requestError.hidden = true; });
@@ -452,16 +569,16 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       if (missing.includes('id_diseno')) { designError.textContent = 'Selecciona un diseño activo.'; design.focus(); return; }
       if (missing.includes('nombre_modelo')) { nameError.textContent = 'El nombre del modelo es obligatorio.'; name.focus(); return; }
       if (missing.includes('nivel_educativo') || !EDUCATION_LEVELS.includes(level.value)) {
-        levelError.textContent = 'Selecciona INICIAL o SUPERIOR.'; level.focus(); return;
+        levelError.textContent = 'Selecciona un nivel educativo válido.'; level.focus(); return;
       }
-      if (Array.from(modelName).length > 30) {
-        requestError.hidden = false; requestError.textContent = 'El nombre del modelo admite hasta 30 caracteres.'; return;
+      if (Array.from(modelName).length > 60) {
+        requestError.hidden = false; requestError.textContent = 'El nombre del modelo admite hasta 60 caracteres.'; return;
       }
-      if (!/^\d{1,8}(\.\d{1,2})?$/.test(price.value)) {
-        requestError.hidden = false; requestError.textContent = 'Ingresa un precio entre 0 y 99999999.99 con hasta dos decimales.'; price.focus(); return;
+      if (price.value.trim() && !/^\d{1,8}(\.\d{1,2})?$/.test(price.value)) {
+        requestError.hidden = false; requestError.textContent = 'Ingresa un precio entre 0 y 99999999.99 con hasta dos decimales, o déjalo pendiente.'; price.focus(); return;
       }
-      if (Array.from(description.value).length > 255) {
-        requestError.hidden = false; requestError.textContent = 'La descripcion admite hasta 255 caracteres.'; description.focus(); return;
+      if (Array.from(presentation.value).length > 255) {
+        requestError.hidden = false; requestError.textContent = 'La presentación admite hasta 255 caracteres.'; presentation.focus(); return;
       }
       const imageFile = imageInput.files?.[0] ?? null;
       const imageValidationError = validateModelImageFile(imageFile);
@@ -487,7 +604,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
         body.append('nombre_modelo', modelName);
         body.append('nivel_educativo', level.value);
         body.append('precio', price.value);
-        body.append('descripcion', description.value.trim());
+        body.append('presentacion', presentation.value.trim());
         if (imageFile) body.append('imagen', imageFile);
         const response = await http(isEdit ? `/api/modelos/${encodeURIComponent(model.id_modelo)}` : '/api/modelos', isEdit ? 'PUT' : 'POST', body);
         modal.close();
@@ -507,7 +624,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       }
     });
 
-    modal.open(isEdit ? 'Editar modelo' : 'Nuevo modelo', 'El nombre admite hasta 30 caracteres.', form, [
+    modal.open(isEdit ? 'Editar modelo' : 'Nuevo modelo', 'El nombre admite hasta 60 caracteres.', form, [
       modal.createButton('Cancelar', 'btn-cancel', () => { releasePreviewObjectUrl(); modal.close(); }),
       Object.assign(document.createElement('button'), { type: 'submit', className: 'btn-primary-action', textContent: isEdit ? 'Guardar cambios' : 'Guardar modelo' }),
     ]);
