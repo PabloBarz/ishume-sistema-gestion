@@ -350,6 +350,7 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
     const submit = document.createElement('button');
     submit.type = 'submit';
     submit.className = 'btn-primary-action';
+    submit.dataset.requiresPermission = isEdit ? 'disenios.editar' : 'disenios.registrar';
     submit.setAttribute('form', form.id);
     submit.textContent = isEdit ? 'Guardar cambios' : 'Guardar diseño';
     submit.disabled = !isEdit && (availableCategories.length === 0 || suppliers.length === 0);
@@ -393,6 +394,7 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
     content.append(message, error);
     const cancel = modal.createButton('Cancelar', 'btn-cancel', () => modal.close());
     const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => changeDesignState(design, 0, deactivate));
+    deactivate.dataset.requiresPermission = 'disenios.cambiar_estado';
     modal.open('Confirmar desactivación', 'No se podrá desactivar mientras existan modelos activos asociados.', content, [cancel, deactivate]);
   }
 

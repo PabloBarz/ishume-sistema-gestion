@@ -358,6 +358,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const createDesignButton = document.createElement('button');
     createDesignButton.type = 'button';
     createDesignButton.className = 'btn-cancel inventory-model-create-design-toggle';
+    createDesignButton.dataset.requiresPermission = 'disenios.registrar';
     createDesignButton.textContent = '+ Crear diseño para este proveedor';
     createDesignButton.disabled = true;
     designField.append(createDesignButton);
@@ -385,6 +386,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const saveDesignButton = document.createElement('button');
     saveDesignButton.type = 'button';
     saveDesignButton.className = 'btn-primary-action';
+    saveDesignButton.dataset.requiresPermission = 'disenios.registrar';
     saveDesignButton.textContent = 'Guardar diseño';
     const cancelDesignButton = document.createElement('button');
     cancelDesignButton.type = 'button';
@@ -624,9 +626,12 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       }
     });
 
+    const saveModelButton = document.createElement('button');
+    Object.assign(saveModelButton, { type: 'submit', className: 'btn-primary-action', textContent: isEdit ? 'Guardar cambios' : 'Guardar modelo' });
+    saveModelButton.dataset.requiresPermission = isEdit ? 'modelos.editar' : 'modelos.registrar';
     modal.open(isEdit ? 'Editar modelo' : 'Nuevo modelo', 'El nombre admite hasta 60 caracteres.', form, [
       modal.createButton('Cancelar', 'btn-cancel', () => { releasePreviewObjectUrl(); modal.close(); }),
-      Object.assign(document.createElement('button'), { type: 'submit', className: 'btn-primary-action', textContent: isEdit ? 'Guardar cambios' : 'Guardar modelo' }),
+      saveModelButton,
     ]);
     const submit = root.querySelector('#inventoryModalFooter [type="submit"]'); submit.setAttribute('form', form.id);
   }
@@ -655,6 +660,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const error = document.createElement('p'); error.className = 'field-error'; error.id = 'modelModalError'; error.setAttribute('role', 'alert'); error.hidden = true;
     content.append(message, error);
     const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => { void changeState(model, 0, deactivate); });
+    deactivate.dataset.requiresPermission = 'modelos.cambiar_estado';
     modal.open('Confirmar desactivación', 'El modelo dejará de estar activo en el catálogo.', content, [
       modal.createButton('Cancelar', 'btn-cancel', () => modal.close()),
       deactivate,

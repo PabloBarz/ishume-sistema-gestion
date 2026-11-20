@@ -157,6 +157,7 @@ export function createCategoriesModule(root, { isActive, onChanged, modal }) {
     const submit = document.createElement('button');
     submit.type = 'submit';
     submit.className = 'btn-primary-action';
+    submit.dataset.requiresPermission = isEdit ? 'categorias.editar' : 'categorias.registrar';
     submit.setAttribute('form', form.id);
     submit.textContent = isEdit ? 'Guardar cambios' : 'Guardar categoría';
     modal.open(isEdit ? 'Editar categoría' : 'Nueva categoría', 'El nombre debe ser único y tener hasta 30 caracteres.', form, [cancel, submit]);
@@ -199,6 +200,7 @@ export function createCategoriesModule(root, { isActive, onChanged, modal }) {
     content.append(message, error);
     const cancel = modal.createButton('Cancelar', 'btn-cancel', closeCategoryModal);
     const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => changeCategoryState(category, 0, deactivate));
+    deactivate.dataset.requiresPermission = 'categorias.cambiar_estado';
     modal.open('Confirmar desactivación', 'La categoría no estará disponible para nuevas asignaciones.', content, [cancel, deactivate]);
   }
 

@@ -18,21 +18,21 @@
         <h2 class="panel-title" id="inventory-catalog-title">Catálogo de modelos</h2>
         <span class="panel-caption" id="inventory-caption">Consulta los registros del sistema</span>
       </div>
-      <button class="btn-primary-action" id="categoryCreateButton" type="button" hidden>
+      <button class="btn-primary-action" id="categoryCreateButton" type="button" data-requires-permission="categorias.registrar" hidden>
         <i class="bi bi-plus-lg" aria-hidden="true"></i> Nueva categoría
       </button>
-      <button class="btn-primary-action" id="designCreateButton" type="button" hidden>
+      <button class="btn-primary-action" id="designCreateButton" type="button" data-requires-permission="disenios.registrar" hidden>
         <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo diseño
       </button>
-      <button class="btn-primary-action" id="modelCreateButton" type="button" hidden>
+      <button class="btn-primary-action" id="modelCreateButton" type="button" data-requires-permission="modelos.registrar" hidden>
         <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo modelo
       </button>
     </div>
 
     <div class="inventory-tablist" role="tablist" aria-label="Catálogos">
-      <button class="inventory-tab" id="tab-categorias" type="button" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1" data-catalog="categorias">Categorías</button>
-      <button class="inventory-tab" id="tab-disenios" type="button" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1" data-catalog="disenios">Diseños</button>
-      <button class="inventory-tab active" id="tab-modelos" type="button" role="tab" aria-selected="true" aria-controls="inventory-panel" data-catalog="modelos">Modelos</button>
+      <button class="inventory-tab" id="tab-categorias" type="button" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1" data-requires-permission="categorias.consultar" data-catalog="categorias">Categorías</button>
+      <button class="inventory-tab" id="tab-disenios" type="button" role="tab" aria-selected="false" aria-controls="inventory-panel" tabindex="-1" data-requires-permission="disenios.consultar" data-catalog="disenios">Diseños</button>
+      <button class="inventory-tab active" id="tab-modelos" type="button" role="tab" aria-selected="true" aria-controls="inventory-panel" data-requires-permission="modelos.consultar" data-catalog="modelos">Modelos</button>
     </div>
 
     <div class="inventory-toolbar" aria-label="Búsqueda y filtros">

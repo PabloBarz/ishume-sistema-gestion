@@ -53,6 +53,9 @@ export function createActionButton({ action, id, label, icon, className, dataset
   button.type = 'button';
   button.dataset[`${dataset}Action`] = action;
   button.dataset[`${dataset}Id`] = String(id);
+  const moduleName = { category: 'categorias', design: 'disenios', model: 'modelos' }[dataset];
+  if (moduleName && action === 'edit') button.dataset.requiresPermission = `${moduleName}.editar`;
+  if (moduleName && action === 'toggle') button.dataset.requiresPermission = `${moduleName}.cambiar_estado`;
   button.setAttribute('aria-label', label);
   button.title = label;
   const glyph = document.createElement('i');

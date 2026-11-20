@@ -1,5 +1,6 @@
 import { formatNumber } from '../utils.js';
 import { appState } from '../appState.js';
+import { hasPermission } from '../auth.js';
 import { createInventoryModal } from '../components/inventoryModal.js';
 import { createCategoriesModule } from './inventario/categorias.js';
 import { createDesignsModule } from './inventario/disenios.js';
@@ -22,7 +23,9 @@ let activeCatalog = 'modelos';
 function renderStats(root) {
   for (const [stat, catalog] of [['models', 'modelos'], ['categories', 'categorias'], ['designs', 'disenios']]) {
     const status = appState.catalogos.getStatus(catalog);
-    root.querySelector(`[data-stat="${stat}"]`).textContent = status.loaded ? formatNumber(status.data.length) : status.loading ? 'Cargando…' : '—';
+    const permission = { modelos: 'modelos.consultar', categorias: 'categorias.consultar', disenios: 'disenios.consultar' }[catalog];
+    root.querySelector(`[data-stat="${stat}"]`).textContent = !hasPermission(permission)
+      ? '—' : status.loaded ? formatNumber(status.data.length) : status.loading ? 'Cargando…' : '—';
   }
 }
 
@@ -160,6 +163,21 @@ function loadCatalog(catalog, root, categoriesModule, designsModule, modelsModul
 export async function init() {
   const root = document.querySelector('.inventory-page');
   if (!root) return;
+  const authorizedCatalogs = ['modelos', 'disenios', 'categorias'].filter((catalog) => hasPermission({
+    modelos: 'modelos.consultar', disenios: 'disenios.consultar', categorias: 'categorias.consultar',
+  }[catalog]));
+  if (!authorizedCatalogs.length) {
+    const denied = document.createElement('section');
+    denied.className = 'auth-state-message';
+    denied.setAttribute('role', 'alert');
+    const heading = document.createElement('h2');
+    heading.textContent = 'Acceso denegado';
+    const detail = document.createElement('p');
+    detail.textContent = 'No tienes permisos para consultar catálogos.';
+    denied.append(heading, detail);
+    root.replaceChildren(denied);
+    return;
+  }
 
   let modelsModule;
   function updateActiveCatalog({ renderOnly = false, refreshStats = false } = {}) {
@@ -220,7 +238,8 @@ export async function init() {
   });
   tablist.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    const tabs = [...root.querySelectorAll('.inventory-tab')];
+    const tabs = [...root.querySelectorAll('.inventory-tab')].filter((tab) => !tab.hidden);
+    if (!tabs.length) return;
     const currentIndex = tabs.findIndex((tab) => tab.dataset.catalog === activeCatalog);
     const nextIndex = event.key === 'Home' ? 0
       : event.key === 'End' ? tabs.length - 1
@@ -231,10 +250,7 @@ export async function init() {
     void loadCatalog(tabs[nextIndex].dataset.catalog, root, categoriesModule, designsModule, modelsModule);
   });
 
+  activeCatalog = authorizedCatalogs[0];
   selectCatalog(root, activeCatalog, categoriesModule, designsModule, modelsModule);
-  await Promise.all([
-    loadCatalog(activeCatalog, root, categoriesModule, designsModule, modelsModule),
-    loadCatalog('categorias', root, categoriesModule, designsModule, modelsModule),
-    loadCatalog('disenios', root, categoriesModule, designsModule, modelsModule),
-  ]);
+  await Promise.all(authorizedCatalogs.map((catalog) => loadCatalog(catalog, root, categoriesModule, designsModule, modelsModule)));
 }

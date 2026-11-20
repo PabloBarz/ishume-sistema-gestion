@@ -1,0 +1,50 @@
+<section class="login-layout" aria-labelledby="loginTitle">
+  <div class="login-brand-panel">
+    <div class="login-brand-mark" aria-label="ISHUME">ISHUME</div>
+    <div class="login-brand-copy">
+      <p class="login-eyebrow">GESTIÓN · CONTROL · CONFIANZA</p>
+      <h1>Todo lo que impulsa<br>tu operación.</h1>
+      <p class="login-brand-description">Accede al entorno de gestión de ISHUME para continuar con tus actividades.</p>
+    </div>
+    <div class="login-brand-footer"><span class="login-brand-line"></span><span>ISHUME · Sistema de gestión</span></div>
+  </div>
+
+  <div class="login-form-panel">
+    <div class="login-form-wrap">
+      <div class="login-mobile-brand">ISHUME</div>
+      <p class="login-eyebrow">BIENVENIDO</p>
+      <h2 id="loginTitle">Iniciar sesión</h2>
+      <p class="login-intro">Ingresa tus credenciales para acceder a tu cuenta.</p>
+
+      <form id="loginForm" class="login-form" novalidate>
+        <div class="login-field">
+          <label for="loginUsername">Usuario</label>
+          <div class="login-input-wrap">
+            <i class="bi bi-person" aria-hidden="true"></i>
+            <input id="loginUsername" name="username" type="text" autocomplete="username" maxlength="60" required aria-describedby="loginUsernameError" autofocus>
+          </div>
+          <p class="login-field-error" id="loginUsernameError" aria-live="polite"></p>
+        </div>
+
+        <div class="login-field">
+          <label for="loginPassword">Contraseña</label>
+          <div class="login-input-wrap">
+            <i class="bi bi-lock" aria-hidden="true"></i>
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required aria-describedby="loginPasswordError">
+            <button class="login-password-toggle" id="togglePassword" type="button" aria-label="Mostrar contraseña" aria-pressed="false">
+              <i class="bi bi-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p class="login-field-error" id="loginPasswordError" aria-live="polite"></p>
+        </div>
+
+        <p class="login-message" id="loginMessage" role="alert" aria-live="assertive" hidden></p>
+        <button class="login-submit" id="loginSubmit" type="submit">
+          <span class="login-submit-label">Iniciar sesión</span>
+          <i class="bi bi-arrow-right" aria-hidden="true"></i>
+        </button>
+      </form>
+      <p class="login-security-note"><i class="bi bi-shield-lock" aria-hidden="true"></i> Acceso seguro para personal autorizado</p>
+    </div>
+  </div>
+</section>

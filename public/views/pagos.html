@@ -25,7 +25,7 @@
         <p id="pagosModalEstado" role="status" aria-live="polite"></p>
         <section id="pagosDetalle" hidden aria-label="Documento del proveedor">
           <form id="pagosCotizacionForm" class="pagos-form" novalidate>
-            <section class="pagos-form-seccion pagos-documento-seccion"><div><label class="form-label-custom" for="pagosArchivo">Documento del proveedor</label><button class="btn-cancel pagos-adjuntar" id="pagosAdjuntar" type="button">Adjuntar imagen o PDF</button><input id="pagosArchivo" type="file" aria-label="Archivo del proveedor" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" aria-describedby="err-pagosArchivo" hidden><p class="field-error" id="err-pagosArchivo" aria-live="polite"></p></div>
+            <section class="pagos-form-seccion pagos-documento-seccion"><div><label class="form-label-custom" for="pagosArchivo">Documento del proveedor</label><button class="btn-cancel pagos-adjuntar" id="pagosAdjuntar" type="button" data-requires-permission="pagos.registrar_documento">Adjuntar imagen o PDF</button><input id="pagosArchivo" type="file" aria-label="Archivo del proveedor" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" aria-describedby="err-pagosArchivo" hidden><p class="field-error" id="err-pagosArchivo" aria-live="polite"></p></div>
             <div id="pagosArchivoVista" class="pagos-archivo-vista"></div></section>
             <div id="pagosMotivoCampo" hidden><label class="form-label-custom" for="pagosMotivo">Motivo de la correcci&#243;n</label><textarea class="input-custom" id="pagosMotivo" maxlength="500" rows="2"></textarea></div>
             <section class="pagos-form-seccion pagos-economica-seccion">
@@ -64,7 +64,7 @@
 
         </section>
       </div>
-      <div class="panel-body compra-totals"><button class="btn-primary-action" id="pagosGuardar" type="submit" form="pagosCotizacionForm" disabled>Guardar documento</button><button class="btn-primary-action" id="pagosAbonoGuardar" type="submit" form="pagosAbonoForm" hidden>Guardar abono</button><button class="btn-primary-action" id="pagosCorreccionGuardar" type="submit" form="pagosCorreccionForm" hidden>Guardar cambios</button><button class="btn-cancel" id="pagosModalCerrar" type="button">Cerrar</button></div>
+      <div class="panel-body compra-totals"><button class="btn-primary-action" id="pagosGuardar" type="submit" form="pagosCotizacionForm" data-requires-permission="pagos.registrar_documento" disabled>Guardar documento</button><button class="btn-primary-action" id="pagosAbonoGuardar" type="submit" form="pagosAbonoForm" data-requires-permission="pagos.registrar_abono" hidden>Guardar abono</button><button class="btn-primary-action" id="pagosCorreccionGuardar" type="submit" form="pagosCorreccionForm" data-requires-permission="pagos.corregir_abono" hidden>Guardar cambios</button><button class="btn-cancel" id="pagosModalCerrar" type="button">Cerrar</button></div>
     </section>
   </div>
 </section>
