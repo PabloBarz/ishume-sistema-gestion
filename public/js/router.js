@@ -42,6 +42,11 @@ const routes = {
     view: '/views/inventario.html',
     loadModule: () => import('./modules/inventario.js'),
   },
+  usuarios: {
+    title: 'Administración de usuarios', permission: 'usuarios.consultar', adminOnly: true,
+    view: '/views/usuarios.html',
+    loadModule: () => import('./module_usuarios/usuarios.js'),
+  },
 };
 
 const viewCache = new Map();
@@ -99,9 +104,13 @@ function applyPermissionVisibility(root = document) {
         element.dataset.authOriginallyHidden = String(element.hidden);
         element.dataset.authVisibilityManaged = 'true';
       }
-      element.hidden = true;
+      // Este observador también vigila `hidden`. Reasignar `true` cuando el atributo
+      // ya está presente genera otro registro de mutación en Chromium y puede
+      // provocar un ciclo que sature la SPA para roles sin permisos de escritura.
+      if (!element.hidden) element.hidden = true;
     } else if (element.dataset.authVisibilityManaged) {
-      element.hidden = element.dataset.authOriginallyHidden === 'true';
+      const originallyHidden = element.dataset.authOriginallyHidden === 'true';
+      if (element.hidden !== originallyHidden) element.hidden = originallyHidden;
       delete element.dataset.authVisibilityManaged;
       delete element.dataset.authOriginallyHidden;
     }
@@ -110,7 +119,9 @@ function applyPermissionVisibility(root = document) {
 
 function applyNavigationPermissions() {
   document.querySelectorAll('.sidebar-nav [data-permission]').forEach((link) => {
-    link.hidden = !link.dataset.permission.split(/\s+/).filter(Boolean).every(hasPermission);
+    const permissionAllowed = link.dataset.permission.split(/\s+/).filter(Boolean).every(hasPermission);
+    const roleAllowed = !link.dataset.role || link.dataset.role === appState.auth.user?.rol;
+    link.hidden = !permissionAllowed || !roleAllowed;
   });
   document.querySelectorAll('.sidebar-nav .nav-group').forEach((group) => {
     const links = [...group.querySelectorAll('.nav-submenu [data-permission]')];
@@ -232,6 +243,11 @@ async function loadCurrentRoute() {
 
   const route = routes[routeName];
   showAppShell();
+  if (route?.adminOnly && appState.auth.user?.rol !== 'administrador') {
+    updateShell(routeName, 'Acceso denegado');
+    showDenied();
+    return;
+  }
   const requiredPermissions = route?.permissions || (route?.permission ? [route.permission] : []);
   if (requiredPermissions.some((permission) => !hasPermission(permission))) {
     updateShell(routeName, 'Acceso denegado');

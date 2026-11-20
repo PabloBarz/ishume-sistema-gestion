@@ -1,6 +1,7 @@
 import { appState } from '../../appState.js';
 import { http, showToast, validateRequiredFields } from '../../utils.js';
 import { createActionButton, createCell, createNumericCell, createStatusCell, createTable } from '../../components/inventoryTable.js';
+import { getDependentModelFilterOptions } from './modelos.js';
 
 let designSearch = '';
 let designCategoryFilter = '';
@@ -110,12 +111,13 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
 
   async function openDesignForm(design = null) {
     let categories;
-    let suppliers;
+    let relatedDesigns;
     try {
-      const [categorias, response] = await Promise.all([appState.catalogos.get('categorias'), http('/api/proveedores')]);
-      categories = categorias; suppliers = response.data;
+      [categories, relatedDesigns] = await Promise.all([
+        appState.catalogos.get('categorias'), appState.catalogos.get('disenios'),
+      ]);
     } catch (error) {
-      showToast(error.message || 'No se pudieron cargar las categorías.', 'error');
+      showToast(error.message || 'No se pudieron cargar las categorías y diseños relacionados.', 'error');
       return;
     }
 
@@ -204,6 +206,10 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
       categoryInput.removeAttribute('aria-invalid');
       categoryError.textContent = '';
       requestError.hidden = true;
+      syncSupplierOptions('');
+      supplierInput.classList.remove('is-invalid');
+      supplierInput.removeAttribute('aria-invalid');
+      supplierError.textContent = '';
     });
     categoryField.append(categoryLabel, categoryInput, categoryError);
     if (currentCategory && Number(currentCategory.estado) !== 1) {
@@ -222,33 +228,37 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
     supplierInput.name = 'id_proveedor';
     supplierInput.required = true;
     supplierInput.setAttribute('aria-describedby', 'designSupplierError');
-    const selectedSupplierId = design?.id_proveedor ?? '';
-
-    const currentSupplier = design && !suppliers.some(
-      (supplier) => Number(supplier.id_proveedor) === Number(design.id_proveedor)
-    ) ? {
-      id_proveedor: design.id_proveedor,
-      razon_social: design.nombre_proveedor,
-      estado: design.estado_proveedor
-    } : null;
-
-    const options = currentSupplier ? [...suppliers, currentSupplier] : suppliers;
-
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = options.length ? 'Selecciona un proveedor activo' : 'No hay proveedores activos';
-    placeholder.disabled = true;
-    placeholder.selected = !selectedSupplierId;
-    supplierInput.append(placeholder);
-
-    options.forEach((supplier) => {
-      const option = document.createElement('option');
-      option.value = String(supplier.id_proveedor);
-      option.textContent = supplier.razon_social +
-        (supplier.estado === 'Inactivo' ? ' (inactivo)' : '');
-      option.selected = Number(supplier.id_proveedor) === Number(selectedSupplierId);
-      supplierInput.append(option);
-    });
+    let allowedSuppliers = [];
+    const isHistoricalSupplier = (categoryId, supplierId) => isEdit &&
+      Number(design.id_categoria) === Number(categoryId) && Number(design.id_proveedor) === Number(supplierId) &&
+      design.estado_proveedor === 'Inactivo';
+    const syncSupplierOptions = (preferredSupplierId = '') => {
+      const related = getDependentModelFilterOptions(relatedDesigns, { categoryId: categoryInput.value });
+      allowedSuppliers = related.providers.filter(({ id }) => {
+        const supplierDesigns = related.designs.filter((item) => String(item.id_proveedor) === String(id));
+        return supplierDesigns.some((item) => item.estado_proveedor === 'Activo') ||
+          isHistoricalSupplier(categoryInput.value, id);
+      });
+      supplierInput.replaceChildren();
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = !categoryInput.value ? 'Selecciona una categoría primero'
+        : allowedSuppliers.length ? 'Selecciona un proveedor' : 'No hay proveedores relacionados con esta categoría';
+      placeholder.disabled = true;
+      supplierInput.append(placeholder);
+      allowedSuppliers.forEach(({ id, name }) => {
+        const historical = isHistoricalSupplier(categoryInput.value, id);
+        const option = document.createElement('option');
+        option.value = String(id);
+        option.textContent = historical ? `${name} (inactivo; relación histórica)` : name;
+        option.disabled = historical;
+        supplierInput.append(option);
+      });
+      supplierInput.disabled = !categoryInput.value || allowedSuppliers.length === 0;
+      supplierInput.value = allowedSuppliers.some(({ id }) => String(id) === String(preferredSupplierId))
+        ? String(preferredSupplierId) : '';
+    };
+    syncSupplierOptions(design?.id_proveedor ?? '');
     const supplierError = document.createElement('span');
     supplierError.className = 'field-error';
     supplierError.id = 'designSupplierError';
@@ -260,9 +270,7 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
       requestError.hidden = true;
     });
     const supplierNote = document.createElement('small');
-    supplierNote.textContent = currentSupplier?.estado === 'Inactivo'
-      ? 'Este proveedor está inactivo y se conserva solo como relación histórica. Para cambiarlo, selecciona un proveedor activo.'
-      : 'Cada diseño pertenece a un único proveedor; sus modelos heredan esta relación para las compras.';
+    supplierNote.textContent = 'Solo se muestran proveedores que tienen diseños asociados a la categoría seleccionada.';
     supplierField.append(supplierLabel, supplierInput, supplierError, supplierNote);
     form.append(nameField, categoryField, supplierField);
 
@@ -307,10 +315,9 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
       }
 
       const supplierId = Number(supplierInput.value);
-      const isHistoricalSupplier = isEdit && Number(design.id_proveedor) === supplierId &&
-        currentSupplier?.estado === 'Inactivo';
       if (!Number.isSafeInteger(supplierId) || supplierId <= 0 ||
-          (!suppliers.some((supplier) => Number(supplier.id_proveedor) === supplierId) && !isHistoricalSupplier)) {
+          (!allowedSuppliers.some(({ id }) => Number(id) === supplierId) &&
+            !isHistoricalSupplier(categoryId, supplierId))) {
         supplierInput.classList.add('is-invalid');
         supplierInput.setAttribute('aria-invalid', 'true');
         supplierError.textContent = 'Selecciona un proveedor activo.';
@@ -353,7 +360,7 @@ export function createDesignsModule(root, { isActive, onChanged, modal }) {
     submit.dataset.requiresPermission = isEdit ? 'disenios.editar' : 'disenios.registrar';
     submit.setAttribute('form', form.id);
     submit.textContent = isEdit ? 'Guardar cambios' : 'Guardar diseño';
-    submit.disabled = !isEdit && (availableCategories.length === 0 || suppliers.length === 0);
+    submit.disabled = !isEdit && availableCategories.length === 0;
     modal.open(isEdit ? 'Editar diseño' : 'Nuevo diseño', 'El nombre admite hasta 30 caracteres. Selecciona un único proveedor activo.', form, [cancel, submit]);
     nameInput.focus();
   }

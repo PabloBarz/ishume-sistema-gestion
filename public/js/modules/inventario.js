@@ -252,5 +252,9 @@ export async function init() {
 
   activeCatalog = authorizedCatalogs[0];
   selectCatalog(root, activeCatalog, categoriesModule, designsModule, modelsModule);
-  await Promise.all(authorizedCatalogs.map((catalog) => loadCatalog(catalog, root, categoriesModule, designsModule, modelsModule)));
+  // Fetch catalog data after the view is interactive. Awaiting every catalog here
+  // kept the router's global loading screen up while any API request was pending.
+  authorizedCatalogs.forEach((catalog) => {
+    void loadCatalog(catalog, root, categoriesModule, designsModule, modelsModule);
+  });
 }

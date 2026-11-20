@@ -53,3 +53,10 @@ export function requirePermission(permissionCode) {
     return checkPermission(req, res, next);
   };
 }
+
+export function requireAdministrator(req, res, next) {
+  if (req.auth?.rol !== 'administrador') {
+    return res.status(403).json({ error: 'Solo el Administrador puede gestionar usuarios.' });
+  }
+  return next();
+}

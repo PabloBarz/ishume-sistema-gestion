@@ -1,0 +1,49 @@
+/* Only layout unique to the user-permission editor; controls use shared ISHUME styles. */
+.users-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(170px, 220px) minmax(145px, 190px); gap: 14px; padding: 18px; margin-bottom: 18px; }
+.users-table-panel { overflow: hidden; }
+.users-table { min-width: 850px; }
+.users-table-status { min-height: 0; padding: 0 18px; color: var(--text-muted); font-size: 13px; }
+.users-table-status:not(:empty) { padding-top: 14px; }
+.users-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.users-row-actions .btn-action { width: 32px; height: 32px; margin-right: 0; }
+.users-modal-panel { display: flex; flex-direction: column; width: min(1120px, calc(100vw - 40px)); max-height: min(900px, calc(100vh - 36px)); max-height: min(900px, calc(100dvh - 36px)); overflow: hidden; }
+.users-password-panel { width: min(520px, calc(100vw - 32px)); }
+.users-editor-form { min-height: 0; padding: 20px 24px 24px; overflow-y: auto; }
+.users-form-section { display: grid; gap: 14px; padding: 0 0 18px; border-bottom: 1px solid var(--border); }
+.users-form-section + .users-form-section { padding-top: 18px; }
+.users-form-section:last-child { padding-bottom: 0; border-bottom: 0; }
+.users-form-section > .panel-title { margin: 0; }
+.users-form-grid,
+.users-password-create { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.users-password-create { padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.users-password-create .input-custom { width: 100%; }
+.users-hint { grid-column: 1 / -1; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.users-permission-editor { display: grid; gap: 12px; }
+.users-permission-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.users-permission-header h3 { margin: 0; font-size: 16px; }
+.users-permission-header p { margin: 5px 0 0; color: var(--text-muted); font-size: 12px; }
+.users-permission-legend { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.users-permission-module { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.users-permission-module h4 { margin: 0; padding: 10px 13px; border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 12px; }
+.users-permission-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(176px, 220px); gap: 12px; align-items: center; padding: 11px 13px; border-bottom: 1px solid var(--border); }
+.users-permission-row:last-child { border-bottom: 0; }
+.users-permission-code { display: block; margin-top: 4px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 10px; overflow-wrap: anywhere; }
+.users-permission-result { display: block; margin-top: 4px; color: var(--text-muted); font-size: 10px; }
+.users-permission-result.is-custom { color: var(--primary); font-weight: 700; }
+.users-permission-row select { width: 100%; min-height: 36px; font-size: 11px; }
+
+@media (max-width: 800px) {
+  .users-toolbar { grid-template-columns: minmax(0, 1fr) minmax(150px, .7fr); }
+  .users-toolbar .search-input-wrap { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .users-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .users-toolbar .search-input-wrap { grid-column: auto; }
+  .users-modal-panel { width: calc(100vw - 18px); max-height: calc(100vh - 18px); max-height: calc(100dvh - 18px); }
+  .users-editor-form { padding: 16px; }
+  .users-form-grid,
+  .users-password-create { grid-template-columns: minmax(0, 1fr); }
+  .users-hint { grid-column: auto; }
+  .users-permission-header { flex-direction: column; }
+  .users-permission-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
