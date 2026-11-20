@@ -1,5 +1,7 @@
 import express, { Router } from 'express';
 import { pagosController } from '../controllers/pagosController.js';
+import { requireAuthentication, requirePermission } from '../services/authRuntime.js';
+import { csrfProtection } from '../middleware/authentication.js';
 const router = Router();
 // El sistema aún no dispone de usuarios/sesiones. Los documentos y operaciones
 // financieras se restringen a acceso local, sin exponer archivos por express.static.
@@ -11,10 +13,10 @@ router.use((req,res,next)=>{
   if(origen){try{if(new URL(origen).host!==req.get('host'))throw Error();}catch{return res.status(403).json({message:'Origen no autorizado.'});}}
   next();
 });
-router.get('/ordenes', pagosController.listar);
-router.get('/ordenes/:id/archivo',pagosController.archivo);
-router.get('/ordenes/:id',pagosController.obtener);
-router.post('/ordenes/:id/documento',express.raw({type:'application/octet-stream',limit:'10mb'}),pagosController.guardar);
-router.post('/ordenes/:id/abonos',pagosController.abonar);
-router.patch('/ordenes/:id/abonos/:pagoId',pagosController.corregirAbono);
+router.get('/ordenes', requireAuthentication, requirePermission('pagos.consultar'), pagosController.listar);
+router.get('/ordenes/:id/archivo', requireAuthentication, requirePermission('pagos.consultar'), pagosController.archivo);
+router.get('/ordenes/:id', requireAuthentication, requirePermission('pagos.consultar'), pagosController.obtener);
+router.post('/ordenes/:id/documento', csrfProtection, requireAuthentication, requirePermission('pagos.registrar_documento'), express.raw({type:'application/octet-stream',limit:'10mb'}), pagosController.guardar);
+router.post('/ordenes/:id/abonos', csrfProtection, requireAuthentication, requirePermission('pagos.registrar_abono'), pagosController.abonar);
+router.patch('/ordenes/:id/abonos/:pagoId', csrfProtection, requireAuthentication, requirePermission('pagos.corregir_abono'), pagosController.corregirAbono);
 export default router;

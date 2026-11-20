@@ -5,6 +5,8 @@ import {mkdtemp,readdir,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import { setupAuthTest } from '../integration-tests/authTestSupport.js';
 import {once} from 'node:events';
 import {jsPDF} from 'jspdf';
 import {pool} from '../src/config/db.js';
@@ -12,6 +14,8 @@ import {pagosService} from '../src/services/pagosService.js';
 import pagosRouter from '../src/routes/pagosRouter.js';
 import {importeCentimos,fechaValida,validarAbono} from '../src/services/pagoValidaciones.js';
 import {validarContenidoArchivo} from '../src/services/archivoPagoService.js';
+
+setupAuthTest(pool);
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
 test('importes y contenido de documentos: valida backend sin confiar en extensión',()=>{
@@ -118,7 +122,7 @@ test('Pagos: transacciones simuladas y archivos privados reales; reintentos, abo
     const reemplazo=await pagosService.guardarDocumento(10,{...p,clave_operacion:randomUUID(),version_esperada:2,motivo:'Reemplazar documento',importe:'1600',adelanto:'0'},pdf,'application/pdf','actualizado.pdf');
     assert.equal(reemplazo.documento.version,3);assert.equal(reemplazo.saldo,'0.00');assert.equal(db.abonos.length,antesReemplazo,'Reemplazar archivo conserva todos los abonos');
     const archivoActual=await pagosService.archivo(10,3);assert.deepEqual(await readFile(archivoActual.ruta),pdf);
-    const app=express();app.use(express.json());app.use('/api/pagos',pagosRouter);server=app.listen(0,'127.0.0.1');await once(server,'listening');
+    const app=express();app.use(express.json());app.use(cookieParser());app.use('/api/pagos',pagosRouter);server=app.listen(0,'127.0.0.1');await once(server,'listening');
     const base='http://127.0.0.1:'+server.address().port;
     const doc=await fetch(base+'/api/pagos/ordenes/11/archivo?version=1');assert.equal(doc.status,200);assert.deepEqual(Buffer.from(await doc.arrayBuffer()),pdf);
     const recuperada=await(await fetch(base+'/api/pagos/ordenes/10')).json();assert.equal(recuperada.data.saldo,'0.00');
@@ -192,9 +196,9 @@ test.after(async()=>{await pool.end();});
 
 
 
-test('instalacion limpia: 23 tablas unificadas y auditoria; pagos vinculados a solicitudes',async()=>{
+test('instalacion limpia: 29 tablas unificadas y auditoria; pagos vinculados a solicitudes',async()=>{
   const sql=await readFile(new URL('../database/ishume_bd_unificada.sql',import.meta.url),'utf8');
-  assert.equal((sql.match(/CREATE TABLE/g)||[]).length,23);
+  assert.equal((sql.match(/CREATE TABLE/g)||[]).length,29);
   assert.doesNotMatch(sql,/ALTER TABLE/);
   assert.doesNotMatch(sql,/fecha_documento DATE/);
   assert.doesNotMatch(sql,/CREATE TABLE (?:cotizaciones_masivas|abonos_masivos|series_ordenes_masivas)/);

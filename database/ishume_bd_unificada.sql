@@ -1,4 +1,4 @@
--- 23 tablas: catalogo unico con proveedores por diseno, Compras y seguimiento.
+-- 29 tablas: 22 operativas y 7 de autenticacion/autorizacion.
 -- Esquema completo propuesto; las funcionalidades futuras aun requieren backend.
 -- Ejecutar solo en base vacia. Fuente unica del esquema de desarrollo.
 -- DB_NAME debe apuntar a bd_ishume al utilizar esta instalacion.
@@ -378,6 +378,210 @@ CREATE TABLE despacho_detalles (
   CONSTRAINT fk_dd_contrato_detalle FOREIGN KEY (id_detalle_contrato)
     REFERENCES contrato_detalles(id_detalle_contrato) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+-- 23. Personas trabajadoras; los datos personales se separan de credenciales.
+CREATE TABLE personas (
+  id_persona INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nombres VARCHAR(120) NOT NULL,
+  apellidos VARCHAR(120) NOT NULL,
+  tipo_documento VARCHAR(30) NULL,
+  numero_documento VARCHAR(30) NULL,
+  telefono VARCHAR(30) NULL,
+  correo VARCHAR(150) NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uq_personas_documento
+    UNIQUE (tipo_documento, numero_documento),
+  CONSTRAINT chk_personas_documento_par
+    CHECK (
+      (tipo_documento IS NULL AND numero_documento IS NULL)
+      OR
+      (tipo_documento IS NOT NULL AND numero_documento IS NOT NULL)
+    ),
+  CONSTRAINT chk_personas_estado CHECK (estado IN (0, 1))
+) ENGINE=InnoDB;
+
+-- 24. Perfiles base; el codigo administrador queda reservado en Node.js.
+CREATE TABLE roles (
+  id_rol INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(40) NOT NULL,
+  nombre VARCHAR(80) NOT NULL,
+  descripcion VARCHAR(255) NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uq_roles_codigo UNIQUE (codigo),
+  CONSTRAINT uq_roles_nombre UNIQUE (nombre),
+  CONSTRAINT chk_roles_estado CHECK (estado IN (0, 1))
+) ENGINE=InnoDB;
+
+-- 25. Catalogo granular por modulo y operacion.
+CREATE TABLE permisos (
+  id_permiso INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(100) NOT NULL,
+  modulo VARCHAR(60) NOT NULL,
+  accion VARCHAR(40) NOT NULL,
+  descripcion VARCHAR(255) NULL,
+  CONSTRAINT uq_permisos_codigo UNIQUE (codigo),
+  CONSTRAINT uq_permisos_modulo_accion UNIQUE (modulo, accion)
+) ENGINE=InnoDB;
+
+-- 26. Cuenta individual; id_persona UNIQUE implementa persona 1 : 0..1 usuario.
+CREATE TABLE usuarios (
+  id_usuario INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  id_persona INT UNSIGNED NOT NULL,
+  username VARCHAR(60) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  id_rol INT UNSIGNED NOT NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1,
+  ultimo_acceso DATETIME NULL,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uq_usuarios_persona UNIQUE (id_persona),
+  CONSTRAINT uq_usuarios_username UNIQUE (username),
+  CONSTRAINT chk_usuarios_estado CHECK (estado IN (0, 1)),
+  CONSTRAINT fk_usuarios_persona FOREIGN KEY (id_persona)
+    REFERENCES personas(id_persona) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_usuarios_rol FOREIGN KEY (id_rol)
+    REFERENCES roles(id_rol) ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX idx_usuarios_rol_estado (id_rol, estado)
+) ENGINE=InnoDB;
+
+-- 27. Permisos heredados desde el rol base.
+CREATE TABLE rol_permisos (
+  id_rol INT UNSIGNED NOT NULL,
+  id_permiso INT UNSIGNED NOT NULL,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_rol, id_permiso),
+  CONSTRAINT fk_rol_permisos_rol FOREIGN KEY (id_rol)
+    REFERENCES roles(id_rol) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_rol_permisos_permiso FOREIGN KEY (id_permiso)
+    REFERENCES permisos(id_permiso) ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX idx_rol_permisos_permiso (id_permiso)
+) ENGINE=InnoDB;
+
+-- 28. Excepciones individuales: permitido=1 concede, permitido=0 deniega.
+CREATE TABLE usuario_permisos (
+  id_usuario INT UNSIGNED NOT NULL,
+  id_permiso INT UNSIGNED NOT NULL,
+  permitido TINYINT(1) NOT NULL,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_usuario, id_permiso),
+  CONSTRAINT chk_usuario_permisos_permitido CHECK (permitido IN (0, 1)),
+  CONSTRAINT fk_usuario_permisos_usuario FOREIGN KEY (id_usuario)
+    REFERENCES usuarios(id_usuario) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_usuario_permisos_permiso FOREIGN KEY (id_permiso)
+    REFERENCES permisos(id_permiso) ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX idx_usuario_permisos_permiso (id_permiso)
+) ENGINE=InnoDB;
+
+-- 29. Registro revocable de sesiones JWT; se almacena el hash del jti, no el token.
+CREATE TABLE sesiones_usuario (
+  id_sesion BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  id_usuario INT UNSIGNED NOT NULL,
+  jti_hash CHAR(64) NOT NULL,
+  expira_en DATETIME NOT NULL,
+  revocada_en DATETIME NULL,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uq_sesiones_usuario_jti_hash UNIQUE (jti_hash),
+  CONSTRAINT fk_sesiones_usuario_usuario FOREIGN KEY (id_usuario)
+    REFERENCES usuarios(id_usuario) ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX idx_sesiones_usuario_vigencia (id_usuario, revocada_en, expira_en)
+) ENGINE=InnoDB;
+
+-- Datos iniciales. El primer usuario Administrador se crea posteriormente
+-- mediante el proceso seguro de bootstrap en Node.js.
+INSERT INTO roles (codigo, nombre, descripcion) VALUES
+  ('administrador', 'Administrador',
+   'Acceso completo y administracion del sistema.'),
+  ('consulta', 'Consulta', 'Perfil base de solo lectura.'),
+  ('operador_confianza', 'Operador de confianza',
+   'Perfil base de lectura; escrituras asignadas por usuario.')
+ON DUPLICATE KEY UPDATE
+  nombre = VALUES(nombre),
+  descripcion = VALUES(descripcion);
+
+INSERT INTO permisos (codigo, modulo, accion, descripcion) VALUES
+  ('usuarios.consultar', 'usuarios', 'consultar', 'Consultar usuarios.'),
+  ('usuarios.registrar', 'usuarios', 'registrar', 'Crear usuarios.'),
+  ('usuarios.editar', 'usuarios', 'editar', 'Editar datos y rol de usuarios.'),
+  ('usuarios.desactivar', 'usuarios', 'desactivar', 'Desactivar usuarios.'),
+  ('usuarios.gestionar_permisos', 'usuarios', 'gestionar_permisos',
+   'Gestionar excepciones individuales.'),
+  ('roles.consultar', 'roles', 'consultar', 'Consultar roles.'),
+  ('roles.gestionar', 'roles', 'gestionar', 'Gestionar roles.'),
+  ('permisos.consultar', 'permisos', 'consultar', 'Consultar permisos.'),
+  ('permisos.gestionar', 'permisos', 'gestionar', 'Gestionar permisos.'),
+
+  ('dashboard.consultar', 'dashboard', 'consultar', 'Consultar dashboard.'),
+  ('inventario.consultar', 'inventario', 'consultar', 'Consultar catalogo.'),
+
+  ('categorias.consultar', 'categorias', 'consultar', 'Consultar categorias.'),
+  ('categorias.registrar', 'categorias', 'registrar', 'Registrar categorias.'),
+  ('categorias.editar', 'categorias', 'editar', 'Editar categorias.'),
+  ('categorias.cambiar_estado', 'categorias', 'cambiar_estado',
+   'Activar o desactivar categorias.'),
+
+  ('disenios.consultar', 'disenios', 'consultar', 'Consultar disenios.'),
+  ('disenios.registrar', 'disenios', 'registrar', 'Registrar disenios.'),
+  ('disenios.editar', 'disenios', 'editar', 'Editar disenios.'),
+  ('disenios.cambiar_estado', 'disenios', 'cambiar_estado',
+   'Activar o desactivar disenios.'),
+
+  ('modelos.consultar', 'modelos', 'consultar', 'Consultar modelos.'),
+  ('modelos.registrar', 'modelos', 'registrar', 'Registrar modelos.'),
+  ('modelos.editar', 'modelos', 'editar', 'Editar modelos.'),
+  ('modelos.cambiar_estado', 'modelos', 'cambiar_estado',
+   'Activar o desactivar modelos.'),
+
+  ('proveedores.consultar', 'proveedores', 'consultar', 'Consultar proveedores.'),
+
+  ('compras.consultar', 'compras', 'consultar', 'Consultar compras y solicitudes.'),
+  ('compras.revisar', 'compras', 'revisar', 'Revisar compras.'),
+  ('compras.confirmar', 'compras', 'confirmar', 'Confirmar compras.'),
+
+  ('colegios.consultar', 'colegios', 'consultar', 'Consultar colegios.'),
+  ('contratos.consultar', 'contratos', 'consultar', 'Consultar contratos.'),
+
+  ('pagos.consultar', 'pagos', 'consultar', 'Consultar pagos, documentos y abonos.'),
+  ('pagos.registrar_documento', 'pagos', 'registrar_documento',
+   'Registrar documentos de pago.'),
+  ('pagos.registrar_abono', 'pagos', 'registrar_abono', 'Registrar abonos.'),
+  ('pagos.corregir_abono', 'pagos', 'corregir_abono', 'Corregir abonos.'),
+
+  ('seguimiento_entrega.consultar', 'seguimiento_entrega', 'consultar',
+   'Consultar seguimiento de entrega.')
+ON DUPLICATE KEY UPDATE
+  modulo = VALUES(modulo),
+  accion = VALUES(accion),
+  descripcion = VALUES(descripcion);
+
+-- Administrador queda asociado a todo el catalogo inicial.
+INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM roles AS r
+CROSS JOIN permisos AS p
+WHERE r.codigo = 'administrador';
+
+-- Consulta y Operador heredan lectura operativa; sus escrituras se asignan
+-- como excepciones en usuario_permisos.
+INSERT IGNORE INTO rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM roles AS r
+JOIN permisos AS p
+  ON p.accion = 'consultar'
+ AND p.modulo IN (
+   'dashboard', 'inventario', 'categorias', 'disenios', 'modelos',
+   'proveedores', 'compras', 'colegios', 'contratos', 'pagos',
+   'seguimiento_entrega'
+ )
+WHERE r.codigo IN ('consulta', 'operador_confianza');
 
 
 -- REGLAS TRANSACCIONALES A IMPLEMENTAR EN EL BACKEND:

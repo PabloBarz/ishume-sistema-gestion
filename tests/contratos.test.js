@@ -5,7 +5,11 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import { setupAuthTest } from '../integration-tests/authTestSupport.js';
 import contratoRouter from '../src/routes/contratoRouter.js';
+
+setupAuthTest(pool);
 
 test('consulta contratos mediante la API externa sin persistencia', async () => {
   const queryOriginal = pool.query;
@@ -39,6 +43,7 @@ test('consulta contratos mediante la API externa sin persistencia', async () => 
     }));
   });
   const app = express();
+  app.use(cookieParser());
   app.use('/api/contratos', contratoRouter);
   const local = createServer(app);
   try {
