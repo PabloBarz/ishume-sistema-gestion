@@ -261,91 +261,48 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const design = makeSelect('modelDesignInput', 'id_diseno', 'Selecciona un diseño activo');
     design.disabled = true;
     let filteredDesigns = [];
-    let providerRequest = 0;
-    let designRequest = 0;
-    const setDesignPlaceholder = (label) => {
-      design.replaceChildren();
-      appendOption(design, '', label, true);
-    };
-    const loadDesignOptions = async (idProveedor, preferredDesignId = '') => {
-      const requestId = ++designRequest;
-      filteredDesigns = [];
-      setDesignPlaceholder(idProveedor ? 'Cargando diseños…' : 'Selecciona un proveedor primero');
-      design.disabled = true;
-      if (!category.value || !idProveedor) return;
-      try {
-        const query = new URLSearchParams({ id_categoria: category.value, id_proveedor: String(idProveedor) });
-        const response = await http(`/api/disenios?${query}`);
-        if (requestId !== designRequest) return;
-        const rows = Array.isArray(response.data) ? response.data : [];
-        filteredDesigns = rows.filter((item) => {
-          const historical = isEdit && String(model.id_diseno) === String(item.id_diseno) &&
-            String(currentDesign?.id_categoria) === String(category.value) &&
-            String(currentDesign?.id_proveedor) === String(idProveedor);
-          const active = Number(item.estado) === 1 && Number(item.estado_categoria) === 1 && item.estado_proveedor === 'Activo';
-          return active || historical;
-        });
-        setDesignPlaceholder(filteredDesigns.length ? 'Selecciona un diseño' : 'No hay diseños; puedes crear uno aquí.');
-        filteredDesigns.forEach((item) => {
-          const active = Number(item.estado) === 1 && Number(item.estado_categoria) === 1 && item.estado_proveedor === 'Activo';
-          appendOption(design, item.id_diseno, active ? item.nombre_diseno : `${item.nombre_diseno} (inactivo; relación histórica)`, !active);
-        });
-        if (filteredDesigns.some((item) => String(item.id_diseno) === String(preferredDesignId))) {
-          design.value = String(preferredDesignId);
-        }
-        design.disabled = filteredDesigns.length === 0;
-      } catch (error) {
-        if (requestId !== designRequest) return;
-        setDesignPlaceholder('No se pudieron cargar los diseños.');
-        requestError.hidden = false;
-        requestError.textContent = error.message || 'No se pudieron cargar los diseños de esta categoría y proveedor.';
-        design.disabled = true;
-      }
-    };
-    const loadProviderOptions = async (preferredProviderId = '', preferredDesignId = '') => {
-      const requestId = ++providerRequest;
-      designRequest += 1;
-      filteredDesigns = [];
+    const syncDependentOptions = (preferredProviderId = '', preferredDesignId = '') => {
+      const previousProvider = preferredProviderId || supplier.value;
+      const previousDesign = preferredDesignId || design.value;
+      const providerChoices = getDependentModelFilterOptions(designs, { categoryId: category.value });
       supplier.replaceChildren();
-      appendOption(supplier, '', category.value ? 'Cargando proveedores…' : 'Selecciona una categoría primero', true);
-      supplier.disabled = true;
-      setDesignPlaceholder('Selecciona un proveedor primero');
-      design.disabled = true;
-      if (!category.value) return;
-      try {
-        const response = await http('/api/proveedores');
-        if (requestId !== providerRequest) return;
-        const availableRows = Array.isArray(response.data) ? response.data : [];
-        const rows = isEdit && currentCategory && Number(currentCategory.estado) !== 1
-          ? availableRows.filter((item) => String(item.id_proveedor) === String(currentDesign?.id_proveedor))
-          : availableRows;
-        supplier.replaceChildren();
-        appendOption(supplier, '', rows.length ? 'Selecciona un proveedor' : 'No hay proveedores activos.', true);
-        rows.forEach((item) => appendOption(supplier, item.id_proveedor, item.razon_social));
-        const currentHistoricalProvider = isEdit && currentDesign &&
-          String(currentDesign.id_categoria) === String(category.value) &&
-          !rows.some((item) => String(item.id_proveedor) === String(currentDesign.id_proveedor));
-        if (currentHistoricalProvider) {
-          appendOption(supplier, currentDesign.id_proveedor,
-            `${currentDesign.nombre_proveedor} (inactivo; relación histórica)`, true);
-        }
-        supplier.disabled = rows.length === 0 && !currentHistoricalProvider;
-        if (preferredProviderId && [...supplier.options].some((option) => option.value === String(preferredProviderId))) {
-          supplier.value = String(preferredProviderId);
-          await loadDesignOptions(supplier.value, preferredDesignId);
-        }
-      } catch (error) {
-        if (requestId !== providerRequest) return;
-        supplier.replaceChildren();
-        appendOption(supplier, '', 'No se pudieron cargar los proveedores.', true);
-        designRequest += 1;
-        setDesignPlaceholder('Selecciona un proveedor primero');
-        design.disabled = true;
-        requestError.hidden = false;
-        requestError.textContent = error.message || 'No se pudieron cargar los proveedores de esta categoría.';
-      }
+      const choices = !category.value ? [] : providerChoices.providers.filter(({ id }) => {
+        const designsForProvider = providerChoices.designs.filter((item) => String(item.id_proveedor) === String(id));
+        return designsForProvider.some((item) => item.estado_proveedor === 'Activo') ||
+          (isEdit && String(currentDesign?.id_categoria) === String(category.value) && String(currentDesign?.id_proveedor) === String(id));
+      });
+      appendOption(supplier, '', category.value
+        ? choices.length ? 'Selecciona un proveedor' : 'No hay proveedores relacionados con esta categoría'
+        : 'Selecciona una categoría primero', true);
+      choices.forEach(({ id, name }) => {
+        const inactiveHistorical = isEdit && String(currentDesign?.id_categoria) === String(category.value) &&
+          String(currentDesign?.id_proveedor) === String(id) && currentDesign.estado_proveedor !== 'Activo';
+        appendOption(supplier, id, inactiveHistorical ? `${name} (inactivo; relación histórica)` : name, inactiveHistorical);
+      });
+      supplier.disabled = !category.value || choices.length === 0;
+      supplier.value = choices.some(({ id }) => String(id) === String(previousProvider)) ? String(previousProvider) : '';
+
+      const selectedProvider = supplier.value;
+      const dependent = getDependentModelFilterOptions(designs, { categoryId: category.value, providerId: selectedProvider });
+      const historical = isEdit && currentDesign && String(currentDesign.id_categoria) === String(category.value) &&
+        String(currentDesign.id_proveedor) === String(selectedProvider);
+      filteredDesigns = !category.value || !selectedProvider ? [] : dependent.designs.filter((item) => {
+        const isCurrentHistorical = historical && String(item.id_diseno) === String(currentDesign.id_diseno);
+        const active = Number(item.estado) === 1 && Number(item.estado_categoria) === 1 && item.estado_proveedor === 'Activo';
+        return active || isCurrentHistorical;
+      });
+      design.replaceChildren();
+      appendOption(design, '', !category.value ? 'Selecciona una categoría primero'
+        : !selectedProvider ? 'Selecciona un proveedor primero'
+          : filteredDesigns.length ? 'Selecciona un diseño' : 'No hay diseños relacionados con esta categoría y proveedor', true);
+      filteredDesigns.forEach((item) => {
+        const active = Number(item.estado) === 1 && Number(item.estado_categoria) === 1 && item.estado_proveedor === 'Activo';
+        appendOption(design, item.id_diseno, active ? item.nombre_diseno : `${item.nombre_diseno} (inactivo; relación histórica)`, !active);
+      });
+      design.disabled = !category.value || !selectedProvider || filteredDesigns.length === 0;
+      design.value = filteredDesigns.some((item) => String(item.id_diseno) === String(previousDesign)) ? String(previousDesign) : '';
     };
-    if (category.value) await loadProviderOptions(currentDesign?.id_proveedor ?? '', model?.id_diseno ?? '');
+    syncDependentOptions(currentDesign?.id_proveedor ?? '', model?.id_diseno ?? '');
 
     const name = document.createElement('input');
     name.className = 'input-custom'; name.id = 'modelNameInput'; name.name = 'nombre_modelo'; name.type = 'text'; name.required = true; name.maxLength = 60; name.autocomplete = 'off'; name.value = model?.nombre_modelo ?? '';
@@ -355,121 +312,6 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const categoryField = makeField('Categoría', category.id, category);
     const supplierField = makeField('Proveedor', supplier.id, supplier);
     const designField = makeField('Diseño', design.id, design);
-    const createDesignButton = document.createElement('button');
-    createDesignButton.type = 'button';
-    createDesignButton.className = 'btn-cancel inventory-model-create-design-toggle';
-    createDesignButton.textContent = '+ Crear diseño para este proveedor';
-    createDesignButton.disabled = true;
-    designField.append(createDesignButton);
-
-    const createDesignPanel = document.createElement('div');
-    createDesignPanel.className = 'inventory-model-create-design';
-    createDesignPanel.hidden = true;
-    const createDesignName = document.createElement('input');
-    createDesignName.className = 'input-custom';
-    createDesignName.id = 'modelNewDesignNameInput';
-    createDesignName.type = 'text';
-    createDesignName.maxLength = 30;
-    createDesignName.autocomplete = 'off';
-    createDesignName.placeholder = 'Ejemplo: Resinado';
-    const createDesignNameField = makeField('Nombre del tipo o diseño (máximo 30 caracteres)', createDesignName.id, createDesignName);
-    const createDesignError = document.createElement('span');
-    createDesignError.className = 'field-error';
-    createDesignError.setAttribute('role', 'alert');
-    createDesignNameField.append(createDesignError);
-    const createDesignHint = document.createElement('small');
-    createDesignHint.className = 'inventory-model-note';
-    createDesignHint.textContent = 'Quedará asociado a la categoría y al proveedor seleccionados.';
-    const createDesignActions = document.createElement('div');
-    createDesignActions.className = 'inventory-model-create-design-actions';
-    const saveDesignButton = document.createElement('button');
-    saveDesignButton.type = 'button';
-    saveDesignButton.className = 'btn-primary-action';
-    saveDesignButton.textContent = 'Guardar diseño';
-    const cancelDesignButton = document.createElement('button');
-    cancelDesignButton.type = 'button';
-    cancelDesignButton.className = 'btn-cancel';
-    cancelDesignButton.textContent = 'Cancelar';
-    createDesignActions.append(saveDesignButton, cancelDesignButton);
-    createDesignPanel.append(createDesignNameField, createDesignHint, createDesignActions);
-
-    const updateCreateDesignAvailability = () => {
-      createDesignButton.disabled = !category.value || !supplier.value ||
-        Boolean(category.selectedOptions[0]?.disabled || supplier.selectedOptions[0]?.disabled);
-    };
-    updateCreateDesignAvailability();
-    createDesignButton.addEventListener('click', () => {
-      createDesignError.textContent = '';
-      createDesignPanel.hidden = false;
-      createDesignName.focus();
-    });
-    cancelDesignButton.addEventListener('click', () => {
-      createDesignName.value = '';
-      createDesignError.textContent = '';
-      createDesignPanel.hidden = true;
-    });
-    saveDesignButton.addEventListener('click', async () => {
-      const designName = createDesignName.value.trim();
-      createDesignError.textContent = '';
-      if (!category.value || !supplier.value) {
-        createDesignError.textContent = 'Selecciona primero la categoría y el proveedor.';
-        return;
-      }
-      if (!designName) {
-        createDesignError.textContent = 'Escribe el nombre del tipo o diseño.';
-        createDesignName.focus();
-        return;
-      }
-      if (Array.from(designName).length > 30) {
-        createDesignError.textContent = 'El nombre del diseño admite hasta 30 caracteres.';
-        createDesignName.focus();
-        return;
-      }
-      const normalizeDesignName = (value) => String(value ?? '')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
-      const duplicate = designs.find((item) =>
-        String(item.id_categoria) === String(category.value) &&
-        String(item.id_proveedor) === String(supplier.value) &&
-        normalizeDesignName(item.nombre_diseno) === normalizeDesignName(designName));
-      if (duplicate) {
-        createDesignError.textContent = Number(duplicate.estado) === 1
-          ? 'Ese diseño ya existe para este proveedor; selecciónalo en la lista.'
-          : 'Ese diseño ya existe, pero está inactivo. Actívalo desde la pestaña Diseños.';
-        return;
-      }
-
-      saveDesignButton.disabled = true;
-      createDesignPanel.setAttribute('aria-busy', 'true');
-      try {
-        const response = await http('/api/disenios', 'POST', {
-          id_categoria: Number(category.value),
-          id_proveedor: Number(supplier.value),
-          nombre_diseno: designName,
-        });
-        const createdDesign = response.data;
-        if (!createdDesign?.id_diseno) throw new Error('El servidor no devolvió el diseño creado.');
-        try {
-          designs = await appState.catalogos.reload('disenios');
-          if (isActive()) onChanged({ renderOnly: true, refreshStats: true });
-        } catch {
-          designs.push(createdDesign);
-          showToast('El diseño se guardó, pero no se pudo actualizar el contador del catálogo.', 'warning');
-        }
-        await loadDesignOptions(supplier.value, createdDesign.id_diseno);
-        if (String(design.value) !== String(createdDesign.id_diseno)) {
-          throw new Error('El diseño se guardó, pero no se pudo seleccionar. Vuelve a cargar los diseños e inténtalo de nuevo.');
-        }
-        createDesignName.value = '';
-        createDesignPanel.hidden = true;
-        showToast('Diseño guardado y listo para asociar al modelo.', 'success');
-      } catch (error) {
-        createDesignError.textContent = error.message || 'No se pudo guardar el diseño.';
-      } finally {
-        createDesignPanel.removeAttribute('aria-busy');
-        saveDesignButton.disabled = false;
-      }
-    });
-
     const nameField = makeField('Nombre del modelo', name.id, name);
     const levelField = makeField('Nivel educativo', level.id, level);
     const price = document.createElement('input');
@@ -544,18 +386,16 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       note.textContent = 'La relación inactiva se conserva para este modelo histórico; selecciona relaciones activas para reasignarlo.';
       designField.append(note);
     }
-    form.append(requestError, categoryField, supplierField, designField, createDesignPanel, nameField, levelField, priceField, presentationField, imageField);
+    form.append(requestError, categoryField, supplierField, designField, nameField, levelField, priceField, presentationField, imageField);
 
     category.addEventListener('change', () => {
       supplier.value = ''; design.value = '';
       categoryError.textContent = ''; supplierError.textContent = ''; designError.textContent = ''; requestError.hidden = true;
-      updateCreateDesignAvailability();
-      void loadProviderOptions();
+      syncDependentOptions('', '');
     });
     supplier.addEventListener('change', () => {
       design.value = ''; supplierError.textContent = ''; designError.textContent = ''; requestError.hidden = true;
-      updateCreateDesignAvailability();
-      void loadDesignOptions(supplier.value);
+      syncDependentOptions(supplier.value, '');
     });
     level.addEventListener('change', () => { levelError.textContent = ''; requestError.hidden = true; });
     form.addEventListener('submit', async (event) => {
@@ -598,8 +438,10 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       submit.disabled = true; form.setAttribute('aria-busy', 'true');
       try {
         const body = new FormData();
-        body.append('id_categoria', category.value);
-        body.append('id_proveedor', supplier.value);
+        // The model stores only id_diseno; these references are derived from that design
+        // for the backend's existing relationship-consistency validation.
+        body.append('id_categoria', String(selectedDesign.id_categoria));
+        body.append('id_proveedor', String(selectedDesign.id_proveedor));
         body.append('id_diseno', String(designId));
         body.append('nombre_modelo', modelName);
         body.append('nivel_educativo', level.value);
@@ -624,9 +466,12 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
       }
     });
 
+    const saveModelButton = document.createElement('button');
+    Object.assign(saveModelButton, { type: 'submit', className: 'btn-primary-action', textContent: isEdit ? 'Guardar cambios' : 'Guardar modelo' });
+    saveModelButton.dataset.requiresPermission = isEdit ? 'modelos.editar' : 'modelos.registrar';
     modal.open(isEdit ? 'Editar modelo' : 'Nuevo modelo', 'El nombre admite hasta 60 caracteres.', form, [
       modal.createButton('Cancelar', 'btn-cancel', () => { releasePreviewObjectUrl(); modal.close(); }),
-      Object.assign(document.createElement('button'), { type: 'submit', className: 'btn-primary-action', textContent: isEdit ? 'Guardar cambios' : 'Guardar modelo' }),
+      saveModelButton,
     ]);
     const submit = root.querySelector('#inventoryModalFooter [type="submit"]'); submit.setAttribute('form', form.id);
   }
@@ -655,6 +500,7 @@ export function createModelsModule(root, { isActive, onChanged, modal }) {
     const error = document.createElement('p'); error.className = 'field-error'; error.id = 'modelModalError'; error.setAttribute('role', 'alert'); error.hidden = true;
     content.append(message, error);
     const deactivate = modal.createButton('Desactivar', 'btn-danger-action', () => { void changeState(model, 0, deactivate); });
+    deactivate.dataset.requiresPermission = 'modelos.cambiar_estado';
     modal.open('Confirmar desactivación', 'El modelo dejará de estar activo en el catálogo.', content, [
       modal.createButton('Cancelar', 'btn-cancel', () => modal.close()),
       deactivate,

@@ -1,12 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import { setupAuthTest } from '../integration-tests/authTestSupport.js';
 import { once } from 'node:events';
 import { inflateSync } from 'node:zlib';
 import { generarOrdenCompraPdf } from '../src/services/ordenCompraPdfService.js';
 import { compraMasivaService } from '../src/services/compraMasivaService.js';
 import compraRouter from '../src/routes/compraMasivaRouter.js';
 import { pool } from '../src/config/db.js';
+
+setupAuthTest(pool);
 
 function contenido(pdf) {
   // Inspecciona los streams FlateDecode y el texto WinAnsi de los documentos generados.
@@ -50,7 +54,7 @@ test('HTTP: descarga repetible y errores sin llamar al guardado', async () => {
     return orden;
   };
   compraMasivaService.confirmar = () => { throw new Error('Descargar nunca debe guardar'); };
-  const app = express(); app.use('/api/compras-masivas', compraRouter);
+  const app = express(); app.use(cookieParser()); app.use('/api/compras-masivas', compraRouter);
   const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}/api/compras-masivas/ordenes`;
   try {

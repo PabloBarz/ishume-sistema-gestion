@@ -4,6 +4,8 @@ import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import mysql from 'mysql2/promise';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import { setupAuthTest } from '../integration-tests/authTestSupport.js';
 import {once} from 'node:events';
 import 'dotenv/config';
 import {validarCorreccionAbono} from '../src/services/pagoValidaciones.js';
@@ -37,6 +39,7 @@ test('MariaDB/MySQL aislado: edición, auditoría, concurrencia, idempotencia, r
     await admin.query(esquema);
     process.env.DB_NAME=base;
     ({pool}=await import('../src/config/db.js'));
+    setupAuthTest(pool);
     const {pagosService}=await import('../src/services/pagosService.js');
     const [[identidad]]=await pool.query('SELECT DATABASE() AS nombre');assert.equal(identidad.nombre,base);
     const [[proveedor]]=await pool.query('SELECT id_proveedor FROM proveedores LIMIT 1');
@@ -73,7 +76,7 @@ test('MariaDB/MySQL aislado: edición, auditoría, concurrencia, idempotencia, r
     assert.equal(concurrentes.filter(r=>r.status==='fulfilled').length,1,'Dos ediciones no se pisan');
     data=await pagosService.obtener(id);
     const {default:router}=await import('../src/routes/pagosRouter.js');
-    const app=express();app.use(express.json());app.use('/api/pagos',router);server=app.listen(0,'127.0.0.1');await once(server,'listening');
+    const app=express();app.use(express.json());app.use(cookieParser());app.use('/api/pagos',router);server=app.listen(0,'127.0.0.1');await once(server,'listening');
     const url='http://127.0.0.1:'+server.address().port+'/api/pagos/ordenes/'+id+'/abonos/'+pago.id_abono;
     const cuerpo=entrada({monto:'400.00',version_esperada:data.historial.find(p=>p.id_abono===pago.id_abono).version_correccion});
     const patch=async(extra={})=>fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json',...extra},body:JSON.stringify(cuerpo)});

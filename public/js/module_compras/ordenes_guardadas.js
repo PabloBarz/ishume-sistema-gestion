@@ -56,7 +56,7 @@ export async function init() {
     return `<div class="ordenes-tarjetas">${grupos.map(g=>`<article class="orden-tarjeta" data-grupo="${g.id_proveedor}">
       <div class="compra-totals"><h3 class="panel-title">${esc(g.razon_social)}</h3><div class="pendientes-proveedor-total"><strong>${formatNumber(g.total)} unidades pendientes</strong><button class="btn-icon-outline pedido-ver-todos" type="button" data-ver-proveedor="${g.id_proveedor}" aria-label="Ver todos los pedidos de ${esc(g.razon_social)}"><i class="bi bi-eye" aria-hidden="true"></i></button></div></div>
       <div class="solicitud-pedidos">${g.ordenes.map(o=>`<div class="solicitud-pedido"><label class="pedido-eleccion"><input type="checkbox" data-orden="${o.id_orden}" ${seleccionPendientes.get(o.id_orden) === false ? '' : 'checked'}><span><strong class="cell-code">${esc(o.codigo)}</strong></span></label><strong>${formatNumber(o.total)} unidades</strong><button class="btn-icon-outline pedido-ver" type="button" data-ver-pedido="${o.id_orden}" aria-label="Ver detalle del pedido ${esc(o.codigo)}"><i class="bi bi-eye" aria-hidden="true"></i></button></div>`).join('')}</div>
-      <div class="solicitud-seleccion"><p data-seleccion></p><button class="btn-primary-action" type="button" data-preparar="${g.id_proveedor}">Preparar orden de compra</button></div>
+      <div class="solicitud-seleccion"><p data-seleccion></p><button class="btn-primary-action" type="button" data-requires-permission="compras.revisar" data-preparar="${g.id_proveedor}">Preparar orden de compra</button></div>
     </article>`).join('')}</div>`;
   }
   function renderGeneradas(ordenes) {

@@ -6,3 +6,4 @@ odd/
 .env
 /storage/pagos/
 /storage/uploads/modelos/.gitkeep
+integration-tests/

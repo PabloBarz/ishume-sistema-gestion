@@ -1,7 +1,28 @@
 import { closeOverlay, openOverlay } from '../utils.js';
 
+function ensureInventoryModal(root) {
+  let overlay = root.querySelector('#inventoryModal');
+  if (overlay) return overlay;
+
+  overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'inventoryModal';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.innerHTML = `
+    <div class="modal-panel" aria-labelledby="inventoryModalTitle" aria-describedby="inventoryModalSubtitle">
+      <div class="modal-header-custom">
+        <div><h2 class="modal-title-custom" id="inventoryModalTitle"></h2><p class="modal-subtitle" id="inventoryModalSubtitle"></p></div>
+        <button class="btn-modal-close" id="inventoryModalClose" type="button" aria-label="Cerrar ventana"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body-custom" id="inventoryModalBody"></div>
+      <div class="modal-footer-custom" id="inventoryModalFooter"></div>
+    </div>`;
+  root.append(overlay);
+  return overlay;
+}
+
 export function createInventoryModal(root) {
-  const overlay = root.querySelector('#inventoryModal');
+  const overlay = ensureInventoryModal(root);
   const title = root.querySelector('#inventoryModalTitle');
   const subtitle = root.querySelector('#inventoryModalSubtitle');
   const body = root.querySelector('#inventoryModalBody');

@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import './config/db.js';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import authRouter from './routes/authRouter.js';
+import userAdministrationRouter from './routes/userAdministrationRouter.js';
 import categoriaRouter from './routes/categoriaRouter.js';
 import disenioRouter from './routes/disenioRouter.js';
 import modeloRouter from './routes/modeloRouter.js';
@@ -22,7 +25,10 @@ const port = process.env.PORT || 3000;
 app.use('/uploads/modelos', createModelImageStaticMiddleware());
 app.use(express.static(publicDirectory));
 app.use(express.json());
+app.use(cookieParser());
 
+app.use('/api/auth', authRouter);
+app.use('/api/usuarios', userAdministrationRouter);
 app.use('/api/categorias', categoriaRouter);
 app.use('/api/disenios', disenioRouter);
 app.use('/api/modelos', modeloRouter);

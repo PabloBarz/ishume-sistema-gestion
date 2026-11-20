@@ -1,0 +1,102 @@
+<section class="users-admin-page" id="usersAdmin" aria-labelledby="usersTitle">
+  <div class="page-header users-page-header">
+    <div>
+      <h1 class="page-title" id="usersTitle">Administración de usuarios</h1>
+      <p class="page-subtitle">Crea cuentas individuales y configura sus permisos de acceso.</p>
+    </div>
+    <button class="btn-primary-action" id="userCreateButton" type="button">
+      <i class="bi bi-person-plus" aria-hidden="true"></i> Crear usuario
+    </button>
+  </div>
+
+  <section class="card-panel search-bar-row users-toolbar" aria-label="Buscar y filtrar usuarios">
+    <label class="search-input-wrap" for="usersSearch">
+      <i class="bi bi-search search-icon" aria-hidden="true"></i>
+      <input class="search-input" id="usersSearch" type="search" maxlength="120" placeholder="Nombre o username" autocomplete="off" aria-label="Buscar usuario">
+    </label>
+    <select class="filter-select" id="usersRoleFilter" aria-label="Filtrar usuarios por rol"><option value="todos">Todos los roles</option></select>
+    <select class="filter-select" id="usersStatusFilter" aria-label="Filtrar usuarios por estado">
+      <option value="todos">Todos los estados</option><option value="1">Activos</option><option value="0">Inactivos</option>
+    </select>
+  </section>
+
+  <section class="card-panel users-table-panel" aria-label="Usuarios registrados">
+    <div class="users-table-status" id="usersTableStatus" role="status" aria-live="polite"></div>
+    <div class="table-scroll">
+      <table class="table-custom users-table">
+        <thead><tr>
+          <th scope="col">Nombre completo</th><th scope="col">Usuario</th><th scope="col">Documento</th>
+          <th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Creado</th><th scope="col">Acciones</th>
+        </tr></thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="modal-overlay users-modal" id="userEditorModal" aria-hidden="true" hidden>
+    <section class="modal-panel users-modal-panel" role="dialog" aria-modal="true" aria-labelledby="userEditorTitle">
+      <header class="modal-header-custom">
+        <div><h2 class="modal-title-custom" id="userEditorTitle">Crear usuario</h2><p class="modal-subtitle">Datos personales, acceso y permisos.</p></div>
+        <button class="btn-modal-close" id="userEditorClose" type="button" aria-label="Cerrar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      </header>
+      <form id="userEditorForm" class="form-stack users-editor-form" novalidate>
+        <section class="users-form-section" aria-labelledby="userPersonalTitle">
+          <h3 id="userPersonalTitle" class="panel-title">Datos personales</h3>
+          <div class="users-form-grid">
+            <label class="form-label-custom">Nombres<input class="input-custom" id="userNombres" name="nombres" type="text" maxlength="120" autocomplete="given-name" required aria-describedby="err-userNombres"><span class="field-error" id="err-userNombres" role="alert" hidden></span></label>
+            <label class="form-label-custom">Apellidos<input class="input-custom" id="userApellidos" name="apellidos" type="text" maxlength="120" autocomplete="family-name" required aria-describedby="err-userApellidos"><span class="field-error" id="err-userApellidos" role="alert" hidden></span></label>
+            <label class="form-label-custom" for="userTipoDocumento">Tipo de documento<select class="input-custom" id="userTipoDocumento" name="tipo_documento" required aria-describedby="err-userTipoDocumento"><option value="">Selecciona el tipo de documento</option><option value="DNI">DNI</option><option value="CE">Carné de extranjería</option></select><span class="field-error" id="err-userTipoDocumento" role="alert" hidden></span></label>
+            <label class="form-label-custom" for="userNumeroDocumento">Número de documento<input class="input-custom" id="userNumeroDocumento" name="numero_documento" type="text" inputmode="numeric" maxlength="11" autocomplete="off" required aria-describedby="err-userNumeroDocumento"><span class="field-error" id="err-userNumeroDocumento" role="alert" hidden></span></label>
+            <label class="form-label-custom">Teléfono (opcional)<input class="input-custom" name="telefono" type="tel" maxlength="30" autocomplete="tel"></label>
+            <label class="form-label-custom">Correo (opcional)<input class="input-custom" id="userCorreo" name="correo" type="email" maxlength="150" autocomplete="email" aria-describedby="err-userCorreo"><span class="field-error" id="err-userCorreo" role="alert" hidden></span></label>
+          </div>
+        </section>
+
+        <section class="users-form-section" aria-labelledby="userAccessTitle">
+          <h3 id="userAccessTitle" class="panel-title">Datos de acceso</h3>
+          <div class="users-form-grid">
+            <label class="form-label-custom">Nombre de usuario<input class="input-custom" id="userUsername" name="username" type="text" maxlength="60" autocomplete="username" required aria-describedby="err-userUsername"><span class="field-error" id="err-userUsername" role="alert" hidden></span></label>
+            <label class="form-label-custom">Rol base<select class="input-custom" id="userRoleSelect" name="id_rol" required aria-describedby="err-userRole"></select><span class="field-error" id="err-userRole" role="alert" hidden></span></label>
+          </div>
+          <div class="users-password-create" id="userCreatePasswordFields">
+            <label class="form-label-custom">Contraseña inicial<input class="input-custom" id="userPassword" name="password" type="password" minlength="12" autocomplete="new-password" required aria-describedby="err-userPassword"><span class="field-error" id="err-userPassword" role="alert" hidden></span></label>
+            <label class="form-label-custom">Confirmar contraseña<input class="input-custom" id="userPasswordConfirm" name="confirmacion" type="password" minlength="12" autocomplete="new-password" required aria-describedby="err-userPasswordConfirm"><span class="field-error" id="err-userPasswordConfirm" role="alert" hidden></span></label>
+            <p class="users-hint">Debe tener entre 12 y 72 bytes UTF-8.</p>
+          </div>
+        </section>
+
+        <section class="users-permission-editor" aria-labelledby="userPermissionsTitle">
+          <div class="users-permission-header">
+            <div><h3 id="userPermissionsTitle">Permisos individuales</h3><p>Elige heredar del rol o guardar una excepción para esta cuenta.</p></div>
+            <span class="users-permission-legend">Heredado · Excepción</span>
+          </div>
+          <div id="userPermissionsList" class="users-permission-list"></div>
+        </section>
+        <p class="field-error" id="userEditorMessage" role="alert" hidden></p>
+        <footer class="modal-footer-custom">
+          <button class="btn-cancel" id="userEditorCancel" type="button">Cancelar</button>
+          <button class="btn-primary-action" id="userEditorSave" type="submit">Crear usuario</button>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-overlay users-modal" id="userPasswordModal" aria-hidden="true" hidden>
+    <section class="modal-panel users-modal-panel users-password-panel" role="dialog" aria-modal="true" aria-labelledby="userPasswordTitle">
+      <header class="modal-header-custom">
+        <div><h2 class="modal-title-custom" id="userPasswordTitle">Cambiar contraseña</h2><p class="modal-subtitle">Las sesiones activas de esta cuenta se cerrarán.</p></div>
+        <button class="btn-modal-close" id="userPasswordClose" type="button" aria-label="Cerrar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      </header>
+      <form id="userPasswordForm" class="form-stack users-editor-form" novalidate>
+        <label class="form-label-custom">Nueva contraseña<input class="input-custom" id="userNewPassword" name="password" type="password" minlength="12" autocomplete="new-password" required aria-describedby="err-userNewPassword"><span class="field-error" id="err-userNewPassword" role="alert" hidden></span></label>
+        <label class="form-label-custom">Confirmar nueva contraseña<input class="input-custom" id="userNewPasswordConfirm" name="confirmacion" type="password" minlength="12" autocomplete="new-password" required aria-describedby="err-userNewPasswordConfirm"><span class="field-error" id="err-userNewPasswordConfirm" role="alert" hidden></span></label>
+        <p class="users-hint">Debe tener entre 12 y 72 bytes UTF-8. No se puede recuperar la contraseña anterior.</p>
+        <p class="field-error" id="userPasswordMessage" role="alert" hidden></p>
+        <footer class="modal-footer-custom">
+          <button class="btn-cancel" id="userPasswordCancel" type="button">Cancelar</button>
+          <button class="btn-primary-action" id="userPasswordSave" type="submit">Actualizar contraseña</button>
+        </footer>
+      </form>
+    </section>
+  </div>
+</section>

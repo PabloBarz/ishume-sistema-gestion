@@ -1,11 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import { setupAuthTest } from '../integration-tests/authTestSupport.js';
 import {once} from 'node:events';
 import {pool} from '../src/config/db.js';
 import {colegioComprasService} from '../src/services/colegioComprasService.js';
 import router from '../src/routes/colegioComprasRouter.js';
 import {contratoService} from '../src/services/contratoService.js';
+
+setupAuthTest(pool);
 
 test('consulta colegios: cantidades distribuidas, varios proveedores y sin duplicar al consolidar',async()=>{
   const queryOriginal=pool.query,conexionOriginal=pool.getConnection;
@@ -61,7 +65,7 @@ test('consulta colegios: cantidades distribuidas, varios proveedores y sin dupli
     assert.equal((await colegioComprasService.obtener(2)).total,0,'No incluye compras de otros colegios');
     await assert.rejects(colegioComprasService.obtener(999),e=>e.status===404);
     for(const id of [0,-1,1.5,NaN])await assert.rejects(colegioComprasService.obtener(id),e=>e.status===400);
-    const app=express();app.use('/api/colegios-compras',router);server=app.listen(0,'127.0.0.1');await once(server,'listening');
+    const app=express();app.use(cookieParser());app.use('/api/colegios-compras',router);server=app.listen(0,'127.0.0.1');await once(server,'listening');
     const base='http://127.0.0.1:'+server.address().port+'/api/colegios-compras';
     assert.equal((await fetch(base+'?q=melcho')).status,200);
     assert.equal((await(await fetch(base+'/1')).json()).data.total,27);

@@ -63,7 +63,7 @@ export function validateRequiredFields(valores) {
 export async function http(url, method = 'GET', body = null, { timeoutMs = 20000 } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const options = { method, headers: {}, signal: controller.signal };
+  const options = { method, headers: {}, signal: controller.signal, credentials: 'include' };
 
   if (body !== null && body !== undefined) {
     if (typeof FormData !== 'undefined' && body instanceof FormData) {
@@ -96,8 +96,8 @@ export async function http(url, method = 'GET', body = null, { timeoutMs = 20000
   }
 
   if (!response.ok) {
-    const message = data && typeof data === 'object' && data.message
-      ? data.message
+    const message = data && typeof data === 'object' && (data.message || data.error)
+      ? (data.message || data.error)
       : typeof data === 'string' && data
         ? data
         : `Error HTTP ${response.status}`;

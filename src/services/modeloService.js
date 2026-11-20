@@ -172,7 +172,7 @@ export const modeloService = {
     return buscarPorId(id);
   },
 
-  async crear({ idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, presentacion = null, imagenPath = null }) {
+  async crear({ idDiseno, idCategoria = null, idProveedor = null, nombre, nivelEducativo, precio = null, presentacion = null, imagenPath = null }) {
     return enTransaccion(async (connection) => {
       await bloquearDiseno(connection, idDiseno, true, { idCategoria, idProveedor });
       const [result] = await connection.query(

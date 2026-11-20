@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {once} from 'node:events';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import { setupAuthTest } from '../integration-tests/authTestSupport.js';
 import {pool} from '../src/config/db.js';
 import {solicitudCotizacionService as service} from '../src/services/solicitudCotizacionService.js';
 import router from '../src/routes/compraMasivaRouter.js';
 import {contratoService} from '../src/services/contratoService.js';
+
+setupAuthTest(pool);
 
 test('rechaza selecciones vacías, repetidas o inválidas antes de escribir',async()=>{
   for(const ids of [[],[1,1],[0],['1']])await assert.rejects(service.revisar(ids,1));
@@ -113,7 +117,7 @@ test('MySQL: consolidación, selección parcial, PDF, historial y restricciones 
     assert.equal((await service.obtener(creada.id_solicitud)).productos[0].modelo,guardada.productos[0].modelo,'Instantánea documental estable');
     const [[original]]=await conn.query('SELECT COUNT(*) n FROM ordenes_compra WHERE id_orden IN (?) AND estado=\'Borrador\'',[[a,b,c,otroId]]);
     assert.equal(original.n,4,'No cambia estados ni elimina órdenes originales');
-    const app=express();app.use(express.json());app.use('/api/compras-masivas',router);
+    const app=express();app.use(express.json());app.use(cookieParser());app.use('/api/compras-masivas',router);
     server=app.listen(0,'127.0.0.1');await once(server,'listening');
     const base=`http://127.0.0.1:${server.address().port}/api/compras-masivas`;
     const detalle=await fetch(`${base}/pendientes/${c}/detalle`);
