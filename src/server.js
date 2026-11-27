@@ -13,6 +13,7 @@ import compraMasivaRouter from './routes/compraMasivaRouter.js';
 import pagosRouter from './routes/pagosRouter.js';
 import colegioComprasRouter from './routes/colegioComprasRouter.js';
 import catalogoIntegracionRouter from './routes/catalogoIntegracionRouter.js';
+import kardexRouter from './routes/kardexRouter.js';
 import { createModelImageStaticMiddleware } from './services/modelImageService.js';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,6 +39,7 @@ app.use('/api/compras-masivas', compraMasivaRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/colegios-compras', colegioComprasRouter);
 app.use('/api/integracion/catalogo', catalogoIntegracionRouter);
+app.use('/api/kardex', kardexRouter);
 
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada.' });

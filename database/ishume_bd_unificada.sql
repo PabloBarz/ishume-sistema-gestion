@@ -1,4 +1,4 @@
--- 29 tablas: 22 operativas y 7 de autenticacion/autorizacion.
+-- 30 tablas: 23 operativas y 7 de autenticacion/autorizacion.
 -- Esquema completo propuesto; las funcionalidades futuras aun requieren backend.
 -- Ejecutar solo en base vacia. Fuente unica del esquema de desarrollo.
 -- DB_NAME debe apuntar a bd_ishume al utilizar esta instalacion.
@@ -379,7 +379,32 @@ CREATE TABLE despacho_detalles (
     REFERENCES contrato_detalles(id_detalle_contrato) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 23. Personas trabajadoras; los datos personales se separan de credenciales.
+-- 23. Kardex: movimientos fisicos vinculados a su detalle de origen.
+CREATE TABLE movimientos_inventario (
+  id_movimiento INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  tipo ENUM('Entrada','Salida') NOT NULL,
+  cantidad INT UNSIGNED NOT NULL,
+  fecha_movimiento DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id_recepcion_detalle INT UNSIGNED NULL,
+  id_despacho_detalle INT UNSIGNED NULL,
+  descripcion TEXT NULL,
+  CONSTRAINT chk_mi_cantidad CHECK (cantidad > 0),
+  CONSTRAINT chk_mi_origen_tipo CHECK (
+    (tipo = 'Entrada' AND id_recepcion_detalle IS NOT NULL AND id_despacho_detalle IS NULL)
+    OR (tipo = 'Salida' AND id_despacho_detalle IS NOT NULL AND id_recepcion_detalle IS NULL)
+  ),
+  CONSTRAINT uq_mi_recepcion_detalle UNIQUE (id_recepcion_detalle),
+  CONSTRAINT uq_mi_despacho_detalle UNIQUE (id_despacho_detalle),
+  CONSTRAINT fk_mi_recepcion_detalle FOREIGN KEY (id_recepcion_detalle)
+    REFERENCES recepcion_detalles(id_recepcion_detalle)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT fk_mi_despacho_detalle FOREIGN KEY (id_despacho_detalle)
+    REFERENCES despacho_detalles(id_despacho_detalle)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  INDEX idx_mi_fecha (fecha_movimiento, id_movimiento)
+) ENGINE=InnoDB;
+
+-- 24. Personas trabajadoras; los datos personales se separan de credenciales.
 CREATE TABLE personas (
   id_persona INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombres VARCHAR(120) NOT NULL,
@@ -403,7 +428,7 @@ CREATE TABLE personas (
   CONSTRAINT chk_personas_estado CHECK (estado IN (0, 1))
 ) ENGINE=InnoDB;
 
--- 24. Perfiles base; el codigo administrador queda reservado en Node.js.
+-- 25. Perfiles base; el codigo administrador queda reservado en Node.js.
 CREATE TABLE roles (
   id_rol INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   codigo VARCHAR(40) NOT NULL,
@@ -418,7 +443,7 @@ CREATE TABLE roles (
   CONSTRAINT chk_roles_estado CHECK (estado IN (0, 1))
 ) ENGINE=InnoDB;
 
--- 25. Catalogo granular por modulo y operacion.
+-- 26. Catalogo granular por modulo y operacion.
 CREATE TABLE permisos (
   id_permiso INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   codigo VARCHAR(100) NOT NULL,
@@ -429,7 +454,7 @@ CREATE TABLE permisos (
   CONSTRAINT uq_permisos_modulo_accion UNIQUE (modulo, accion)
 ) ENGINE=InnoDB;
 
--- 26. Cuenta individual; id_persona UNIQUE implementa persona 1 : 0..1 usuario.
+-- 27. Cuenta individual; id_persona UNIQUE implementa persona 1 : 0..1 usuario.
 CREATE TABLE usuarios (
   id_usuario INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_persona INT UNSIGNED NOT NULL,
@@ -451,7 +476,7 @@ CREATE TABLE usuarios (
   INDEX idx_usuarios_rol_estado (id_rol, estado)
 ) ENGINE=InnoDB;
 
--- 27. Permisos heredados desde el rol base.
+-- 28. Permisos heredados desde el rol base.
 CREATE TABLE rol_permisos (
   id_rol INT UNSIGNED NOT NULL,
   id_permiso INT UNSIGNED NOT NULL,
@@ -464,7 +489,7 @@ CREATE TABLE rol_permisos (
   INDEX idx_rol_permisos_permiso (id_permiso)
 ) ENGINE=InnoDB;
 
--- 28. Excepciones individuales: permitido=1 concede, permitido=0 deniega.
+-- 29. Excepciones individuales: permitido=1 concede, permitido=0 deniega.
 CREATE TABLE usuario_permisos (
   id_usuario INT UNSIGNED NOT NULL,
   id_permiso INT UNSIGNED NOT NULL,
@@ -481,7 +506,7 @@ CREATE TABLE usuario_permisos (
   INDEX idx_usuario_permisos_permiso (id_permiso)
 ) ENGINE=InnoDB;
 
--- 29. Registro revocable de sesiones JWT; se almacena el hash del jti, no el token.
+-- 30. Registro revocable de sesiones JWT; se almacena el hash del jti, no el token.
 CREATE TABLE sesiones_usuario (
   id_sesion BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_usuario INT UNSIGNED NOT NULL,
@@ -556,7 +581,8 @@ INSERT INTO permisos (codigo, modulo, accion, descripcion) VALUES
   ('pagos.corregir_abono', 'pagos', 'corregir_abono', 'Corregir abonos.'),
 
   ('seguimiento_entrega.consultar', 'seguimiento_entrega', 'consultar',
-   'Consultar seguimiento de entrega.')
+   'Consultar seguimiento de entrega.'),
+  ('kardex.consultar', 'kardex', 'consultar', 'Consultar movimientos de inventario.')
 ON DUPLICATE KEY UPDATE
   modulo = VALUES(modulo),
   accion = VALUES(accion),
@@ -579,7 +605,7 @@ JOIN permisos AS p
  AND p.modulo IN (
    'dashboard', 'inventario', 'categorias', 'disenios', 'modelos',
    'proveedores', 'compras', 'colegios', 'contratos', 'pagos',
-   'seguimiento_entrega'
+   'seguimiento_entrega', 'kardex'
  )
 WHERE r.codigo IN ('consulta', 'operador_confianza');
 
@@ -597,7 +623,8 @@ WHERE r.codigo IN ('consulta', 'operador_confianza');
 -- F. Suma de avances preparados <= cantidad_requerida del contrato.
 -- G. Confirmar despacho completo exige todas las lineas preparadas,
 --    sin duplicar confirmacion; registrar cantidades por pedido.
--- H. No se administran existencias ni movimientos de inventario.
+-- H. movimientos_inventario ya existe; falta integrar su generacion
+--    transaccional con la confirmacion de recepciones y despachos.
 -- I. Usar transacciones, bloqueo de filas y controles de idempotencia.
 -- J. No asumir que productos asignados documentalmente ya estan separados.
 -- L. No usar `precio` del catalogo como costo real de compra; para eso
