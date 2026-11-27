@@ -396,9 +396,11 @@ CREATE TABLE movimientos_inventario (
   CONSTRAINT uq_mi_recepcion_detalle UNIQUE (id_recepcion_detalle),
   CONSTRAINT uq_mi_despacho_detalle UNIQUE (id_despacho_detalle),
   CONSTRAINT fk_mi_recepcion_detalle FOREIGN KEY (id_recepcion_detalle)
-    REFERENCES recepcion_detalles(id_recepcion_detalle) ON UPDATE CASCADE ON DELETE RESTRICT,
+    REFERENCES recepcion_detalles(id_recepcion_detalle)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT fk_mi_despacho_detalle FOREIGN KEY (id_despacho_detalle)
-    REFERENCES despacho_detalles(id_despacho_detalle) ON UPDATE CASCADE ON DELETE RESTRICT,
+    REFERENCES despacho_detalles(id_despacho_detalle)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
   INDEX idx_mi_fecha (fecha_movimiento, id_movimiento)
 ) ENGINE=InnoDB;
 
