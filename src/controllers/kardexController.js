@@ -56,6 +56,17 @@ function validarConsulta(query) {
 }
 
 export const kardexController = {
+  async listarModelos(req, res) {
+    res.set('Cache-Control', 'no-store');
+    try {
+      const modelos = await kardexService.listarModelos();
+      return res.json({ success: true, data: modelos });
+    } catch (error) {
+      console.error('Consulta de modelos del Kardex:', error);
+      return res.status(500).json({ success: false, message: 'No se pudieron consultar los modelos del Kardex.' });
+    }
+  },
+
   async listar(req, res) {
     const validationError = validarConsulta(req.query);
     if (validationError) {

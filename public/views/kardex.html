@@ -1,0 +1,86 @@
+<section class="kardex-page" aria-labelledby="kardex-title">
+  <header class="page-header kardex-header">
+    <div>
+      <h1 class="page-title" id="kardex-title">Kardex</h1>
+      <p class="page-subtitle">Historial de movimientos de inventario.</p>
+    </div>
+  </header>
+
+  <section class="stats-grid kardex-stats" aria-label="Resumen de unidades" aria-live="polite">
+    <article class="stat-card">
+      <span class="stat-icon kardex-stat-entry" aria-hidden="true"><i class="bi bi-box-arrow-in-down"></i></span>
+      <span class="stat-value" data-kardex-total="entradas">—</span>
+      <span class="stat-label">Unidades ingresadas</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-icon kardex-stat-exit" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
+      <span class="stat-value" data-kardex-total="salidas">—</span>
+      <span class="stat-label">Unidades despachadas</span>
+    </article>
+  </section>
+
+  <section class="card-panel kardex-panel" aria-labelledby="kardex-list-title">
+    <div class="panel-header kardex-panel-header">
+      <div>
+        <h2 class="panel-title" id="kardex-list-title">Movimientos de inventario</h2>
+        <span class="panel-caption">Consulta entradas, salidas y saldo por modelo</span>
+      </div>
+    </div>
+
+    <form class="kardex-filters" id="kardexFilters" novalidate>
+      <label class="kardex-field kardex-search-field">
+        <span>Buscar modelo</span>
+        <span class="search-input-wrap">
+          <i class="bi bi-search search-icon" aria-hidden="true"></i>
+          <input class="search-input" id="kardexSearch" type="search" placeholder="Nombre del modelo" autocomplete="off">
+        </span>
+      </label>
+      <label class="kardex-field">
+        <span>Modelo</span>
+        <select class="filter-select" id="kardexModelFilter">
+          <option value="">Todos los modelos</option>
+        </select>
+        <small class="kardex-model-error" id="kardexModelError" role="status" hidden></small>
+      </label>
+      <label class="kardex-field">
+        <span>Tipo de movimiento</span>
+        <select class="filter-select" id="kardexTypeFilter">
+          <option value="">Todos</option>
+          <option value="Entrada">Entrada</option>
+          <option value="Salida">Salida</option>
+        </select>
+      </label>
+      <label class="kardex-field">
+        <span>Desde</span>
+        <input class="input-custom" id="kardexDateFrom" type="date">
+      </label>
+      <label class="kardex-field">
+        <span>Hasta</span>
+        <input class="input-custom" id="kardexDateTo" type="date">
+      </label>
+      <button class="btn-cancel kardex-clear" id="kardexClear" type="button">
+        <i class="bi bi-x-circle" aria-hidden="true"></i> Limpiar filtros
+      </button>
+    </form>
+
+    <p class="kardex-filter-error" id="kardexFilterError" role="alert" hidden></p>
+    <div class="kardex-state" id="kardexState" role="status" aria-live="polite" hidden></div>
+    <div class="kardex-table-panel" id="kardexTablePanel" aria-busy="false"></div>
+
+    <footer class="kardex-pagination" id="kardexPagination" aria-label="Paginación de movimientos">
+      <label class="kardex-page-size">
+        <span>Registros por página</span>
+        <select class="filter-select" id="kardexPageSize" aria-label="Registros por página">
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </label>
+      <span class="kardex-page-info" id="kardexPageInfo">Página 1 de 0 · 0 registros</span>
+      <div class="kardex-page-actions">
+        <button class="btn-cancel" id="kardexPrevious" type="button" disabled>Anterior</button>
+        <button class="btn-cancel" id="kardexNext" type="button" disabled>Siguiente</button>
+      </div>
+    </footer>
+  </section>
+</section>

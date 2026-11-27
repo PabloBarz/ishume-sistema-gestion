@@ -1,6 +1,6 @@
 import { pool } from '../config/db.js';
 
-function crearFiltros({ nombreModelo, idModelo, tipo, fechaDesde, fechaHasta, referencia }) {
+function crearFiltros({ nombreModelo, idModelo, tipo, fechaDesde, fechaHasta, referencia }, { incluirTipo = true } = {}) {
   const conditions = [];
   const params = [];
 
@@ -12,7 +12,7 @@ function crearFiltros({ nombreModelo, idModelo, tipo, fechaDesde, fechaHasta, re
     conditions.push('ms.id_modelo = ?');
     params.push(idModelo);
   }
-  if (tipo !== null) {
+  if (incluirTipo && tipo !== null) {
     conditions.push('ms.tipo = ?');
     params.push(tipo);
   }
@@ -60,19 +60,39 @@ const MOVEMENTS_WITH_BALANCE = `${MOVEMENTS_WITH_MODEL}, movimientos_saldo AS (
   )`;
 
 export const kardexService = {
+  async listarModelos() {
+    const [rows] = await pool.execute(
+      `${MOVEMENTS_WITH_MODEL}
+       SELECT DISTINCT ms.id_modelo, m.nombre_modelo
+       FROM movimientos_modelo ms
+       INNER JOIN modelos m ON m.id_modelo = ms.id_modelo
+       ORDER BY m.nombre_modelo ASC, ms.id_modelo ASC`,
+      [],
+    );
+
+    return rows.map((row) => ({
+      id_modelo: Number(row.id_modelo),
+      nombre_modelo: row.nombre_modelo,
+    }));
+  },
+
   async listar({ nombreModelo, idModelo, tipo, fechaDesde, fechaHasta, referencia, pagina, limite }) {
     const offset = (pagina - 1) * limite;
     const criteria = { nombreModelo, idModelo, tipo, fechaDesde, fechaHasta, referencia };
     const filters = crearFiltros(criteria);
-    const [countRows] = await pool.execute(
+    const summaryFilters = crearFiltros(criteria, { incluirTipo: false });
+    const [aggregateRows] = await pool.execute(
       `${MOVEMENTS_WITH_MODEL}
-       SELECT COUNT(*) AS total
+       SELECT COUNT(CASE WHEN ? IS NULL OR ms.tipo = ? THEN 1 END) AS total,
+         COALESCE(SUM(CASE WHEN ms.tipo = 'Entrada' THEN ms.cantidad ELSE 0 END), 0) AS total_entradas,
+         COALESCE(SUM(CASE WHEN ms.tipo = 'Salida' THEN ms.cantidad ELSE 0 END), 0) AS total_salidas
        FROM movimientos_modelo ms
        INNER JOIN modelos m ON m.id_modelo = ms.id_modelo
-       ${filters.sql}`,
-      filters.params,
+       ${summaryFilters.sql}`,
+      [tipo, tipo, ...summaryFilters.params],
     );
-    const total = Number(countRows[0].total);
+    const aggregate = aggregateRows[0];
+    const total = Number(aggregate.total);
 
     const [rows] = await pool.execute(
       `${MOVEMENTS_WITH_BALANCE}
@@ -95,6 +115,10 @@ export const kardexService = {
         cantidad: Number(row.cantidad),
         saldo_modelo: Number(row.saldo_modelo),
       })),
+      resumen: {
+        total_entradas: Number(aggregate.total_entradas),
+        total_salidas: Number(aggregate.total_salidas),
+      },
       paginacion: {
         pagina,
         limite,

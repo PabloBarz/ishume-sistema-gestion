@@ -4,6 +4,7 @@ import { requireAuthentication, requirePermission } from '../services/authRuntim
 
 const router = Router();
 
+router.get('/modelos', requireAuthentication, requirePermission('kardex.consultar'), kardexController.listarModelos);
 router.get('/', requireAuthentication, requirePermission('kardex.consultar'), kardexController.listar);
 
 export default router;

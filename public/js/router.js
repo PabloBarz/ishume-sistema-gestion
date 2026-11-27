@@ -42,6 +42,11 @@ const routes = {
     view: '/views/inventario.html',
     loadModule: () => import('./modules/inventario.js'),
   },
+  kardex: {
+    title: 'Kardex', permission: 'kardex.consultar',
+    view: '/views/kardex.html',
+    loadModule: () => import('./modules/kardex.js'),
+  },
   usuarios: {
     title: 'Administración de usuarios', permission: 'usuarios.consultar', adminOnly: true,
     view: '/views/usuarios.html',
